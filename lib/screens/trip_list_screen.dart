@@ -137,6 +137,7 @@ class _TripListScreenState extends State<TripListScreen> {
         itemBuilder: (context, i) {
           final trip = trips.trips[i];
           return TripCard(
+            key: ValueKey(trip.tripId),
             trip: trip,
             onTap: () => Navigator.push(context, sharedAxisVerticalRoute(TripDetailScreen(trip: trip))),
           );

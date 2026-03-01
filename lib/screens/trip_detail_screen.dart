@@ -17,29 +17,67 @@ class TripDetailScreen extends StatefulWidget {
   State<TripDetailScreen> createState() => _TripDetailScreenState();
 }
 
-class _TripDetailScreenState extends State<TripDetailScreen> {
+class _TripDetailScreenState extends State<TripDetailScreen>
+    with SingleTickerProviderStateMixin {
   final TripService _tripService = TripService();
   final DriverService _driverService = DriverService();
   StreamSubscription? _tripSub;
   TripModel? _currentTrip;
 
+  // Pipeline animation
+  late AnimationController _pipeCtrl;
+  late Animation<double> _pipeAnim;
+  double _fromStep = 0;
+  double _toStep = 0;
+
+  int _pipeStepIndex(TripStatus s) {
+    switch (s) {
+      case TripStatus.requested:     return 0;
+      case TripStatus.accepted:      return 1;
+      case TripStatus.driverArrived: return 2;
+      case TripStatus.inProgress:    return 3;
+      case TripStatus.completed:     return 4;
+      case TripStatus.cancelled:     return -1;
+    }
+  }
+
   @override
   void initState() {
     super.initState();
     _currentTrip = widget.trip;
+    _fromStep = _toStep = _pipeStepIndex(widget.trip.status).toDouble();
+    _pipeCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 700),
+    );
+    _pipeAnim = Tween<double>(begin: _fromStep, end: _toStep).animate(
+      CurvedAnimation(parent: _pipeCtrl, curve: Curves.easeOutCubic),
+    );
     _tripSub = _tripService.getTripStream(widget.trip.tripId).listen(
       (updated) {
         if (updated != null && mounted) {
+          final newStep = _pipeStepIndex(updated.status).toDouble();
+          if (newStep != _toStep) {
+            _fromStep = _pipeAnim.value;
+            _toStep = newStep;
+            _pipeAnim = Tween<double>(begin: _fromStep, end: _toStep).animate(
+              CurvedAnimation(parent: _pipeCtrl, curve: Curves.easeOutCubic),
+            );
+            _pipeCtrl
+              ..reset()
+              ..forward();
+          }
           setState(() => _currentTrip = updated);
         }
       },
-      onError: (_) {}, // keep showing last known state on error
+      onError: (_) {},
     );
   }
 
   @override
   void dispose() {
     _tripSub?.cancel();
+    _pipeCtrl.dispose();
     super.dispose();
   }
 
@@ -79,9 +117,12 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Center(child: StatusBadge(status: trip.status)),
           const SizedBox(height: 16),
-          // ── Status pipeline ──
+          // ── Status pipeline (animated real-time) ──
           if (trip.status != TripStatus.cancelled)
-            _buildStatusPipeline(trip.status),
+            AnimatedBuilder(
+              animation: _pipeAnim,
+              builder: (_, __) => _buildStatusPipeline(_pipeAnim.value),
+            ),
           if (trip.status == TripStatus.cancelled)
             _buildCancelledBanner(),
           const SizedBox(height: 20),
@@ -225,19 +266,7 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
 
   static const _pipelineLabels = ['New', 'Assigned', 'Arrived', 'Riding', 'Done'];
 
-  int _stepIndex(TripStatus s) {
-    switch (s) {
-      case TripStatus.requested:    return 0;
-      case TripStatus.accepted:     return 1;
-      case TripStatus.driverArrived: return 2;
-      case TripStatus.inProgress:   return 3;
-      case TripStatus.completed:    return 4;
-      case TripStatus.cancelled:    return -1;
-    }
-  }
-
-  Widget _buildStatusPipeline(TripStatus s) {
-    final current = _stepIndex(s);
+  Widget _buildStatusPipeline(double animStep) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       decoration: BoxDecoration(
@@ -248,37 +277,44 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
       child: Row(
         children: List.generate(_pipelineLabels.length * 2 - 1, (i) {
           if (i.isOdd) {
-            final filled = current > i ~/ 2;
+            // Animated connector line
+            final lineIndex = i ~/ 2;
+            final fill = (animStep - lineIndex).clamp(0.0, 1.0);
             return Expanded(
               child: Container(
-                height: 2,
+                height: 2.5,
                 decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(1),
-                  color: filled
-                      ? AppColors.primary.withValues(alpha: 0.70)
-                      : Colors.white.withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(1.25),
+                  gradient: LinearGradient(
+                    stops: [fill, fill],
+                    colors: [
+                      AppColors.primary.withValues(alpha: 0.70),
+                      Colors.white.withValues(alpha: 0.08),
+                    ],
+                  ),
                 ),
               ),
             );
           }
           final idx = i ~/ 2;
-          final isActive = current == idx;
-          final isDone = current > idx;
+          final isActive = _toStep.round() == idx;
+          final isDone = animStep > idx + 0.5;
           final color = (isActive || isDone) ? AppColors.primary : Colors.white.withValues(alpha: 0.15);
           return Column(mainAxisSize: MainAxisSize.min, children: [
-            Container(
-              width: isActive ? 14 : 9,
-              height: isActive ? 14 : 9,
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 300),
+              width: isActive ? 16 : (isDone ? 12 : 9),
+              height: isActive ? 16 : (isDone ? 12 : 9),
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 color: color,
-                border: isActive ? Border.all(color: AppColors.primary.withValues(alpha: 0.40), width: 2.5) : null,
+                border: isActive ? Border.all(color: AppColors.primary.withValues(alpha: 0.50), width: 2.5) : null,
                 boxShadow: isActive
-                    ? [BoxShadow(color: AppColors.primary.withValues(alpha: 0.50), blurRadius: 10)]
-                    : isDone ? [BoxShadow(color: AppColors.primary.withValues(alpha: 0.25), blurRadius: 5)] : [],
+                    ? [BoxShadow(color: AppColors.primary.withValues(alpha: 0.60), blurRadius: 12, spreadRadius: 1)]
+                    : isDone ? [BoxShadow(color: AppColors.primary.withValues(alpha: 0.30), blurRadius: 6)] : [],
               ),
               child: isDone
-                  ? const Icon(Icons.check, size: 6, color: Color(0xFF08090C))
+                  ? const Icon(Icons.check, size: 7, color: Color(0xFF08090C))
                   : null,
             ),
             const SizedBox(height: 5),
@@ -290,7 +326,7 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
                 color: isActive
                     ? AppColors.primary
                     : isDone
-                        ? Colors.white.withValues(alpha: 0.50)
+                        ? Colors.white.withValues(alpha: 0.55)
                         : Colors.white.withValues(alpha: 0.20),
               ),
             ),
