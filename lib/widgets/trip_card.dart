@@ -149,10 +149,11 @@ class _TripCardState extends State<TripCard>
   }
 
   String get _statusHeadline {
+    final hasDriver = trip.driverName != null && trip.driverName!.isNotEmpty;
     switch (trip.status) {
       case TripStatus.requested:     return 'Waiting for driver';
-      case TripStatus.accepted:      return 'Driver on the way';
-      case TripStatus.driverArrived: return 'Driver has arrived';
+      case TripStatus.accepted:      return hasDriver ? '${trip.driverName} en route' : 'Driver on the way';
+      case TripStatus.driverArrived: return hasDriver ? '${trip.driverName} arrived' : 'Driver has arrived';
       case TripStatus.inProgress:    return 'Ride in progress';
       case TripStatus.completed:     return 'Ride completed';
       case TripStatus.cancelled:     return 'Cancelled';
@@ -205,6 +206,10 @@ class _TripCardState extends State<TripCard>
               padding: const EdgeInsets.fromLTRB(16, 14, 16, 0),
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                 _buildPassengerRow(),
+                if (trip.driverName != null && trip.driverName!.isNotEmpty) ...[
+                  const SizedBox(height: 10),
+                  _buildDriverRow(),
+                ],
                 const SizedBox(height: 12),
                 _buildRoute(),
                 const SizedBox(height: 12),
@@ -299,6 +304,47 @@ class _TripCardState extends State<TripCard>
 
   // ── Route ─────────────────────────────────────────────────
 
+  Widget _buildDriverRow() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: _gold.withValues(alpha: 0.06),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: _gold.withValues(alpha: 0.15)),
+      ),
+      child: Row(children: [
+        Container(
+          width: 30, height: 30,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: _gold.withValues(alpha: 0.15),
+          ),
+          child: Center(
+            child: Icon(Icons.directions_car_rounded, size: 15, color: _gold),
+          ),
+        ),
+        const SizedBox(width: 10),
+        Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text(trip.driverName ?? '',
+            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Colors.white)),
+          if (trip.driverPhone != null && trip.driverPhone!.isNotEmpty)
+            Text(trip.driverPhone!,
+              style: TextStyle(fontSize: 11, color: Colors.white.withValues(alpha: 0.40))),
+        ])),
+        if (trip.vehicleType.isNotEmpty)
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.06),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Text(trip.vehicleType,
+              style: TextStyle(fontSize: 10, fontWeight: FontWeight.w500, color: _gold.withValues(alpha: 0.80))),
+          ),
+      ]),
+    );
+  }
+
   Widget _buildRoute() {
     return Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
       Padding(
@@ -329,7 +375,7 @@ class _TripCardState extends State<TripCard>
       _metaChip(Icons.straighten_rounded, '${trip.distance.toStringAsFixed(1)} km'),
       const SizedBox(width: 8),
       _metaChip(Icons.timer_rounded, '${trip.duration} min'),
-      if (trip.driverName != null && trip.driverName!.isNotEmpty) ...[
+      if (trip.driverName != null && trip.driverName!.isNotEmpty && _isActive) ...[
         const SizedBox(width: 8),
         Expanded(
           child: Row(children: [

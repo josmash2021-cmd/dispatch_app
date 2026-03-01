@@ -49,14 +49,19 @@ extension TripStatusExtension on TripStatus {
       case 'requested':
         return TripStatus.requested;
       case 'accepted':
+      case 'driver_assigned':
+      case 'driver_en_route':
         return TripStatus.accepted;
       case 'driver_arrived':
+      case 'arrived':
         return TripStatus.driverArrived;
       case 'in_progress':
+      case 'in_trip':
         return TripStatus.inProgress;
       case 'completed':
         return TripStatus.completed;
       case 'cancelled':
+      case 'canceled':
         return TripStatus.cancelled;
       default:
         return TripStatus.requested;
