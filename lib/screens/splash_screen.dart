@@ -18,7 +18,7 @@ class _SplashScreenState extends State<SplashScreen>
   static const _gold      = Color(0xFFD4A843);
   static const _goldBright = Color(0xFFFFF1C1);
 
-  static const _letters = ['D', 'i', 's', 'p', 'a', 't', 'c', 'h'];
+  static const _letters = ['C', 'r', 'u', 'i', 's', 'e'];
 
   // ── Phase 1: staggered letter entrance ──
   late AnimationController _entranceCtrl;
@@ -259,12 +259,12 @@ class _SplashScreenState extends State<SplashScreen>
                     Opacity(
                       opacity: _entranceCtrl.value.clamp(0.0, 1.0),
                       child: Text(
-                        'Admin Dashboard',
+                        'Dispatch  ·  Admin',
                         style: TextStyle(
                           fontSize: 13,
-                          fontWeight: FontWeight.w500,
-                          letterSpacing: 1.5,
-                          color: Colors.white.withValues(alpha: 0.30),
+                          fontWeight: FontWeight.w600,
+                          letterSpacing: 3.0,
+                          color: Colors.white.withValues(alpha: 0.35),
                         ),
                       ),
                     ),
