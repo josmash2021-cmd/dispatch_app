@@ -43,6 +43,3 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
-
-# Local machine config (contains machine-specific SDK paths)
-**/android/local.properties
