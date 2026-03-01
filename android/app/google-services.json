@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "56054738352",
+    "project_id": "cruise-af9f1",
+    "storage_bucket": "cruise-af9f1.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:56054738352:android:e37930a44e5476e1c1ba75",
+        "android_client_info": {
+          "package_name": "com.uberclone.dispatch.dispatch_app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyA17wn7sSLxa7WInC8Z8FCA-Pjkb-a2eIw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
