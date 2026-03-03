@@ -11,21 +11,25 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen>
-    with SingleTickerProviderStateMixin {
-  static const _gold      = AppColors.primary;
+    with TickerProviderStateMixin {
+  static const _gold = AppColors.primary;
   static const _goldLight = AppColors.primaryLight;
 
-  final _formKey            = GlobalKey<FormState>();
-  final _emailController    = TextEditingController();
+  final _formKey = GlobalKey<FormState>();
+  final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
-  bool _obscurePassword     = true;
-  bool _emailActive         = false;
-  bool _passActive          = false;
+  bool _obscurePassword = true;
+  bool _emailActive = false;
+  bool _passActive = false;
 
   // Entry animation
   late AnimationController _fadeCtrl;
-  late Animation<double>   _fadeAnim;
-  late Animation<Offset>   _slideAnim;
+  late Animation<double> _fadeAnim;
+  late Animation<Offset> _slideAnim;
+
+  // Logo glow animation
+  late AnimationController _glowCtrl;
+  late Animation<double> _glowAnim;
 
   @override
   void initState() {
@@ -34,13 +38,22 @@ class _LoginScreenState extends State<LoginScreen>
 
     _fadeCtrl = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 700),
+      duration: const Duration(milliseconds: 900),
     )..forward();
     _fadeAnim = CurvedAnimation(parent: _fadeCtrl, curve: Curves.easeOutCubic);
     _slideAnim = Tween<Offset>(
-      begin: const Offset(0, 0.08),
+      begin: const Offset(0, 0.06),
       end: Offset.zero,
     ).animate(CurvedAnimation(parent: _fadeCtrl, curve: Curves.easeOutCubic));
+
+    _glowCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 2500),
+    )..repeat(reverse: true);
+    _glowAnim = Tween<double>(
+      begin: 0.30,
+      end: 0.55,
+    ).animate(CurvedAnimation(parent: _glowCtrl, curve: Curves.easeInOut));
   }
 
   @override
@@ -48,11 +61,11 @@ class _LoginScreenState extends State<LoginScreen>
     _emailController.dispose();
     _passwordController.dispose();
     _fadeCtrl.dispose();
+    _glowCtrl.dispose();
     super.dispose();
   }
 
-  bool get _canSignIn =>
-      _emailController.text.trim().isNotEmpty;
+  bool get _canSignIn => _emailController.text.trim().isNotEmpty;
 
   Future<void> _handleLogin() async {
     if (!_formKey.currentState!.validate()) return;
@@ -67,10 +80,15 @@ class _LoginScreenState extends State<LoginScreen>
         SnackBar(
           backgroundColor: AppColors.surfaceHigh,
           behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(14),
+          ),
           content: Text(
             auth.errorMessage ?? 'Sign in failed',
-            style: const TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600),
+            style: const TextStyle(
+              color: AppColors.textPrimary,
+              fontWeight: FontWeight.w600,
+            ),
           ),
         ),
       );
@@ -92,7 +110,8 @@ class _LoginScreenState extends State<LoginScreen>
               padding: const EdgeInsets.symmetric(horizontal: 24),
               child: ConstrainedBox(
                 constraints: BoxConstraints(
-                  minHeight: MediaQuery.of(context).size.height -
+                  minHeight:
+                      MediaQuery.of(context).size.height -
                       MediaQuery.of(context).padding.top -
                       MediaQuery.of(context).padding.bottom,
                 ),
@@ -106,45 +125,61 @@ class _LoginScreenState extends State<LoginScreen>
 
                         // ── Logo + Brand ──────────────────────────────────
                         Center(
-                          child: Column(children: [
-                            Container(
-                              width: 72, height: 72,
-                              decoration: BoxDecoration(
-                                color: _gold,
-                                borderRadius: BorderRadius.circular(20),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: _gold.withValues(alpha: 0.40),
-                                    blurRadius: 40,
-                                    offset: const Offset(0, 14),
+                          child: Column(
+                            children: [
+                              AnimatedBuilder(
+                                animation: _glowAnim,
+                                builder: (_, child) => Container(
+                                  width: 72,
+                                  height: 72,
+                                  decoration: BoxDecoration(
+                                    color: _gold,
+                                    borderRadius: BorderRadius.circular(20),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: _gold.withValues(
+                                          alpha: _glowAnim.value,
+                                        ),
+                                        blurRadius: 40 + 10 * _glowAnim.value,
+                                        offset: const Offset(0, 14),
+                                      ),
+                                      BoxShadow(
+                                        color: _goldLight.withValues(
+                                          alpha: _glowAnim.value * 0.3,
+                                        ),
+                                        blurRadius: 60,
+                                        spreadRadius: 2,
+                                      ),
+                                    ],
                                   ),
-                                ],
+                                  child: child,
+                                ),
+                                child: const Icon(
+                                  Icons.local_taxi_rounded,
+                                  color: Color(0xFF08090C),
+                                  size: 38,
+                                ),
                               ),
-                              child: const Icon(
-                                Icons.local_taxi_rounded,
-                                color: Color(0xFF08090C),
-                                size: 38,
+                              const SizedBox(height: 20),
+                              const Text(
+                                'Dispatch',
+                                style: TextStyle(
+                                  fontSize: 34,
+                                  fontWeight: FontWeight.w800,
+                                  color: AppColors.textPrimary,
+                                  letterSpacing: -0.5,
+                                ),
                               ),
-                            ),
-                            const SizedBox(height: 20),
-                            const Text(
-                              'Dispatch',
-                              style: TextStyle(
-                                fontSize: 34,
-                                fontWeight: FontWeight.w800,
-                                color: AppColors.textPrimary,
-                                letterSpacing: -0.5,
+                              const SizedBox(height: 6),
+                              Text(
+                                'Admin Dashboard',
+                                style: TextStyle(
+                                  fontSize: 15,
+                                  color: Colors.white.withValues(alpha: 0.40),
+                                ),
                               ),
-                            ),
-                            const SizedBox(height: 6),
-                            Text(
-                              'Admin Dashboard',
-                              style: TextStyle(
-                                fontSize: 15,
-                                color: Colors.white.withValues(alpha: 0.40),
-                              ),
-                            ),
-                          ]),
+                            ],
+                          ),
                         ),
 
                         const SizedBox(height: 48),
@@ -172,7 +207,8 @@ class _LoginScreenState extends State<LoginScreen>
                               fontSize: 16,
                             ),
                             onTap: () => setState(() => _emailActive = true),
-                            onEditingComplete: () => setState(() => _emailActive = false),
+                            onEditingComplete: () =>
+                                setState(() => _emailActive = false),
                             decoration: InputDecoration(
                               border: InputBorder.none,
                               hintText: 'Email address',
@@ -187,13 +223,17 @@ class _LoginScreenState extends State<LoginScreen>
                                     : Colors.white.withValues(alpha: 0.25),
                                 size: 20,
                               ),
-                              prefixIconConstraints:
-                                  const BoxConstraints(minWidth: 48, minHeight: 0),
-                              contentPadding:
-                                  const EdgeInsets.symmetric(vertical: 16),
+                              prefixIconConstraints: const BoxConstraints(
+                                minWidth: 48,
+                                minHeight: 0,
+                              ),
+                              contentPadding: const EdgeInsets.symmetric(
+                                vertical: 16,
+                              ),
                             ),
                             validator: (v) {
-                              if (v == null || v.isEmpty) return 'Enter your email';
+                              if (v == null || v.isEmpty)
+                                return 'Enter your email';
                               if (!v.contains('@')) return 'Invalid email';
                               return null;
                             },
@@ -231,10 +271,13 @@ class _LoginScreenState extends State<LoginScreen>
                                     : Colors.white.withValues(alpha: 0.25),
                                 size: 20,
                               ),
-                              prefixIconConstraints:
-                                  const BoxConstraints(minWidth: 48, minHeight: 0),
-                              contentPadding:
-                                  const EdgeInsets.symmetric(vertical: 16),
+                              prefixIconConstraints: const BoxConstraints(
+                                minWidth: 48,
+                                minHeight: 0,
+                              ),
+                              contentPadding: const EdgeInsets.symmetric(
+                                vertical: 16,
+                              ),
                               suffixIcon: IconButton(
                                 icon: Icon(
                                   _obscurePassword
@@ -243,12 +286,14 @@ class _LoginScreenState extends State<LoginScreen>
                                   color: Colors.white.withValues(alpha: 0.30),
                                   size: 20,
                                 ),
-                                onPressed: () =>
-                                    setState(() => _obscurePassword = !_obscurePassword),
+                                onPressed: () => setState(
+                                  () => _obscurePassword = !_obscurePassword,
+                                ),
                               ),
                             ),
                             validator: (v) {
-                              if (v == null || v.isEmpty) return 'Enter your password';
+                              if (v == null || v.isEmpty)
+                                return 'Enter your password';
                               if (v.length < 6) return 'At least 6 characters';
                               return null;
                             },
@@ -259,16 +304,20 @@ class _LoginScreenState extends State<LoginScreen>
 
                         // ── Sign In button — gradient pill ────────────────
                         GestureDetector(
-                          onTap: (auth.isLoading || !_canSignIn) ? null : _handleLogin,
+                          onTap: (auth.isLoading || !_canSignIn)
+                              ? null
+                              : _handleLogin,
                           child: AnimatedContainer(
-                            duration: const Duration(milliseconds: 250),
+                            duration: const Duration(milliseconds: 300),
+                            curve: Curves.easeOutCubic,
                             height: 56,
                             decoration: BoxDecoration(
                               gradient: _canSignIn
                                   ? const LinearGradient(
-                                      colors: [_gold, _goldLight],
+                                      colors: [_gold, _goldLight, _gold],
                                       begin: Alignment.centerLeft,
                                       end: Alignment.centerRight,
+                                      stops: [0.0, 0.5, 1.0],
                                     )
                                   : null,
                               color: _canSignIn
@@ -278,9 +327,16 @@ class _LoginScreenState extends State<LoginScreen>
                               boxShadow: _canSignIn
                                   ? [
                                       BoxShadow(
-                                        color: _gold.withValues(alpha: 0.35),
-                                        blurRadius: 24,
-                                        offset: const Offset(0, 8),
+                                        color: _gold.withValues(alpha: 0.40),
+                                        blurRadius: 28,
+                                        offset: const Offset(0, 10),
+                                      ),
+                                      BoxShadow(
+                                        color: _goldLight.withValues(
+                                          alpha: 0.15,
+                                        ),
+                                        blurRadius: 50,
+                                        spreadRadius: 4,
                                       ),
                                     ]
                                   : [],
@@ -288,7 +344,8 @@ class _LoginScreenState extends State<LoginScreen>
                             child: Center(
                               child: auth.isLoading
                                   ? const SizedBox(
-                                      width: 22, height: 22,
+                                      width: 22,
+                                      height: 22,
                                       child: CircularProgressIndicator(
                                         color: Color(0xFF08090C),
                                         strokeWidth: 2.5,
@@ -301,7 +358,9 @@ class _LoginScreenState extends State<LoginScreen>
                                         fontWeight: FontWeight.w700,
                                         color: _canSignIn
                                             ? const Color(0xFF1A1400)
-                                            : Colors.white.withValues(alpha: 0.25),
+                                            : Colors.white.withValues(
+                                                alpha: 0.25,
+                                              ),
                                       ),
                                     ),
                             ),

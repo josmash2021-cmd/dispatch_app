@@ -21,19 +21,7 @@ class AuthService {
     }
   }
 
-  Future<UserCredential> createUserWithEmailAndPassword({
-    required String email,
-    required String password,
-  }) async {
-    try {
-      return await _auth.createUserWithEmailAndPassword(
-        email: email,
-        password: password,
-      );
-    } on FirebaseAuthException catch (e) {
-      throw _handleAuthException(e);
-    }
-  }
+  // createUserWithEmailAndPassword REMOVED — no registration allowed
 
   Future<void> signOut() async {
     await _auth.signOut();

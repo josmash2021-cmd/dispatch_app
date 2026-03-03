@@ -1,0 +1,83 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ═══════════════════════════════════════════════════════════════════
+    // SINGLE-OWNER LOCKDOWN
+    // Only royalpurplecorp@gmail.com can access ANY data.
+    // No other user, even if authenticated, can read or write anything.
+    // ═══════════════════════════════════════════════════════════════════
+
+    function isOwner() {
+      return request.auth != null
+        && request.auth.token.email == 'royalpurplecorp@gmail.com';
+    }
+
+    function isNonEmptyString(field) {
+      return field is string && field.size() > 0;
+    }
+
+    // ═══════════════════════════════════════════════════════════════════
+    // ADMINS COLLECTION — owner read only, no new admins ever
+    // ═══════════════════════════════════════════════════════════════════
+    match /admins/{adminId} {
+      allow read: if isOwner();
+      // Bootstrap: owner can create their own admin doc (first setup only)
+      allow create: if isOwner() && adminId == request.auth.uid;
+      allow update, delete: if false;  // locked permanently
+    }
+
+    // ═══════════════════════════════════════════════════════════════════
+    // TRIPS COLLECTION — owner only
+    // ═══════════════════════════════════════════════════════════════════
+    match /trips/{tripId} {
+      allow read: if isOwner();
+      allow create: if isOwner()
+        && isNonEmptyString(request.resource.data.passengerName)
+        && isNonEmptyString(request.resource.data.pickupAddress)
+        && isNonEmptyString(request.resource.data.dropoffAddress);
+      allow update: if isOwner();
+      allow delete: if isOwner();
+    }
+
+    // ═══════════════════════════════════════════════════════════════════
+    // CLIENTS COLLECTION — owner only
+    // ═══════════════════════════════════════════════════════════════════
+    match /clients/{clientId} {
+      allow read: if isOwner();
+      allow create: if isOwner()
+        && isNonEmptyString(request.resource.data.firstName)
+        && isNonEmptyString(request.resource.data.phone);
+      allow update: if isOwner();
+      allow delete: if isOwner();
+    }
+
+    // ═══════════════════════════════════════════════════════════════════
+    // DRIVERS COLLECTION — owner only
+    // ═══════════════════════════════════════════════════════════════════
+    match /drivers/{driverId} {
+      allow read: if isOwner();
+      allow create: if isOwner()
+        && isNonEmptyString(request.resource.data.firstName)
+        && isNonEmptyString(request.resource.data.phone);
+      allow update: if isOwner();
+      allow delete: if isOwner();
+    }
+
+    // ═══════════════════════════════════════════════════════════════════
+    // AUDIT LOG — owner can create & read, immutable
+    // ═══════════════════════════════════════════════════════════════════
+    match /audit_log/{logId} {
+      allow read: if isOwner();
+      allow create: if isOwner();
+      allow update, delete: if false;  // immutable forever
+    }
+
+    // ═══════════════════════════════════════════════════════════════════
+    // DENY ALL — everything else blocked permanently
+    // ═══════════════════════════════════════════════════════════════════
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

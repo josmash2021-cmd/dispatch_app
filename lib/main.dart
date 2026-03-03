@@ -7,7 +7,9 @@ import 'package:timeago/timeago.dart' as timeago;
 import 'config/app_theme.dart';
 import 'firebase_options.dart';
 import 'providers/auth_provider.dart';
+import 'providers/client_provider.dart';
 import 'providers/dashboard_provider.dart';
+import 'providers/driver_provider.dart';
 import 'providers/trip_provider.dart';
 import 'screens/splash_screen.dart';
 import 'screens/dashboard_screen.dart';
@@ -37,6 +39,8 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => AuthProvider()),
         ChangeNotifierProvider(create: (_) => TripProvider()),
         ChangeNotifierProvider(create: (_) => DashboardProvider()),
+        ChangeNotifierProvider(create: (_) => ClientProvider()),
+        ChangeNotifierProvider(create: (_) => DriverProvider()),
       ],
       child: MaterialApp(
         title: 'Dispatch Admin',
@@ -59,7 +63,9 @@ class AuthWrapper extends StatelessWidget {
       case AuthStatus.uninitialized:
         return const Scaffold(
           backgroundColor: Color(0xFF08090C),
-          body: Center(child: CircularProgressIndicator(color: Color(0xFFD4A843))),
+          body: Center(
+            child: CircularProgressIndicator(color: Color(0xFFD4A843)),
+          ),
         );
       case AuthStatus.authenticated:
         return const DashboardScreen();
@@ -69,5 +75,3 @@ class AuthWrapper extends StatelessWidget {
     }
   }
 }
-
-

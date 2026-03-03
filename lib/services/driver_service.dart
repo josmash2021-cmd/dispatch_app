@@ -12,8 +12,11 @@ class DriverService {
     return _driversCollection
         .orderBy('isOnline', descending: true)
         .snapshots()
-        .map((snapshot) =>
-            snapshot.docs.map((doc) => DriverModel.fromFirestore(doc)).toList());
+        .map(
+          (snapshot) => snapshot.docs
+              .map((doc) => DriverModel.fromFirestore(doc))
+              .toList(),
+        );
   }
 
   /// One-time fetch of all drivers
@@ -21,9 +24,7 @@ class DriverService {
     final snapshot = await _driversCollection
         .orderBy('isOnline', descending: true)
         .get();
-    return snapshot.docs
-        .map((doc) => DriverModel.fromFirestore(doc))
-        .toList();
+    return snapshot.docs.map((doc) => DriverModel.fromFirestore(doc)).toList();
   }
 
   /// Add a driver manually from dispatch
@@ -40,6 +41,16 @@ class DriverService {
       'isOnline': isOnline,
       'lastSeen': FieldValue.serverTimestamp(),
     });
+  }
+
+  /// Update driver status (active / inactive / blocked)
+  Future<void> updateStatus(String driverId, String status) async {
+    await _driversCollection.doc(driverId).update({'status': status});
+  }
+
+  /// Update driver fields
+  Future<void> updateDriver(String driverId, Map<String, dynamic> data) async {
+    await _driversCollection.doc(driverId).update(data);
   }
 
   /// Delete a driver
