@@ -1,0 +1,168 @@
+workflows:
+
+  # ─────────────────────────────────────────────────────────────────────────
+  # iOS Release — builds a signed IPA and optionally publishes to TestFlight
+  # ─────────────────────────────────────────────────────────────────────────
+  ios-release:
+    name: iOS Release Build
+    max_build_duration: 90
+    instance_type: mac_mini_m2
+
+    environment:
+      flutter: stable
+      xcode: latest
+      cocoapods: default
+
+      # ── Secret variable groups (configure in Codemagic UI) ────────────────
+      # Group: "app_store_credentials"
+      #   APP_STORE_CONNECT_ISSUER_ID      — Issuer ID from App Store Connect API
+      #   APP_STORE_CONNECT_KEY_IDENTIFIER — Key ID from App Store Connect API
+      #   APP_STORE_CONNECT_PRIVATE_KEY    — Contents of AuthKey_*.p8 (or base-64)
+      #   CERTIFICATE_PRIVATE_KEY          — RSA-2048 private key for the code signing certificate
+      #
+      # Group: "firebase_credentials"
+      #   GOOGLE_SERVICE_INFO_PLIST        — Base-64 encoded GoogleService-Info.plist
+      #
+      # Group: "google_maps"
+      #   MAPS_API_KEY_IOS                 — Google Maps iOS API key
+      groups:
+        - app_store_credentials
+        - firebase_credentials
+        - google_maps
+
+      vars:
+        BUNDLE_ID: "com.uberclone.dispatch.dispatchApp"
+        XCODE_SCHEME: "Runner"
+        XCODE_WORKSPACE: "ios/Runner.xcworkspace"
+
+    triggering:
+      events:
+        - push
+        - tag
+      branch_patterns:
+        - pattern: "main"
+          include: true
+          source: true
+
+    scripts:
+      # 1 — Inject the real GoogleService-Info.plist from the CI secret
+      - name: Decode and install GoogleService-Info.plist
+        script: |
+          echo "$GOOGLE_SERVICE_INFO_PLIST" | base64 --decode \
+            > "$CM_BUILD_DIR/ios/Runner/GoogleService-Info.plist"
+
+      # 2 — Inject Google Maps API key into Info.plist
+      - name: Inject Google Maps API key
+        script: |
+          /usr/libexec/PlistBuddy -c \
+            "Set :GMSApiKey $MAPS_API_KEY_IOS" \
+            "$CM_BUILD_DIR/ios/Runner/Info.plist"
+
+      # 3 — Set up iOS code signing (managed by Codemagic)
+      - name: Set up keychain for code signing
+        script: keychain initialize
+
+      - name: Fetch App Store Connect signing certificate
+        script: |
+          app-store-connect fetch-signing-files \
+            "$BUNDLE_ID" \
+            --type IOS_APP_STORE \
+            --create
+
+      - name: Add code signing identities to keychain
+        script: keychain add-certificates
+
+      - name: Set up Xcode code signing settings
+        script: |
+          xcode-project use-profiles \
+            --workspace "$XCODE_WORKSPACE" \
+            --scheme "$XCODE_SCHEME"
+
+      # 4 — Install Flutter deps
+      - name: Flutter pub get
+        script: flutter pub get
+
+      # 5 — Install CocoaPods
+      - name: Pod install
+        script: |
+          cd ios && pod install --repo-update
+
+      # 6 — Build IPA
+      - name: Flutter build iOS release
+        script: |
+          flutter build ipa \
+            --release \
+            --export-options-plist=/Users/builder/export_options.plist
+
+    artifacts:
+      - build/ios/ipa/*.ipa
+      - /tmp/xcodebuild_logs/*.log
+      - flutter_drive.log
+
+    publishing:
+      email:
+        recipients:
+          - your@email.com   # ← replace with your email
+        notify:
+          success: true
+          failure: true
+      app_store_connect:
+        api_key: $APP_STORE_CONNECT_PRIVATE_KEY
+        key_id: $APP_STORE_CONNECT_KEY_IDENTIFIER
+        issuer_id: $APP_STORE_CONNECT_ISSUER_ID
+        submit_to_testflight: false   # ← set true to auto-publish to TestFlight
+
+
+  # ─────────────────────────────────────────────────────────────────────────
+  # Android Release (for reference / parallel builds)
+  # ─────────────────────────────────────────────────────────────────────────
+  android-release:
+    name: Android Release Build
+    max_build_duration: 60
+    instance_type: linux_x2
+
+    environment:
+      flutter: stable
+      groups:
+        - firebase_credentials
+        - google_maps
+
+      vars:
+        PACKAGE_NAME: "com.uberclone.dispatch.dispatch_app"
+
+    triggering:
+      events:
+        - push
+      branch_patterns:
+        - pattern: "main"
+          include: true
+
+    scripts:
+      # Inject Google Maps key into AndroidManifest.xml via build-time replacement
+      - name: Inject Google Maps API key
+        script: |
+          cd android
+          sed -i "s/YOUR_GOOGLE_MAPS_ANDROID_API_KEY/$MAPS_API_KEY_ANDROID/g" \
+            app/src/main/AndroidManifest.xml || true
+
+      - name: Flutter pub get
+        script: flutter pub get
+
+      - name: Build Android release AAB
+        script: |
+          flutter build appbundle \
+            --release \
+            --build-name=1.0.0 \
+            --build-number=$BUILD_NUMBER
+
+    artifacts:
+      - build/app/outputs/**/*.aab
+      - build/app/outputs/**/*.apk
+
+    publishing:
+      email:
+        recipients:
+          - your@email.com   # ← replace with your email
+        notify:
+          success: true
+          failure: true

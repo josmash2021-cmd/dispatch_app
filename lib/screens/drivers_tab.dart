@@ -668,197 +668,283 @@ class _DriverCard extends StatelessWidget {
     showModalBottomSheet(
       context: context,
       backgroundColor: AppColors.surface,
+      isScrollControlled: true,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      builder: (_) => Padding(
-        padding: const EdgeInsets.fromLTRB(24, 16, 24, 32),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 40,
-              height: 4,
-              decoration: BoxDecoration(
-                color: AppColors.cardBorder,
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-            const SizedBox(height: 20),
-            Stack(
-              children: [
-                CircleAvatar(
-                  radius: 36,
-                  backgroundColor: AppColors.primary.withValues(alpha: 0.15),
-                  backgroundImage: driver.photoUrl != null
-                      ? NetworkImage(driver.photoUrl!)
-                      : null,
-                  child: driver.photoUrl == null
-                      ? Text(
-                          driver.fullName.isNotEmpty
-                              ? driver.fullName[0].toUpperCase()
-                              : '?',
-                          style: const TextStyle(
-                            color: AppColors.primary,
-                            fontSize: 28,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        )
-                      : null,
-                ),
-                Positioned(
-                  right: 0,
-                  bottom: 0,
-                  child: Container(
-                    width: 18,
-                    height: 18,
-                    decoration: BoxDecoration(
-                      color: acctColor,
-                      shape: BoxShape.circle,
-                      border: Border.all(color: AppColors.surface, width: 3),
-                    ),
-                  ),
-                ),
-                Positioned(
-                  right: 0,
-                  top: 0,
-                  child: Container(
-                    width: 16,
-                    height: 16,
-                    decoration: BoxDecoration(
-                      color: driver.isOnline
-                          ? AppColors.success
-                          : AppColors.textHint,
-                      shape: BoxShape.circle,
-                      border: Border.all(color: AppColors.surface, width: 3),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            Text(
-              driver.fullName,
-              style: const TextStyle(
-                color: AppColors.textPrimary,
-                fontSize: 20,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-            const SizedBox(height: 6),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 4,
-                  ),
+      builder: (_) => DraggableScrollableSheet(
+        initialChildSize: 0.85,
+        maxChildSize: 0.95,
+        minChildSize: 0.5,
+        expand: false,
+        builder: (_, scrollCtrl) => Padding(
+          padding: const EdgeInsets.fromLTRB(24, 16, 24, 32),
+          child: ListView(
+            controller: scrollCtrl,
+            children: [
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
                   decoration: BoxDecoration(
-                    color:
-                        (driver.isOnline
-                                ? AppColors.success
-                                : AppColors.textHint)
-                            .withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Text(
-                    driver.isOnline ? 'Online' : 'Offline',
-                    style: TextStyle(
-                      fontSize: 13,
-                      color: driver.isOnline
-                          ? AppColors.success
-                          : AppColors.textHint,
-                      fontWeight: FontWeight.w600,
-                    ),
+                    color: AppColors.cardBorder,
+                    borderRadius: BorderRadius.circular(2),
                   ),
                 ),
-                const SizedBox(width: 8),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 4,
-                  ),
-                  decoration: BoxDecoration(
-                    color: acctColor.withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        _statusIcon(driver.status),
-                        color: acctColor,
-                        size: 14,
+              ),
+              const SizedBox(height: 20),
+              Center(
+                child: Stack(
+                  children: [
+                    CircleAvatar(
+                      radius: 36,
+                      backgroundColor:
+                          AppColors.primary.withValues(alpha: 0.15),
+                      backgroundImage: driver.photoUrl != null
+                          ? NetworkImage(driver.photoUrl!)
+                          : null,
+                      child: driver.photoUrl == null
+                          ? Text(
+                              driver.fullName.isNotEmpty
+                                  ? driver.fullName[0].toUpperCase()
+                                  : '?',
+                              style: const TextStyle(
+                                color: AppColors.primary,
+                                fontSize: 28,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            )
+                          : null,
+                    ),
+                    Positioned(
+                      right: 0,
+                      bottom: 0,
+                      child: Container(
+                        width: 18,
+                        height: 18,
+                        decoration: BoxDecoration(
+                          color: acctColor,
+                          shape: BoxShape.circle,
+                          border:
+                              Border.all(color: AppColors.surface, width: 3),
+                        ),
                       ),
-                      const SizedBox(width: 4),
-                      Text(
-                        _statusLabel(driver.status),
+                    ),
+                    Positioned(
+                      right: 0,
+                      top: 0,
+                      child: Container(
+                        width: 16,
+                        height: 16,
+                        decoration: BoxDecoration(
+                          color: driver.isOnline
+                              ? AppColors.success
+                              : AppColors.textHint,
+                          shape: BoxShape.circle,
+                          border:
+                              Border.all(color: AppColors.surface, width: 3),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 12),
+              Center(
+                child: Text(
+                  driver.fullName,
+                  style: const TextStyle(
+                    color: AppColors.textPrimary,
+                    fontSize: 20,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 6),
+              Center(
+                child: Wrap(
+                  spacing: 8,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: (driver.isOnline
+                                    ? AppColors.success
+                                    : AppColors.textHint)
+                                .withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Text(
+                        driver.isOnline ? 'Online' : 'Offline',
                         style: TextStyle(
                           fontSize: 13,
-                          color: acctColor,
+                          color: driver.isOnline
+                              ? AppColors.success
+                              : AppColors.textHint,
                           fontWeight: FontWeight.w600,
                         ),
                       ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            _detailRow(Icons.phone_outlined, 'Phone', driver.phone),
-            if (driver.vehicleType != null)
-              _detailRow(
-                Icons.directions_car_outlined,
-                'Vehicle',
-                driver.vehicleType!,
-              ),
-            if (driver.vehiclePlate != null)
-              _detailRow(
-                Icons.confirmation_number_outlined,
-                'Plate',
-                driver.vehiclePlate!,
-              ),
-            if (driver.rating != null)
-              _detailRow(
-                Icons.star_rounded,
-                'Rating',
-                driver.rating!.toStringAsFixed(1),
-              ),
-            if (driver.lastSeen != null)
-              _detailRow(
-                Icons.access_time_rounded,
-                'Last Seen',
-                timeago.format(driver.lastSeen!, locale: 'en'),
-              ),
-            if (driver.createdAt != null)
-              _detailRow(
-                Icons.calendar_today_rounded,
-                'Registered',
-                dateFmt.format(driver.createdAt!),
-              ),
-            const SizedBox(height: 16),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton.icon(
-                onPressed: () {
-                  Navigator.pop(context);
-                  _showActions(context, driver);
-                },
-                icon: const Icon(Icons.settings_rounded, size: 18),
-                label: const Text('Manage Driver'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary,
-                  foregroundColor: const Color(0xFF1A1400),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  padding: const EdgeInsets.symmetric(vertical: 12),
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: acctColor.withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(_statusIcon(driver.status),
+                              color: acctColor, size: 14),
+                          const SizedBox(width: 4),
+                          Text(
+                            _statusLabel(driver.status),
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: acctColor,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    if (driver.source != null)
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: AppColors.textHint.withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Text(
+                          driver.source!,
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: AppColors.textSecondary,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                  ],
                 ),
               ),
-            ),
-          ],
+
+              // ── Contact Info ──
+              const SizedBox(height: 20),
+              _sectionHeader('Contact Info'),
+              _detailRow(Icons.phone_outlined, 'Phone',
+                  driver.phone.isNotEmpty ? driver.phone : 'Not set'),
+              _detailRow(Icons.email_outlined, 'Email',
+                  driver.email ?? 'Not set'),
+              if (driver.photoUrl != null)
+                _detailRow(Icons.image_outlined, 'Photo URL', 'Set'),
+
+              // ── Account Details ──
+              const SizedBox(height: 16),
+              _sectionHeader('Account Details'),
+              _detailRow(Icons.badge_outlined, 'Driver ID', driver.driverId),
+              if (driver.sqliteId != null)
+                _detailRow(Icons.storage_outlined, 'SQLite ID',
+                    '${driver.sqliteId}'),
+              _detailRow(Icons.person_outline, 'Role', driver.role),
+              _detailRow(
+                Icons.lock_outlined,
+                'Password',
+                driver.hasPassword ? 'Set' : 'Not set',
+              ),
+              if (driver.passwordHash != null &&
+                  driver.passwordHash!.isNotEmpty)
+                _detailRow(
+                  Icons.fingerprint_rounded,
+                  'Password Hash',
+                  '${driver.passwordHash!.substring(0, (driver.passwordHash!.length > 20 ? 20 : driver.passwordHash!.length))}...',
+                ),
+
+              // ── Vehicle Info ──
+              const SizedBox(height: 16),
+              _sectionHeader('Vehicle Info'),
+              _detailRow(Icons.directions_car_outlined, 'Vehicle',
+                  driver.vehicleType ?? 'Not set'),
+              _detailRow(Icons.confirmation_number_outlined, 'Plate',
+                  driver.vehiclePlate ?? 'Not set'),
+
+              // ── Location / GPS ──
+              const SizedBox(height: 16),
+              _sectionHeader('Location'),
+              _detailRow(Icons.gps_fixed_rounded, 'GPS Status',
+                  driver.isOnline ? 'Active' : 'Inactive'),
+              if (driver.lat != null && driver.lng != null)
+                _detailRow(Icons.location_on_outlined, 'Coordinates',
+                    '${driver.lat!.toStringAsFixed(6)}, ${driver.lng!.toStringAsFixed(6)}'),
+              if (driver.rating != null)
+                _detailRow(Icons.star_rounded, 'Rating',
+                    driver.rating!.toStringAsFixed(1)),
+
+              // ── Timestamps ──
+              const SizedBox(height: 16),
+              _sectionHeader('Timestamps'),
+              if (driver.createdAt != null)
+                _detailRow(Icons.calendar_today_rounded, 'Registered',
+                    dateFmt.format(driver.createdAt!)),
+              if (driver.lastSeen != null)
+                _detailRow(Icons.access_time_rounded, 'Last Seen',
+                    timeago.format(driver.lastSeen!, locale: 'en')),
+              if (driver.lastUpdated != null)
+                _detailRow(Icons.update_rounded, 'Last Updated',
+                    dateFmt.format(driver.lastUpdated!)),
+
+              const SizedBox(height: 20),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: () {
+                    Navigator.pop(context);
+                    _showActions(context, driver);
+                  },
+                  icon: const Icon(Icons.settings_rounded, size: 18),
+                  label: const Text('Manage Driver'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    foregroundColor: const Color(0xFF1A1400),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
+      ),
+    );
+  }
+
+  Widget _sectionHeader(String title) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Row(
+        children: [
+          Container(
+            width: 3,
+            height: 16,
+            decoration: BoxDecoration(
+              color: AppColors.primary,
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+          const SizedBox(width: 8),
+          Text(
+            title,
+            style: const TextStyle(
+              color: AppColors.textPrimary,
+              fontSize: 15,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ],
       ),
     );
   }

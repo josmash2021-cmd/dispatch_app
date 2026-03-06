@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  GoogleService-Info.plist — Firebase iOS configuration for Cruise Dispatch
+  =========================================================================
+  IMPORTANT: Replace these placeholder values with the real ones from your
+  Firebase Console → Project Settings → iOS app (com.uberclone.dispatch.dispatchApp).
+
+  In Codemagic, store this file as a base-64 encoded secret in the
+  "firebase_credentials" variable group (GOOGLE_SERVICE_INFO_PLIST) and
+  the CI script will decode it and write it here automatically.
+-->
+<plist version="1.0">
+<dict>
+	<key>AD_UNIT_ID_FOR_BANNER_TEST</key>
+	<string>ca-app-pub-3940256099942544/2934735716</string>
+	<key>AD_UNIT_ID_FOR_INTERSTITIAL_TEST</key>
+	<string>ca-app-pub-3940256099942544/4411468910</string>
+	<key>CLIENT_ID</key>
+	<string>56054738352-iosxxxxxxxxxxxxxxx.apps.googleusercontent.com</string>
+	<key>REVERSED_CLIENT_ID</key>
+	<string>com.googleusercontent.apps.56054738352-iosxxxxxxxxxxxxxxx</string>
+	<key>API_KEY</key>
+	<string>AIzaSyAdwPUqsI8UuaEQEXw6aaNz7umWeGdWjjg</string>
+	<key>GCM_SENDER_ID</key>
+	<string>56054738352</string>
+	<key>PLIST_VERSION</key>
+	<string>1</string>
+	<key>BUNDLE_ID</key>
+	<string>com.uberclone.dispatch.dispatchApp</string>
+	<key>PROJECT_ID</key>
+	<string>cruise-af9f1</string>
+	<key>STORAGE_BUCKET</key>
+	<string>cruise-af9f1.firebasestorage.app</string>
+	<key>IS_ADS_ENABLED</key>
+	<false/>
+	<key>IS_ANALYTICS_ENABLED</key>
+	<false/>
+	<key>IS_APPINVITE_ENABLED</key>
+	<true/>
+	<key>IS_GCM_ENABLED</key>
+	<true/>
+	<key>IS_SIGNIN_ENABLED</key>
+	<true/>
+	<key>GOOGLE_APP_ID</key>
+	<string>1:56054738352:ios:REPLACE_WITH_REAL_IOS_APP_ID</string>
+</dict>
+</plist>

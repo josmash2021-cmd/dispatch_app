@@ -638,145 +638,253 @@ class _ClientCard extends StatelessWidget {
     showModalBottomSheet(
       context: context,
       backgroundColor: AppColors.surface,
+      isScrollControlled: true,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      builder: (_) => Padding(
-        padding: const EdgeInsets.fromLTRB(24, 16, 24, 32),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 40,
-              height: 4,
-              decoration: BoxDecoration(
-                color: AppColors.cardBorder,
-                borderRadius: BorderRadius.circular(2),
+      builder: (_) => DraggableScrollableSheet(
+        initialChildSize: 0.85,
+        maxChildSize: 0.95,
+        minChildSize: 0.5,
+        expand: false,
+        builder: (_, scrollCtrl) => Padding(
+          padding: const EdgeInsets.fromLTRB(24, 16, 24, 32),
+          child: ListView(
+            controller: scrollCtrl,
+            children: [
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: AppColors.cardBorder,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
               ),
-            ),
-            const SizedBox(height: 20),
-            Stack(
-              children: [
-                CircleAvatar(
-                  radius: 36,
-                  backgroundColor: AppColors.primary.withValues(alpha: 0.15),
-                  backgroundImage: client.photoUrl != null
-                      ? NetworkImage(client.photoUrl!)
-                      : null,
-                  child: client.photoUrl == null
-                      ? Text(
-                          client.fullName.isNotEmpty
-                              ? client.fullName[0].toUpperCase()
-                              : '?',
-                          style: const TextStyle(
-                            color: AppColors.primary,
-                            fontSize: 28,
-                            fontWeight: FontWeight.w700,
+              const SizedBox(height: 20),
+              Center(
+                child: Stack(
+                  children: [
+                    CircleAvatar(
+                      radius: 36,
+                      backgroundColor:
+                          AppColors.primary.withValues(alpha: 0.15),
+                      backgroundImage: client.photoUrl != null
+                          ? NetworkImage(client.photoUrl!)
+                          : null,
+                      child: client.photoUrl == null
+                          ? Text(
+                              client.fullName.isNotEmpty
+                                  ? client.fullName[0].toUpperCase()
+                                  : '?',
+                              style: const TextStyle(
+                                color: AppColors.primary,
+                                fontSize: 28,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            )
+                          : null,
+                    ),
+                    Positioned(
+                      right: 0,
+                      bottom: 0,
+                      child: Container(
+                        width: 18,
+                        height: 18,
+                        decoration: BoxDecoration(
+                          color: color,
+                          shape: BoxShape.circle,
+                          border:
+                              Border.all(color: AppColors.surface, width: 3),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 12),
+              Center(
+                child: Text(
+                  client.fullName,
+                  style: const TextStyle(
+                    color: AppColors.textPrimary,
+                    fontSize: 20,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 6),
+              Center(
+                child: Wrap(
+                  spacing: 8,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: color.withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(_statusIcon(client.status),
+                              color: color, size: 14),
+                          const SizedBox(width: 4),
+                          Text(
+                            _statusLabel(client.status),
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: color,
+                              fontWeight: FontWeight.w600,
+                            ),
                           ),
-                        )
-                      : null,
-                ),
-                Positioned(
-                  right: 0,
-                  bottom: 0,
-                  child: Container(
-                    width: 18,
-                    height: 18,
-                    decoration: BoxDecoration(
-                      color: color,
-                      shape: BoxShape.circle,
-                      border: Border.all(color: AppColors.surface, width: 3),
+                        ],
+                      ),
                     ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            Text(
-              client.fullName,
-              style: const TextStyle(
-                color: AppColors.textPrimary,
-                fontSize: 20,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-            const SizedBox(height: 6),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-              decoration: BoxDecoration(
-                color: color.withValues(alpha: 0.12),
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(_statusIcon(client.status), color: color, size: 14),
-                  const SizedBox(width: 4),
-                  Text(
-                    _statusLabel(client.status),
-                    style: TextStyle(
-                      fontSize: 13,
-                      color: color,
-                      fontWeight: FontWeight.w600,
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: AppColors.primary.withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Text(
+                        client.role.toUpperCase(),
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: AppColors.primary,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
                     ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 16),
-            _detailRow(Icons.phone_outlined, 'Phone', client.phone),
-            if (client.email != null)
-              _detailRow(Icons.email_outlined, 'Email', client.email!),
-            _detailRow(
-              Icons.directions_car_outlined,
-              'Total Trips',
-              '${client.totalTrips}',
-            ),
-            _detailRow(
-              Icons.attach_money_rounded,
-              'Total Spent',
-              currFmt.format(client.totalSpent),
-            ),
-            if (client.rating != null)
-              _detailRow(
-                Icons.star_rounded,
-                'Rating',
-                client.rating!.toStringAsFixed(1),
-              ),
-            if (client.lastTripAt != null)
-              _detailRow(
-                Icons.schedule_rounded,
-                'Last Trip',
-                dateFmt.format(client.lastTripAt!),
-              ),
-            if (client.createdAt != null)
-              _detailRow(
-                Icons.calendar_today_rounded,
-                'Registered',
-                dateFmt.format(client.createdAt!),
-              ),
-            const SizedBox(height: 16),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton.icon(
-                onPressed: () {
-                  Navigator.pop(context);
-                  _showActions(context, client);
-                },
-                icon: const Icon(Icons.settings_rounded, size: 18),
-                label: const Text('Manage Client'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary,
-                  foregroundColor: const Color(0xFF1A1400),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  padding: const EdgeInsets.symmetric(vertical: 12),
+                    if (client.source != null)
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: AppColors.textHint.withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Text(
+                          client.source!,
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: AppColors.textSecondary,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                  ],
                 ),
               ),
-            ),
-          ],
+
+              // ── Contact Info ──
+              const SizedBox(height: 20),
+              _sectionHeader('Contact Info'),
+              _detailRow(Icons.phone_outlined, 'Phone',
+                  client.phone.isNotEmpty ? client.phone : 'Not set'),
+              _detailRow(Icons.email_outlined, 'Email',
+                  client.email ?? 'Not set'),
+              if (client.photoUrl != null)
+                _detailRow(Icons.image_outlined, 'Photo URL', 'Set'),
+
+              // ── Account Details ──
+              const SizedBox(height: 16),
+              _sectionHeader('Account Details'),
+              _detailRow(Icons.badge_outlined, 'Client ID', client.clientId),
+              if (client.sqliteId != null)
+                _detailRow(Icons.storage_outlined, 'SQLite ID',
+                    '${client.sqliteId}'),
+              _detailRow(Icons.person_outline, 'Role', client.role),
+              _detailRow(
+                Icons.lock_outlined,
+                'Password',
+                client.hasPassword ? 'Set' : 'Not set',
+              ),
+              if (client.passwordHash != null &&
+                  client.passwordHash!.isNotEmpty)
+                _detailRow(
+                  Icons.fingerprint_rounded,
+                  'Password Hash',
+                  '${client.passwordHash!.substring(0, (client.passwordHash!.length > 20 ? 20 : client.passwordHash!.length))}...',
+                ),
+
+              // ── Trip Stats ──
+              const SizedBox(height: 16),
+              _sectionHeader('Trip Stats'),
+              _detailRow(Icons.directions_car_outlined, 'Total Trips',
+                  '${client.totalTrips}'),
+              _detailRow(Icons.attach_money_rounded, 'Total Spent',
+                  currFmt.format(client.totalSpent)),
+              if (client.rating != null)
+                _detailRow(Icons.star_rounded, 'Rating',
+                    client.rating!.toStringAsFixed(1)),
+
+              // ── Timestamps ──
+              const SizedBox(height: 16),
+              _sectionHeader('Timestamps'),
+              if (client.createdAt != null)
+                _detailRow(Icons.calendar_today_rounded, 'Registered',
+                    dateFmt.format(client.createdAt!)),
+              if (client.lastTripAt != null)
+                _detailRow(Icons.schedule_rounded, 'Last Trip',
+                    dateFmt.format(client.lastTripAt!)),
+              if (client.lastUpdated != null)
+                _detailRow(Icons.update_rounded, 'Last Updated',
+                    dateFmt.format(client.lastUpdated!)),
+
+              const SizedBox(height: 20),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: () {
+                    Navigator.pop(context);
+                    _showActions(context, client);
+                  },
+                  icon: const Icon(Icons.settings_rounded, size: 18),
+                  label: const Text('Manage Client'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    foregroundColor: const Color(0xFF1A1400),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
+      ),
+    );
+  }
+
+  Widget _sectionHeader(String title) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Row(
+        children: [
+          Container(
+            width: 3,
+            height: 16,
+            decoration: BoxDecoration(
+              color: AppColors.primary,
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+          const SizedBox(width: 8),
+          Text(
+            title,
+            style: const TextStyle(
+              color: AppColors.textPrimary,
+              fontSize: 15,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ],
       ),
     );
   }
