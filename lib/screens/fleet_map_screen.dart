@@ -35,8 +35,9 @@ class _FleetMapScreenState extends State<FleetMapScreen> {
   // Simulation demo
   bool _simulationMode = false;
   Timer? _simTimer;
-  List<_DriverPin> _simDrivers = [];
+  List<_SimDriverState> _simStates = [];
   final _rand = Random();
+  gm.BitmapDescriptor? _simCarIcon;
 
   gm.BitmapDescriptor? _gmOnlineIcon;
   gm.BitmapDescriptor? _gmOfflineIcon;
@@ -113,6 +114,7 @@ class _FleetMapScreenState extends State<FleetMapScreen> {
     _gmOnlineIcon = await _carBitmap(AppColors.success);
     _gmOfflineIcon = await _carBitmap(AppColors.error);
     _gmPickupIcon = await _pickupBitmap();
+    _simCarIcon = await _simCarBitmap();
     if (mounted) setState(() {});
   }
 
@@ -184,8 +186,155 @@ class _FleetMapScreenState extends State<FleetMapScreen> {
     return gm.BitmapDescriptor.bytes(data!.buffer.asUint8List());
   }
 
+  Future<gm.BitmapDescriptor> _simCarBitmap() async {
+    const w = 42.0;
+    const h = 100.0;
+    final rec = ui.PictureRecorder();
+    final c = Canvas(rec);
+    c.drawRRect(
+      RRect.fromRectAndRadius(
+        const Rect.fromLTWH(4, 6, 34, 92),
+        const Radius.circular(10),
+      ),
+      Paint()
+        ..color = const Color(0x60000000)
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 3),
+    );
+    final bodyPath = Path()
+      ..moveTo(w / 2, 4)
+      ..quadraticBezierTo(w - 6, 4, w - 6, 16)
+      ..lineTo(w - 5, h - 16)
+      ..quadraticBezierTo(w - 6, h - 4, w / 2, h - 4)
+      ..quadraticBezierTo(6, h - 4, 6, h - 16)
+      ..lineTo(5, 16)
+      ..quadraticBezierTo(6, 4, w / 2, 4)
+      ..close();
+    c.drawPath(bodyPath, Paint()..color = const Color(0xFFF5F5F5));
+    c.drawPath(
+      bodyPath,
+      Paint()
+        ..color = const Color(0xFFBBBBBB)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 0.8,
+    );
+    c.drawLine(
+      const Offset(12, 20),
+      Offset(w - 12, 20),
+      Paint()
+        ..color = const Color(0xFFDDDDDD)
+        ..strokeWidth = 0.5,
+    );
+    final fwPath = Path()
+      ..moveTo(10, 26)
+      ..lineTo(w - 10, 26)
+      ..lineTo(w - 12, 40)
+      ..lineTo(12, 40)
+      ..close();
+    c.drawPath(fwPath, Paint()..color = const Color(0xFF2D3748));
+    c.drawRRect(
+      RRect.fromRectAndRadius(
+        const Rect.fromLTWH(12, 40, 18, 18),
+        const Radius.circular(2),
+      ),
+      Paint()..color = const Color(0xFFE2E2E2),
+    );
+    final rwPath = Path()
+      ..moveTo(12, 58)
+      ..lineTo(w - 12, 58)
+      ..lineTo(w - 10, 70)
+      ..lineTo(10, 70)
+      ..close();
+    c.drawPath(rwPath, Paint()..color = const Color(0xFF2D3748));
+    c.drawLine(
+      const Offset(12, 78),
+      Offset(w - 12, 78),
+      Paint()
+        ..color = const Color(0xFFDDDDDD)
+        ..strokeWidth = 0.5,
+    );
+    c.drawRRect(
+      RRect.fromRectAndRadius(
+        const Rect.fromLTWH(8, 6, 7, 4),
+        const Radius.circular(2),
+      ),
+      Paint()..color = const Color(0xFFFFF8E1),
+    );
+    c.drawRRect(
+      RRect.fromRectAndRadius(
+        Rect.fromLTWH(w - 15, 6, 7, 4),
+        const Radius.circular(2),
+      ),
+      Paint()..color = const Color(0xFFFFF8E1),
+    );
+    c.drawRRect(
+      RRect.fromRectAndRadius(
+        Rect.fromLTWH(8, h - 10, 7, 4),
+        const Radius.circular(2),
+      ),
+      Paint()..color = const Color(0xFFE53E3E),
+    );
+    c.drawRRect(
+      RRect.fromRectAndRadius(
+        Rect.fromLTWH(w - 15, h - 10, 7, 4),
+        const Radius.circular(2),
+      ),
+      Paint()..color = const Color(0xFFE53E3E),
+    );
+    final wp = Paint()..color = const Color(0xFF1A1A1A);
+    c.drawRRect(
+      RRect.fromRectAndRadius(
+        const Rect.fromLTWH(2, 20, 5, 14),
+        const Radius.circular(2),
+      ),
+      wp,
+    );
+    c.drawRRect(
+      RRect.fromRectAndRadius(
+        Rect.fromLTWH(w - 7, 20, 5, 14),
+        const Radius.circular(2),
+      ),
+      wp,
+    );
+    c.drawRRect(
+      RRect.fromRectAndRadius(
+        Rect.fromLTWH(2, h - 34, 5, 14),
+        const Radius.circular(2),
+      ),
+      wp,
+    );
+    c.drawRRect(
+      RRect.fromRectAndRadius(
+        Rect.fromLTWH(w - 7, h - 34, 5, 14),
+        const Radius.circular(2),
+      ),
+      wp,
+    );
+    c.drawOval(
+      const Rect.fromLTWH(1, 28, 5, 4),
+      Paint()..color = const Color(0xFFE0E0E0),
+    );
+    c.drawOval(
+      Rect.fromLTWH(w - 6, 28, 5, 4),
+      Paint()..color = const Color(0xFFE0E0E0),
+    );
+    final img = await rec.endRecording().toImage(w.toInt(), h.toInt());
+    final data2 = await img.toByteData(format: ui.ImageByteFormat.png);
+    return gm.BitmapDescriptor.bytes(data2!.buffer.asUint8List());
+  }
+
   List<_DriverPin> get _displayDrivers {
-    if (_simulationMode) return _simDrivers;
+    if (_simulationMode) {
+      return _simStates
+          .map(
+            (s) => _DriverPin(
+              driver: s.driver,
+              lat: s.lat,
+              lng: s.lng,
+              bearing: s.bearing,
+            ),
+          )
+          .toList();
+    }
     return _showOnlineOnly
         ? _driverPins.where((d) => d.driver.isOnline).toList()
         : _driverPins;
@@ -210,69 +359,37 @@ class _FleetMapScreenState extends State<FleetMapScreen> {
   }
 
   void _startSimulation() {
-    final simData = [
-      (
-        'sim_1',
-        'Carlos',
-        'Martinez',
-        33.5186,
-        -86.8104,
-        'Toyota Camry',
-        'ALA-001',
-      ),
-      (
-        'sim_2',
-        'Ana',
-        'González',
-        33.4950,
-        -86.8044,
-        'Honda Accord',
-        'ALA-002',
-      ),
-      (
-        'sim_3',
-        'Roberto',
-        'Silva',
-        33.5330,
-        -86.7990,
-        'Ford Fusion',
-        'ALA-003',
-      ),
-      ('sim_4', 'Maria', 'López', 33.5070, -86.8250, 'Chevy Malibu', 'ALA-004'),
-      (
-        'sim_5',
-        'José',
-        'Rodríguez',
-        33.5400,
-        -86.8180,
-        'Nissan Altima',
-        'ALA-005',
-      ),
+    const simInfo = [
+      ('sim_1', 'Carlos', 'Martinez', 'Toyota Camry', 'ALA-001', 0, true),
+      ('sim_2', 'Ana', 'González', 'Honda Accord', 'ALA-002', 1, true),
+      ('sim_3', 'Roberto', 'Silva', 'Ford Fusion', 'ALA-003', 2, false),
+      ('sim_4', 'Maria', 'López', 'Chevy Malibu', 'ALA-004', 3, false),
+      ('sim_5', 'José', 'Rodríguez', 'Nissan Altima', 'ALA-005', 4, true),
     ];
-    final pins = simData
-        .map(
-          (d) => _DriverPin(
-            driver: DriverModel(
-              driverId: d.$1,
-              firstName: d.$2,
-              lastName: d.$3,
-              phone: '+1-205-000-0000',
-              isOnline: true,
-              vehicleType: d.$6,
-              vehiclePlate: d.$7,
-              status: 'active',
-            ),
-            lat: d.$4,
-            lng: d.$5,
-            bearing: _rand.nextDouble() * 360,
-          ),
-        )
-        .toList();
-    setState(() {
-      _simulationMode = true;
-      _simDrivers = pins;
-    });
-    _simTimer = Timer.periodic(const Duration(milliseconds: 1500), _moveSim);
+    _simStates = simInfo.map((d) {
+      final route = _simRoutes[d.$6];
+      final startIdx = _rand.nextInt(route.length);
+      return _SimDriverState(
+        driver: DriverModel(
+          driverId: d.$1,
+          firstName: d.$2,
+          lastName: d.$3,
+          phone: '+1-205-555-${_rand.nextInt(9000) + 1000}',
+          isOnline: true,
+          vehicleType: d.$4,
+          vehiclePlate: d.$5,
+          status: 'active',
+        ),
+        route: route,
+        isLoop: d.$7,
+        waypointIdx: startIdx,
+        lat: route[startIdx].$1,
+        lng: route[startIdx].$2,
+        bearing: _rand.nextDouble() * 360,
+      );
+    }).toList();
+    setState(() => _simulationMode = true);
+    _simTimer = Timer.periodic(const Duration(milliseconds: 80), _moveSim);
   }
 
   void _stopSimulation() {
@@ -280,25 +397,51 @@ class _FleetMapScreenState extends State<FleetMapScreen> {
     _simTimer = null;
     setState(() {
       _simulationMode = false;
-      _simDrivers = [];
+      _simStates = [];
       _selectedDriver = null;
     });
   }
 
   void _moveSim(Timer t) {
+    if (!mounted) return;
     setState(() {
-      _simDrivers = _simDrivers.map((dp) {
-        final dlat = (_rand.nextDouble() - 0.5) * 0.0012;
-        final dlng = (_rand.nextDouble() - 0.5) * 0.0012;
-        final newLat = dp.lat + dlat;
-        final newLng = dp.lng + dlng;
-        return _DriverPin(
-          driver: dp.driver,
-          lat: newLat,
-          lng: newLng,
-          bearing: _calcBearing(dp.lat, dp.lng, newLat, newLng),
-        );
-      }).toList();
+      for (final s in _simStates) {
+        int nextIdx;
+        if (s.isLoop) {
+          nextIdx = (s.waypointIdx + 1) % s.route.length;
+        } else if (s.forward) {
+          nextIdx = s.waypointIdx + 1;
+        } else {
+          nextIdx = s.waypointIdx - 1;
+        }
+        if (nextIdx < 0 || nextIdx >= s.route.length) {
+          s.forward = !s.forward;
+          continue;
+        }
+        final target = s.route[nextIdx];
+        final dx = target.$2 - s.lng;
+        final dy = target.$1 - s.lat;
+        final dist = sqrt(dx * dx + dy * dy);
+        const speed = 0.000035;
+        if (dist < speed * 1.5) {
+          s.lat = target.$1;
+          s.lng = target.$2;
+          s.waypointIdx = nextIdx;
+          if (!s.isLoop) {
+            if (s.forward && nextIdx >= s.route.length - 1) {
+              s.forward = false;
+            } else if (!s.forward && nextIdx <= 0) {
+              s.forward = true;
+            }
+          }
+        } else {
+          final ratio = speed / dist;
+          s.lat += dy * ratio;
+          s.lng += dx * ratio;
+        }
+        final tBearing = _calcBearing(s.lat, s.lng, target.$1, target.$2);
+        s.bearing = _lerpAngle(s.bearing, tBearing, 0.12);
+      }
     });
   }
 
@@ -309,6 +452,11 @@ class _FleetMapScreenState extends State<FleetMapScreen> {
     final y = sin(dLng) * cos(lat2R);
     final x = cos(lat1R) * sin(lat2R) - sin(lat1R) * cos(lat2R) * cos(dLng);
     return (atan2(y, x) * 180 / pi + 360) % 360;
+  }
+
+  double _lerpAngle(double from, double to, double t) {
+    final diff = ((to - from) + 540) % 360 - 180;
+    return (from + diff * t) % 360;
   }
 
   Set<am.Annotation> _buildAppleAnnotations() {
@@ -368,7 +516,9 @@ class _FleetMapScreenState extends State<FleetMapScreen> {
   Set<gm.Marker> _buildGoogleMapMarkers() {
     final markers = <gm.Marker>{};
     for (final dp in _displayDrivers) {
-      final icon = dp.driver.isOnline
+      final icon = _simulationMode
+          ? (_simCarIcon ?? gm.BitmapDescriptor.defaultMarker)
+          : dp.driver.isOnline
           ? (_gmOnlineIcon ??
                 gm.BitmapDescriptor.defaultMarkerWithHue(
                   gm.BitmapDescriptor.hueGreen,
@@ -830,6 +980,107 @@ class _DriverPin {
     this.bearing = 0,
   });
 }
+
+class _SimDriverState {
+  final DriverModel driver;
+  final List<(double, double)> route;
+  final bool isLoop;
+  int waypointIdx;
+  bool forward;
+  double lat;
+  double lng;
+  double bearing;
+
+  _SimDriverState({
+    required this.driver,
+    required this.route,
+    required this.isLoop,
+    this.waypointIdx = 0,
+    required this.lat,
+    required this.lng,
+    this.bearing = 0,
+  }) : forward = true;
+}
+
+const _simRoutes = <List<(double, double)>>[
+  // Route 0: Downtown rectangle loop (clockwise)
+  [
+    (33.5215, -86.8140),
+    (33.5215, -86.8120),
+    (33.5215, -86.8100),
+    (33.5215, -86.8080),
+    (33.5210, -86.8065),
+    (33.5200, -86.8060),
+    (33.5185, -86.8060),
+    (33.5170, -86.8060),
+    (33.5162, -86.8065),
+    (33.5158, -86.8080),
+    (33.5158, -86.8100),
+    (33.5158, -86.8120),
+    (33.5158, -86.8140),
+    (33.5163, -86.8150),
+    (33.5175, -86.8155),
+    (33.5195, -86.8155),
+    (33.5210, -86.8148),
+  ],
+  // Route 1: UAB campus loop
+  [
+    (33.5105, -86.8130),
+    (33.5105, -86.8110),
+    (33.5105, -86.8090),
+    (33.5105, -86.8070),
+    (33.5098, -86.8058),
+    (33.5085, -86.8055),
+    (33.5070, -86.8055),
+    (33.5062, -86.8062),
+    (33.5058, -86.8075),
+    (33.5058, -86.8095),
+    (33.5058, -86.8115),
+    (33.5058, -86.8130),
+    (33.5068, -86.8138),
+    (33.5085, -86.8140),
+    (33.5098, -86.8135),
+  ],
+  // Route 2: 20th St corridor north-south (ping-pong)
+  [
+    (33.5280, -86.8094),
+    (33.5260, -86.8094),
+    (33.5240, -86.8094),
+    (33.5220, -86.8094),
+    (33.5200, -86.8094),
+    (33.5180, -86.8094),
+    (33.5160, -86.8094),
+    (33.5140, -86.8094),
+    (33.5120, -86.8094),
+    (33.5100, -86.8094),
+    (33.5080, -86.8094),
+  ],
+  // Route 3: Highland Ave diagonal (ping-pong)
+  [
+    (33.5080, -86.7940),
+    (33.5090, -86.7965),
+    (33.5100, -86.7990),
+    (33.5108, -86.8015),
+    (33.5115, -86.8040),
+    (33.5120, -86.8065),
+    (33.5125, -86.8090),
+    (33.5128, -86.8115),
+    (33.5130, -86.8140),
+  ],
+  // Route 4: Lakeview district loop
+  [
+    (33.5060, -86.7930),
+    (33.5060, -86.7955),
+    (33.5060, -86.7980),
+    (33.5055, -86.7995),
+    (33.5045, -86.8000),
+    (33.5030, -86.8000),
+    (33.5030, -86.7975),
+    (33.5030, -86.7950),
+    (33.5035, -86.7935),
+    (33.5048, -86.7928),
+  ],
+];
 
 const String _darkMapStyle = r"""
 [
