@@ -37,7 +37,7 @@ workflows:
           <plist version="1.0">
           <dict>
           \t<key>API_KEY</key>
-          \t<string>AIzaSyAdwPUqsI8UuaEQEXw6aaNz7umWeGdWjjg</string>
+          	<string>AIzaSyBW_EyQYZUWbWzD6CAvxo9Btowb7bxALCU</string>
           \t<key>GCM_SENDER_ID</key>
           \t<string>56054738352</string>
           \t<key>PLIST_VERSION</key>
