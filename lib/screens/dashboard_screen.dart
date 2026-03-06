@@ -27,6 +27,9 @@ class _DashboardScreenState extends State<DashboardScreen>
     with TickerProviderStateMixin {
   int _currentIndex = 0;
   int _previousIndex = 0;
+  // Track which tab indexes have been visited so we only build their
+  // widgets on first visit (avoids building GoogleMap before Maps SDK is ready).
+  final Set<int> _visitedPages = {0};
 
   late AnimationController _fadeCtrl;
   late Animation<double> _fadeAnim;
@@ -76,7 +79,10 @@ class _DashboardScreenState extends State<DashboardScreen>
   void _onTabChanged(int i) {
     if (i == _currentIndex) return;
     _previousIndex = _currentIndex;
-    setState(() => _currentIndex = i);
+    setState(() {
+      _visitedPages.add(i);
+      _currentIndex = i;
+    });
 
     // Cross-fade between pages
     _fadeCtrl.value = 0;
@@ -97,7 +103,9 @@ class _DashboardScreenState extends State<DashboardScreen>
         animation: _fadeAnim,
         builder: (_, _) => IndexedStack(
           index: _currentIndex,
-          children: List.generate(_pages.length, (i) {
+          children: List.generate(_pages.length, (i) {            // Don't build pages that haven't been visited yet.
+            // This prevents GoogleMap from initializing before Maps SDK is ready.
+            if (!_visitedPages.contains(i)) return const SizedBox.shrink();
             // Only animate the newly selected page
             final isActive = i == _currentIndex;
             final opacity = isActive
