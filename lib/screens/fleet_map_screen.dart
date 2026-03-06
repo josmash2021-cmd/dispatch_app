@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 import 'dart:math';
+import 'dart:typed_data';
 import 'dart:ui' as ui;
 
 import 'package:apple_maps_flutter/apple_maps_flutter.dart' as am;
@@ -38,6 +39,8 @@ class _FleetMapScreenState extends State<FleetMapScreen> {
   List<_SimDriverState> _simStates = [];
   final _rand = Random();
   gm.BitmapDescriptor? _simCarIcon;
+  Uint8List? _simCarPng; // raw car PNG for iOS rotation
+  final Map<int, am.BitmapDescriptor> _iosRotatedIcons = {}; // 0-359° cache
 
   gm.BitmapDescriptor? _gmOnlineIcon;
   gm.BitmapDescriptor? _gmOfflineIcon;
@@ -51,7 +54,7 @@ class _FleetMapScreenState extends State<FleetMapScreen> {
     super.initState();
     _listenDriverLocations();
     _listenActiveTrips();
-    if (!Platform.isIOS) _initGoogleMarkers();
+    _initMarkers();
   }
 
   @override
@@ -110,11 +113,20 @@ class _FleetMapScreenState extends State<FleetMapScreen> {
         });
   }
 
-  Future<void> _initGoogleMarkers() async {
-    _gmOnlineIcon = await _carBitmap(AppColors.success);
-    _gmOfflineIcon = await _carBitmap(AppColors.error);
-    _gmPickupIcon = await _pickupBitmap();
-    _simCarIcon = await _simCarBitmap();
+  Future<void> _initMarkers() async {
+    _simCarPng = await _renderCarPng();
+    if (Platform.isIOS) {
+      // Pre-generate 36 rotated icons (every 10°) for smooth iOS rotation
+      for (int deg = 0; deg < 360; deg += 10) {
+        final bytes = await _rotatedCarPng(deg.toDouble());
+        _iosRotatedIcons[deg] = am.BitmapDescriptor.fromBytes(bytes);
+      }
+    } else {
+      _gmOnlineIcon = await _carBitmap(AppColors.success);
+      _gmOfflineIcon = await _carBitmap(AppColors.error);
+      _gmPickupIcon = await _pickupBitmap();
+      _simCarIcon = gm.BitmapDescriptor.bytes(_simCarPng!);
+    }
     if (mounted) setState(() {});
   }
 
@@ -186,7 +198,7 @@ class _FleetMapScreenState extends State<FleetMapScreen> {
     return gm.BitmapDescriptor.bytes(data!.buffer.asUint8List());
   }
 
-  Future<gm.BitmapDescriptor> _simCarBitmap() async {
+  Future<Uint8List> _renderCarPng() async {
     const w = 42.0;
     const h = 100.0;
     const scale = 0.22;
@@ -323,7 +335,26 @@ class _FleetMapScreenState extends State<FleetMapScreen> {
     );
     final img = await rec.endRecording().toImage(ow, oh);
     final data2 = await img.toByteData(format: ui.ImageByteFormat.png);
-    return gm.BitmapDescriptor.bytes(data2!.buffer.asUint8List());
+    return data2!.buffer.asUint8List();
+  }
+
+  Future<Uint8List> _rotatedCarPng(double bearingDeg) async {
+    if (_simCarPng == null) return Uint8List(0);
+    final codec = await ui.instantiateImageCodec(_simCarPng!);
+    final frame = await codec.getNextFrame();
+    final src = frame.image;
+    final sz = max(src.width, src.height).toDouble();
+    final rec = ui.PictureRecorder();
+    final c = Canvas(rec);
+    c.translate(sz / 2, sz / 2);
+    c.rotate(bearingDeg * pi / 180);
+    c.translate(-src.width / 2, -src.height / 2);
+    c.drawImage(src, Offset.zero, Paint());
+    final out = await rec.endRecording().toImage(sz.toInt(), sz.toInt());
+    final d = await out.toByteData(format: ui.ImageByteFormat.png);
+    src.dispose();
+    out.dispose();
+    return d!.buffer.asUint8List();
   }
 
   List<_DriverPin> get _displayDrivers {
@@ -372,7 +403,14 @@ class _FleetMapScreenState extends State<FleetMapScreen> {
     ];
     _simStates = simInfo.map((d) {
       final route = _simRoutes[d.$6];
-      final startIdx = _rand.nextInt(route.length);
+      const startIdx = 0;
+      final nextPt = route.length > 1 ? route[1] : route[0];
+      final initBearing = _calcBearing(
+        route[0].$1,
+        route[0].$2,
+        nextPt.$1,
+        nextPt.$2,
+      );
       return _SimDriverState(
         driver: DriverModel(
           driverId: d.$1,
@@ -389,7 +427,7 @@ class _FleetMapScreenState extends State<FleetMapScreen> {
         waypointIdx: startIdx,
         lat: route[startIdx].$1,
         lng: route[startIdx].$2,
-        bearing: _rand.nextDouble() * 360,
+        bearing: initBearing,
       );
     }).toList();
     setState(() => _simulationMode = true);
@@ -438,13 +476,24 @@ class _FleetMapScreenState extends State<FleetMapScreen> {
               s.forward = true;
             }
           }
+          // Look ahead to next waypoint and set bearing toward it
+          int lookAhead;
+          if (s.isLoop) {
+            lookAhead = (s.waypointIdx + 1) % s.route.length;
+          } else if (s.forward) {
+            lookAhead = min(s.waypointIdx + 1, s.route.length - 1);
+          } else {
+            lookAhead = max(s.waypointIdx - 1, 0);
+          }
+          final la = s.route[lookAhead];
+          s.bearing = _calcBearing(s.lat, s.lng, la.$1, la.$2);
         } else {
           final ratio = speed / dist;
           s.lat += dy * ratio;
           s.lng += dx * ratio;
+          // Always face the direction we are moving
+          s.bearing = _calcBearing(s.lat, s.lng, target.$1, target.$2);
         }
-        final tBearing = _calcBearing(s.lat, s.lng, target.$1, target.$2);
-        s.bearing = _lerpAngle(s.bearing, tBearing, 0.18);
       }
     });
   }
@@ -458,21 +507,25 @@ class _FleetMapScreenState extends State<FleetMapScreen> {
     return (atan2(y, x) * 180 / pi + 360) % 360;
   }
 
-  double _lerpAngle(double from, double to, double t) {
-    final diff = ((to - from) + 540) % 360 - 180;
-    return (from + diff * t) % 360;
+  am.BitmapDescriptor _iosCarIcon(double bearing) {
+    final snap = ((bearing / 10).round() * 10) % 360;
+    return _iosRotatedIcons[snap] ?? am.BitmapDescriptor.defaultAnnotation;
   }
 
   Set<am.Annotation> _buildAppleAnnotations() {
     final annotations = <am.Annotation>{};
     for (final dp in _displayDrivers) {
+      final icon = _simulationMode
+          ? _iosCarIcon(dp.bearing)
+          : am.BitmapDescriptor.defaultAnnotationWithHue(
+              dp.driver.isOnline ? 120.0 : 0.0,
+            );
       annotations.add(
         am.Annotation(
           annotationId: am.AnnotationId('driver_${dp.driver.driverId}'),
           position: am.LatLng(dp.lat, dp.lng),
-          icon: am.BitmapDescriptor.defaultAnnotationWithHue(
-            dp.driver.isOnline ? 120.0 : 0.0,
-          ),
+          anchor: const Offset(0.5, 0.5),
+          icon: icon,
           infoWindow: am.InfoWindow(
             title: dp.driver.fullName,
             snippet:
@@ -1007,107 +1060,168 @@ class _SimDriverState {
 }
 
 const _simRoutes = <List<(double, double)>>[
-  // Route 0: 20th St N → 1st Ave N → 18th St N → 5th Ave N loop (Downtown grid)
+  // Route 0: Downtown grid loop — 20th St S → 1st Ave N → 18th St N → 5th Ave N
   [
-    (33.5210, -86.8093), (33.5205, -86.8093), (33.5200, -86.8093),
-    (33.5195, -86.8093), (33.5190, -86.8093), (33.5185, -86.8093),
-    (33.5180, -86.8093), (33.5175, -86.8093), (33.5170, -86.8093),
-    // Turn east on 1st Ave N
-    (33.5168, -86.8088), (33.5168, -86.8080), (33.5168, -86.8072),
-    (33.5168, -86.8064), (33.5168, -86.8056), (33.5168, -86.8048),
-    (33.5168, -86.8040), (33.5168, -86.8032),
-    // Turn north on 18th St N
-    (33.5172, -86.8028), (33.5177, -86.8028), (33.5182, -86.8028),
-    (33.5187, -86.8028), (33.5192, -86.8028), (33.5197, -86.8028),
-    (33.5202, -86.8028), (33.5207, -86.8028), (33.5212, -86.8028),
-    // Turn west on 5th Ave N
-    (33.5214, -86.8033), (33.5214, -86.8041), (33.5214, -86.8049),
-    (33.5214, -86.8057), (33.5214, -86.8065), (33.5214, -86.8073),
-    (33.5214, -86.8081), (33.5214, -86.8089),
+    // South on 20th St
+    (33.5214, -86.8093), (33.5210, -86.8093), (33.5206, -86.8093),
+    (33.5202, -86.8093), (33.5198, -86.8093), (33.5194, -86.8093),
+    (33.5190, -86.8093), (33.5186, -86.8093), (33.5182, -86.8093),
+    (33.5178, -86.8093), (33.5174, -86.8093), (33.5170, -86.8093),
+    // Curve left (turn east onto 1st Ave N)
+    (33.5168, -86.8091), (33.5167, -86.8088), (33.5167, -86.8084),
+    // East on 1st Ave N
+    (33.5167, -86.8080), (33.5167, -86.8076), (33.5167, -86.8072),
+    (33.5167, -86.8068), (33.5167, -86.8064), (33.5167, -86.8060),
+    (33.5167, -86.8056), (33.5167, -86.8052), (33.5167, -86.8048),
+    (33.5167, -86.8044), (33.5167, -86.8040), (33.5167, -86.8036),
+    (33.5167, -86.8032),
+    // Curve left (turn north onto 18th St)
+    (33.5168, -86.8029), (33.5170, -86.8028), (33.5172, -86.8028),
+    // North on 18th St
+    (33.5176, -86.8028), (33.5180, -86.8028), (33.5184, -86.8028),
+    (33.5188, -86.8028), (33.5192, -86.8028), (33.5196, -86.8028),
+    (33.5200, -86.8028), (33.5204, -86.8028), (33.5208, -86.8028),
+    (33.5212, -86.8028),
+    // Curve left (turn west onto 5th Ave N)
+    (33.5214, -86.8030), (33.5215, -86.8033), (33.5215, -86.8036),
+    // West on 5th Ave N
+    (33.5215, -86.8040), (33.5215, -86.8044), (33.5215, -86.8048),
+    (33.5215, -86.8052), (33.5215, -86.8056), (33.5215, -86.8060),
+    (33.5215, -86.8064), (33.5215, -86.8068), (33.5215, -86.8072),
+    (33.5215, -86.8076), (33.5215, -86.8080), (33.5215, -86.8084),
+    (33.5215, -86.8088),
+    // Curve left (turn south back onto 20th St)
+    (33.5215, -86.8091), (33.5214, -86.8093),
   ],
-  // Route 1: University Blvd → 14th St S → 8th Ave S → 20th St S (UAB area)
+  // Route 1: UAB area loop — University Blvd → 14th St → 8th Ave → 20th St
   [
-    (33.5055, -86.8093), (33.5055, -86.8085), (33.5055, -86.8077),
-    (33.5055, -86.8069), (33.5055, -86.8061), (33.5055, -86.8053),
-    (33.5055, -86.8045), (33.5055, -86.8037),
-    // Turn south on 14th St S
-    (33.5051, -86.8033), (33.5046, -86.8033), (33.5041, -86.8033),
-    (33.5036, -86.8033), (33.5031, -86.8033), (33.5026, -86.8033),
-    // Turn west on 8th Ave S
-    (33.5023, -86.8038), (33.5023, -86.8046), (33.5023, -86.8054),
-    (33.5023, -86.8062), (33.5023, -86.8070), (33.5023, -86.8078),
-    (33.5023, -86.8086), (33.5023, -86.8094),
-    // Turn north on 20th St S
-    (33.5027, -86.8097), (33.5032, -86.8097), (33.5037, -86.8097),
-    (33.5042, -86.8097), (33.5047, -86.8097), (33.5052, -86.8097),
+    // East on University Blvd
+    (33.5055, -86.8097), (33.5055, -86.8093), (33.5055, -86.8089),
+    (33.5055, -86.8085), (33.5055, -86.8081), (33.5055, -86.8077),
+    (33.5055, -86.8073), (33.5055, -86.8069), (33.5055, -86.8065),
+    (33.5055, -86.8061), (33.5055, -86.8057), (33.5055, -86.8053),
+    (33.5055, -86.8049), (33.5055, -86.8045), (33.5055, -86.8041),
+    (33.5055, -86.8037),
+    // Curve right (turn south onto 14th St)
+    (33.5054, -86.8034), (33.5052, -86.8033), (33.5050, -86.8033),
+    // South on 14th St
+    (33.5046, -86.8033), (33.5042, -86.8033), (33.5038, -86.8033),
+    (33.5034, -86.8033), (33.5030, -86.8033), (33.5026, -86.8033),
+    // Curve right (turn west onto 8th Ave)
+    (33.5024, -86.8035), (33.5023, -86.8038), (33.5023, -86.8041),
+    // West on 8th Ave
+    (33.5023, -86.8045), (33.5023, -86.8049), (33.5023, -86.8053),
+    (33.5023, -86.8057), (33.5023, -86.8061), (33.5023, -86.8065),
+    (33.5023, -86.8069), (33.5023, -86.8073), (33.5023, -86.8077),
+    (33.5023, -86.8081), (33.5023, -86.8085), (33.5023, -86.8089),
+    (33.5023, -86.8093),
+    // Curve right (turn north onto 20th St)
+    (33.5024, -86.8096), (33.5026, -86.8097), (33.5028, -86.8097),
+    // North on 20th St
+    (33.5032, -86.8097), (33.5036, -86.8097), (33.5040, -86.8097),
+    (33.5044, -86.8097), (33.5048, -86.8097), (33.5052, -86.8097),
   ],
-  // Route 2: Richard Arrington Jr Blvd N-S (ping-pong)
+  // Route 2: 20th St long corridor N→S (ping-pong)
   [
     (33.5250, -86.8093),
-    (33.5245, -86.8093),
-    (33.5240, -86.8093),
-    (33.5235, -86.8093),
+    (33.5246, -86.8093),
+    (33.5242, -86.8093),
+    (33.5238, -86.8093),
+    (33.5234, -86.8093),
     (33.5230, -86.8093),
-    (33.5225, -86.8093),
-    (33.5220, -86.8093),
-    (33.5215, -86.8093),
+    (33.5226, -86.8093),
+    (33.5222, -86.8093),
+    (33.5218, -86.8093),
+    (33.5214, -86.8093),
     (33.5210, -86.8093),
-    (33.5205, -86.8093),
-    (33.5200, -86.8093),
-    (33.5195, -86.8093),
+    (33.5206, -86.8093),
+    (33.5202, -86.8093),
+    (33.5198, -86.8093),
+    (33.5194, -86.8093),
     (33.5190, -86.8093),
-    (33.5185, -86.8093),
-    (33.5180, -86.8093),
-    (33.5175, -86.8093),
+    (33.5186, -86.8093),
+    (33.5182, -86.8093),
+    (33.5178, -86.8093),
+    (33.5174, -86.8093),
     (33.5170, -86.8093),
-    (33.5165, -86.8093),
-    (33.5160, -86.8093),
-    (33.5155, -86.8093),
+    (33.5166, -86.8093),
+    (33.5162, -86.8093),
+    (33.5158, -86.8093),
+    (33.5154, -86.8093),
     (33.5150, -86.8093),
-    (33.5145, -86.8093),
-    (33.5140, -86.8093),
-    (33.5135, -86.8093),
+    (33.5146, -86.8093),
+    (33.5142, -86.8093),
+    (33.5138, -86.8093),
+    (33.5134, -86.8093),
     (33.5130, -86.8093),
-    (33.5125, -86.8093),
-    (33.5120, -86.8093),
-    (33.5115, -86.8093),
+    (33.5126, -86.8093),
+    (33.5122, -86.8093),
+    (33.5118, -86.8093),
+    (33.5114, -86.8093),
     (33.5110, -86.8093),
-    (33.5105, -86.8093),
-    (33.5100, -86.8093),
+    (33.5106, -86.8093),
+    (33.5102, -86.8093),
+    (33.5098, -86.8093),
   ],
-  // Route 3: 2nd Ave N east-west → 22nd St → 4th Ave → back (ping-pong)
+  // Route 3: 2nd Ave N E→W (ping-pong)
   [
     (33.5187, -86.8140),
+    (33.5187, -86.8136),
     (33.5187, -86.8132),
+    (33.5187, -86.8128),
     (33.5187, -86.8124),
+    (33.5187, -86.8120),
     (33.5187, -86.8116),
+    (33.5187, -86.8112),
     (33.5187, -86.8108),
+    (33.5187, -86.8104),
     (33.5187, -86.8100),
+    (33.5187, -86.8096),
     (33.5187, -86.8092),
+    (33.5187, -86.8088),
     (33.5187, -86.8084),
+    (33.5187, -86.8080),
     (33.5187, -86.8076),
+    (33.5187, -86.8072),
     (33.5187, -86.8068),
+    (33.5187, -86.8064),
     (33.5187, -86.8060),
+    (33.5187, -86.8056),
     (33.5187, -86.8052),
+    (33.5187, -86.8048),
     (33.5187, -86.8044),
+    (33.5187, -86.8040),
     (33.5187, -86.8036),
+    (33.5187, -86.8032),
     (33.5187, -86.8028),
+    (33.5187, -86.8024),
     (33.5187, -86.8020),
+    (33.5187, -86.8016),
     (33.5187, -86.8012),
   ],
-  // Route 4: Southside loop — 11th Ave S → 20th St → 14th Ave → 22nd St
+  // Route 4: Southside loop — 11th Ave → 17th St → 14th Ave → 20th St
   [
-    (33.4985, -86.8093), (33.4985, -86.8085), (33.4985, -86.8077),
-    (33.4985, -86.8069), (33.4985, -86.8061), (33.4985, -86.8053),
-    // Turn south on 17th St
-    (33.4981, -86.8049), (33.4976, -86.8049), (33.4971, -86.8049),
-    (33.4966, -86.8049), (33.4961, -86.8049),
-    // Turn west on 14th Ave S
-    (33.4958, -86.8054), (33.4958, -86.8062), (33.4958, -86.8070),
-    (33.4958, -86.8078), (33.4958, -86.8086), (33.4958, -86.8094),
-    // Turn north on 20th St
-    (33.4962, -86.8097), (33.4967, -86.8097), (33.4972, -86.8097),
-    (33.4977, -86.8097), (33.4982, -86.8097),
+    // East on 11th Ave S
+    (33.4985, -86.8097), (33.4985, -86.8093), (33.4985, -86.8089),
+    (33.4985, -86.8085), (33.4985, -86.8081), (33.4985, -86.8077),
+    (33.4985, -86.8073), (33.4985, -86.8069), (33.4985, -86.8065),
+    (33.4985, -86.8061), (33.4985, -86.8057), (33.4985, -86.8053),
+    // Curve right (turn south onto 17th St)
+    (33.4984, -86.8050), (33.4982, -86.8049), (33.4980, -86.8049),
+    // South on 17th St
+    (33.4976, -86.8049), (33.4972, -86.8049), (33.4968, -86.8049),
+    (33.4964, -86.8049), (33.4960, -86.8049),
+    // Curve right (turn west onto 14th Ave)
+    (33.4958, -86.8051), (33.4957, -86.8054), (33.4957, -86.8057),
+    // West on 14th Ave S
+    (33.4957, -86.8061), (33.4957, -86.8065), (33.4957, -86.8069),
+    (33.4957, -86.8073), (33.4957, -86.8077), (33.4957, -86.8081),
+    (33.4957, -86.8085), (33.4957, -86.8089), (33.4957, -86.8093),
+    // Curve right (turn north onto 20th St)
+    (33.4958, -86.8096), (33.4960, -86.8097), (33.4962, -86.8097),
+    // North on 20th St
+    (33.4966, -86.8097), (33.4970, -86.8097), (33.4974, -86.8097),
+    (33.4978, -86.8097), (33.4982, -86.8097),
   ],
 ];
 
