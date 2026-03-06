@@ -119,27 +119,27 @@ class _FleetMapScreenState extends State<FleetMapScreen> {
   }
 
   Future<gm.BitmapDescriptor> _carBitmap(Color color) async {
-    const sz = 72.0;
+    const sz = 28.0;
     final rec = ui.PictureRecorder();
     final c = Canvas(rec);
     c.drawCircle(
       const Offset(sz / 2, sz / 2),
-      sz / 2 - 3,
+      sz / 2 - 1,
       Paint()..color = color,
     );
     c.drawCircle(
       const Offset(sz / 2, sz / 2),
-      sz / 2 - 3,
+      sz / 2 - 1,
       Paint()
         ..color = Colors.white
         ..style = PaintingStyle.stroke
-        ..strokeWidth = 3,
+        ..strokeWidth = 1.5,
     );
     final tp = TextPainter(
       text: TextSpan(
         text: String.fromCharCode(Icons.directions_car.codePoint),
         style: const TextStyle(
-          fontSize: 32,
+          fontSize: 14,
           fontFamily: 'MaterialIcons',
           color: Colors.white,
         ),
@@ -153,27 +153,27 @@ class _FleetMapScreenState extends State<FleetMapScreen> {
   }
 
   Future<gm.BitmapDescriptor> _pickupBitmap() async {
-    const sz = 60.0;
+    const sz = 24.0;
     final rec = ui.PictureRecorder();
     final c = Canvas(rec);
     c.drawCircle(
       const Offset(sz / 2, sz / 2),
-      sz / 2 - 3,
+      sz / 2 - 1,
       Paint()..color = AppColors.primary,
     );
     c.drawCircle(
       const Offset(sz / 2, sz / 2),
-      sz / 2 - 3,
+      sz / 2 - 1,
       Paint()
         ..color = Colors.white
         ..style = PaintingStyle.stroke
-        ..strokeWidth = 3,
+        ..strokeWidth = 1.5,
     );
     final tp = TextPainter(
       text: TextSpan(
         text: String.fromCharCode(Icons.location_on.codePoint),
         style: const TextStyle(
-          fontSize: 28,
+          fontSize: 12,
           fontFamily: 'MaterialIcons',
           color: Colors.white,
         ),
@@ -189,8 +189,12 @@ class _FleetMapScreenState extends State<FleetMapScreen> {
   Future<gm.BitmapDescriptor> _simCarBitmap() async {
     const w = 42.0;
     const h = 100.0;
+    const scale = 0.38;
+    final ow = (w * scale).ceil();
+    final oh = (h * scale).ceil();
     final rec = ui.PictureRecorder();
     final c = Canvas(rec);
+    c.scale(scale);
     c.drawRRect(
       RRect.fromRectAndRadius(
         const Rect.fromLTWH(4, 6, 34, 92),
@@ -317,7 +321,7 @@ class _FleetMapScreenState extends State<FleetMapScreen> {
       Rect.fromLTWH(w - 6, 28, 5, 4),
       Paint()..color = const Color(0xFFE0E0E0),
     );
-    final img = await rec.endRecording().toImage(w.toInt(), h.toInt());
+    final img = await rec.endRecording().toImage(ow, oh);
     final data2 = await img.toByteData(format: ui.ImageByteFormat.png);
     return gm.BitmapDescriptor.bytes(data2!.buffer.asUint8List());
   }
