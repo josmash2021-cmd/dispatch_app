@@ -59,7 +59,7 @@ workflows:
           \t<key>IS_SIGNIN_ENABLED</key>
           \t<true/>
           \t<key>GOOGLE_APP_ID</key>
-          \t<string>1:56054738352:ios:0000000000000000</string>
+          \t<string>1:56054738352:ios:1e63ceaeb97cdb6bc1ba75</string>
           </dict>
           </plist>
           """)
