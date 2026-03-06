@@ -144,18 +144,28 @@ workflows:
           source: true
 
     scripts:
-      # 1 — Inject the real GoogleService-Info.plist from the CI secret
+      # 1 — Inject the real GoogleService-Info.plist from the CI secret (only if variable is set)
       - name: Decode and install GoogleService-Info.plist
         script: |
-          echo "$GOOGLE_SERVICE_INFO_PLIST" | base64 --decode \
-            > "$CM_BUILD_DIR/ios/Runner/GoogleService-Info.plist"
+          if [ -n "$GOOGLE_SERVICE_INFO_PLIST" ]; then
+            echo "$GOOGLE_SERVICE_INFO_PLIST" | base64 --decode \
+              > "$CM_BUILD_DIR/ios/Runner/GoogleService-Info.plist"
+            echo "GoogleService-Info.plist injected from secret."
+          else
+            echo "GOOGLE_SERVICE_INFO_PLIST not set — using repo placeholder."
+          fi
 
-      # 2 — Inject Google Maps API key into Info.plist
+      # 2 — Inject Google Maps API key into Info.plist (key is an empty string by default)
       - name: Inject Google Maps API key
         script: |
-          /usr/libexec/PlistBuddy -c \
-            "Set :GMSApiKey $MAPS_API_KEY_IOS" \
-            "$CM_BUILD_DIR/ios/Runner/Info.plist"
+          if [ -n "$MAPS_API_KEY_IOS" ]; then
+            /usr/libexec/PlistBuddy -c \
+              "Set :GMSApiKey $MAPS_API_KEY_IOS" \
+              "$CM_BUILD_DIR/ios/Runner/Info.plist"
+            echo "Google Maps API key injected."
+          else
+            echo "MAPS_API_KEY_IOS not set — GMSApiKey left empty (map will not render)."
+          fi
 
       # 3 — Set up iOS code signing (managed by Codemagic)
       - name: Set up keychain for code signing

@@ -5,7 +5,7 @@
 	<key>CADisableMinimumFrameDurationOnPhone</key>
 	<true/>
 	<key>GMSApiKey</key>
-	<string>$(MAPS_API_KEY_IOS)</string>
+	<string></string>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>Cruise Dispatch uses your location to center the fleet map.</string>
 	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
