@@ -1,15 +1,17 @@
 import 'dart:async';
+import 'dart:io';
+import 'dart:ui' as ui;
+
+import 'package:apple_maps_flutter/apple_maps_flutter.dart' as am;
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_map/flutter_map.dart';
-import 'package:latlong2/latlong.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart' as gm;
+
 import '../config/app_theme.dart';
 import '../models/driver_model.dart';
 import '../models/trip_model.dart';
 
-/// Live fleet map showing all online drivers and active trips.
-/// Uses flutter_map (OpenStreetMap) — works on iOS, Android, and Web
-/// without any native SDK or API key.
+/// Live fleet map - Apple Maps on iOS, Google Maps on Android.
 class FleetMapScreen extends StatefulWidget {
   const FleetMapScreen({super.key});
 
@@ -18,34 +20,37 @@ class FleetMapScreen extends StatefulWidget {
 }
 
 class _FleetMapScreenState extends State<FleetMapScreen> {
-  final MapController _mapCtrl = MapController();
+  am.AppleMapController? _appleCtrl;
+  gm.GoogleMapController? _googleCtrl;
 
-  // Data
   List<_DriverPin> _driverPins = [];
   List<TripModel> _activeTrips = [];
   StreamSubscription? _driverSub;
   StreamSubscription? _tripSub;
 
-  // Selected driver for info panel
   _DriverPin? _selectedDriver;
-
-  // Filter
   bool _showOnlineOnly = true;
 
-  static final _miamiCenter = LatLng(25.7617, -80.1918);
+  gm.BitmapDescriptor? _gmOnlineIcon;
+  gm.BitmapDescriptor? _gmOfflineIcon;
+  gm.BitmapDescriptor? _gmPickupIcon;
+
+  static const double _miamiLat = 25.7617;
+  static const double _miamiLng = -80.1918;
 
   @override
   void initState() {
     super.initState();
     _listenDriverLocations();
     _listenActiveTrips();
+    if (!Platform.isIOS) _initGoogleMarkers();
   }
 
   @override
   void dispose() {
     _driverSub?.cancel();
     _tripSub?.cancel();
-    _mapCtrl.dispose();
+    _googleCtrl?.dispose();
     super.dispose();
   }
 
@@ -64,12 +69,11 @@ class _FleetMapScreenState extends State<FleetMapScreen> {
                 (data['lng'] as num?)?.toDouble() ??
                 (data['longitude'] as num?)?.toDouble();
             if (lat == null || lng == null) continue;
-
-            final driver = DriverModel.fromFirestore(doc);
             pins.add(
               _DriverPin(
-                driver: driver,
-                position: LatLng(lat, lng),
+                driver: DriverModel.fromFirestore(doc),
+                lat: lat,
+                lng: lng,
                 bearing: (data['bearing'] as num?)?.toDouble() ?? 0,
               ),
             );
@@ -97,80 +101,233 @@ class _FleetMapScreenState extends State<FleetMapScreen> {
         });
   }
 
+  Future<void> _initGoogleMarkers() async {
+    _gmOnlineIcon = await _carBitmap(AppColors.success);
+    _gmOfflineIcon = await _carBitmap(AppColors.error);
+    _gmPickupIcon = await _pickupBitmap();
+    if (mounted) setState(() {});
+  }
+
+  Future<gm.BitmapDescriptor> _carBitmap(Color color) async {
+    const sz = 72.0;
+    final rec = ui.PictureRecorder();
+    final c = Canvas(rec);
+    c.drawCircle(
+      const Offset(sz / 2, sz / 2),
+      sz / 2 - 3,
+      Paint()..color = color,
+    );
+    c.drawCircle(
+      const Offset(sz / 2, sz / 2),
+      sz / 2 - 3,
+      Paint()
+        ..color = Colors.white
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 3,
+    );
+    final tp = TextPainter(
+      text: TextSpan(
+        text: String.fromCharCode(Icons.directions_car.codePoint),
+        style: const TextStyle(
+          fontSize: 32,
+          fontFamily: 'MaterialIcons',
+          color: Colors.white,
+        ),
+      ),
+      textDirection: TextDirection.ltr,
+    )..layout();
+    tp.paint(c, Offset((sz - tp.width) / 2, (sz - tp.height) / 2));
+    final img = await rec.endRecording().toImage(sz.toInt(), sz.toInt());
+    final data = await img.toByteData(format: ui.ImageByteFormat.png);
+    return gm.BitmapDescriptor.bytes(data!.buffer.asUint8List());
+  }
+
+  Future<gm.BitmapDescriptor> _pickupBitmap() async {
+    const sz = 60.0;
+    final rec = ui.PictureRecorder();
+    final c = Canvas(rec);
+    c.drawCircle(
+      const Offset(sz / 2, sz / 2),
+      sz / 2 - 3,
+      Paint()..color = AppColors.primary,
+    );
+    c.drawCircle(
+      const Offset(sz / 2, sz / 2),
+      sz / 2 - 3,
+      Paint()
+        ..color = Colors.white
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 3,
+    );
+    final tp = TextPainter(
+      text: TextSpan(
+        text: String.fromCharCode(Icons.location_on.codePoint),
+        style: const TextStyle(
+          fontSize: 28,
+          fontFamily: 'MaterialIcons',
+          color: Colors.white,
+        ),
+      ),
+      textDirection: TextDirection.ltr,
+    )..layout();
+    tp.paint(c, Offset((sz - tp.width) / 2, (sz - tp.height) / 2));
+    final img = await rec.endRecording().toImage(sz.toInt(), sz.toInt());
+    final data = await img.toByteData(format: ui.ImageByteFormat.png);
+    return gm.BitmapDescriptor.bytes(data!.buffer.asUint8List());
+  }
+
   List<_DriverPin> get _displayDrivers => _showOnlineOnly
       ? _driverPins.where((d) => d.driver.isOnline).toList()
       : _driverPins;
 
-  // ── Build ──
+  void _centerMap() {
+    if (Platform.isIOS) {
+      _appleCtrl?.animateCamera(
+        am.CameraUpdate.newLatLngZoom(
+          const am.LatLng(_miamiLat, _miamiLng),
+          11,
+        ),
+      );
+    } else {
+      _googleCtrl?.animateCamera(
+        gm.CameraUpdate.newLatLngZoom(
+          const gm.LatLng(_miamiLat, _miamiLng),
+          11,
+        ),
+      );
+    }
+  }
+
+  Set<am.Annotation> _buildAppleAnnotations() {
+    final annotations = <am.Annotation>{};
+    for (final dp in _displayDrivers) {
+      annotations.add(
+        am.Annotation(
+          annotationId: am.AnnotationId('driver_${dp.driver.driverId}'),
+          position: am.LatLng(dp.lat, dp.lng),
+          icon: am.BitmapDescriptor.defaultAnnotationWithHue(
+            dp.driver.isOnline ? 120.0 : 0.0,
+          ),
+          infoWindow: am.InfoWindow(
+            title: dp.driver.fullName,
+            snippet:
+                '${dp.driver.vehicleType ?? "Vehicle"} · ${dp.driver.vehiclePlate ?? ""}',
+          ),
+          onTap: () => setState(() => _selectedDriver = dp),
+        ),
+      );
+    }
+    for (final trip in _activeTrips) {
+      if (trip.pickupLat != 0 && trip.pickupLng != 0) {
+        annotations.add(
+          am.Annotation(
+            annotationId: am.AnnotationId('pickup_${trip.tripId}'),
+            position: am.LatLng(trip.pickupLat, trip.pickupLng),
+            icon: am.BitmapDescriptor.defaultAnnotationWithHue(45.0),
+            infoWindow: am.InfoWindow(
+              title: trip.passengerName,
+              snippet: trip.pickupAddress,
+            ),
+          ),
+        );
+      }
+    }
+    return annotations;
+  }
+
+  Widget _buildAppleMap() {
+    return am.AppleMap(
+      initialCameraPosition: const am.CameraPosition(
+        target: am.LatLng(_miamiLat, _miamiLng),
+        zoom: 11,
+      ),
+      annotations: _buildAppleAnnotations(),
+      onMapCreated: (ctrl) => setState(() => _appleCtrl = ctrl),
+      onTap: (_) => setState(() => _selectedDriver = null),
+      mapType: am.MapType.standard,
+      myLocationEnabled: false,
+      compassEnabled: true,
+      zoomGesturesEnabled: true,
+      scrollGesturesEnabled: true,
+    );
+  }
+
+  Set<gm.Marker> _buildGoogleMapMarkers() {
+    final markers = <gm.Marker>{};
+    for (final dp in _displayDrivers) {
+      final icon = dp.driver.isOnline
+          ? (_gmOnlineIcon ??
+                gm.BitmapDescriptor.defaultMarkerWithHue(
+                  gm.BitmapDescriptor.hueGreen,
+                ))
+          : (_gmOfflineIcon ??
+                gm.BitmapDescriptor.defaultMarkerWithHue(
+                  gm.BitmapDescriptor.hueRed,
+                ));
+      markers.add(
+        gm.Marker(
+          markerId: gm.MarkerId('driver_${dp.driver.driverId}'),
+          position: gm.LatLng(dp.lat, dp.lng),
+          rotation: dp.bearing,
+          icon: icon,
+          flat: true,
+          infoWindow: gm.InfoWindow(
+            title: dp.driver.fullName,
+            snippet:
+                '${dp.driver.vehicleType ?? "Vehicle"} · ${dp.driver.vehiclePlate ?? ""}',
+          ),
+          onTap: () => setState(() => _selectedDriver = dp),
+        ),
+      );
+    }
+    for (final trip in _activeTrips) {
+      if (trip.pickupLat != 0 && trip.pickupLng != 0) {
+        markers.add(
+          gm.Marker(
+            markerId: gm.MarkerId('pickup_${trip.tripId}'),
+            position: gm.LatLng(trip.pickupLat, trip.pickupLng),
+            icon:
+                _gmPickupIcon ??
+                gm.BitmapDescriptor.defaultMarkerWithHue(
+                  gm.BitmapDescriptor.hueOrange,
+                ),
+            infoWindow: gm.InfoWindow(
+              title: trip.passengerName,
+              snippet: trip.pickupAddress,
+            ),
+          ),
+        );
+      }
+    }
+    return markers;
+  }
+
+  Widget _buildGoogleMap() {
+    return gm.GoogleMap(
+      initialCameraPosition: const gm.CameraPosition(
+        target: gm.LatLng(_miamiLat, _miamiLng),
+        zoom: 11,
+      ),
+      markers: _buildGoogleMapMarkers(),
+      onMapCreated: (ctrl) => setState(() => _googleCtrl = ctrl),
+      onTap: (_) => setState(() => _selectedDriver = null),
+      zoomControlsEnabled: false,
+      mapToolbarEnabled: false,
+      myLocationEnabled: false,
+      style: _darkMapStyle,
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
     final onlineCount = _driverPins.where((d) => d.driver.isOnline).length;
     final offlineCount = _driverPins.length - onlineCount;
-    final drivers = _displayDrivers;
 
     return Scaffold(
       backgroundColor: AppColors.background,
       body: Stack(
         children: [
-          // ── Map ──
-          FlutterMap(
-            mapController: _mapCtrl,
-            options: MapOptions(
-              initialCenter: _miamiCenter,
-              initialZoom: 11,
-              onTap: (_, _) => setState(() => _selectedDriver = null),
-              backgroundColor: const Color(0xFF0e0e12),
-            ),
-            children: [
-              TileLayer(
-                urlTemplate:
-                    'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}@2x.png',
-                subdomains: const ['a', 'b', 'c', 'd'],
-                userAgentPackageName: 'com.uberclone.dispatch.dispatchApp',
-                maxZoom: 19,
-              ),
-              // Driver markers
-              MarkerLayer(
-                markers: [
-                  for (final dp in drivers)
-                    Marker(
-                      point: dp.position,
-                      width: 40,
-                      height: 40,
-                      child: GestureDetector(
-                        onTap: () => setState(() => _selectedDriver = dp),
-                        child: _DriverMarkerDot(
-                          isOnline: dp.driver.isOnline,
-                          label: dp.driver.fullName.isNotEmpty
-                              ? dp.driver.fullName[0]
-                              : '?',
-                        ),
-                      ),
-                    ),
-                  // Trip pickup markers
-                  for (final trip in _activeTrips)
-                    if (trip.pickupLat != 0 && trip.pickupLng != 0)
-                      Marker(
-                        point: LatLng(trip.pickupLat, trip.pickupLng),
-                        width: 32,
-                        height: 32,
-                        child: Tooltip(
-                          message:
-                              '${trip.passengerName}\n${trip.pickupAddress}',
-                          child: const Icon(
-                            Icons.location_on,
-                            color: AppColors.primary,
-                            size: 32,
-                          ),
-                        ),
-                      ),
-                ],
-              ),
-            ],
-          ),
-
-          // ── Top stats bar ──
+          Platform.isIOS ? _buildAppleMap() : _buildGoogleMap(),
           Positioned(
             top: MediaQuery.of(context).padding.top + 8,
             left: 12,
@@ -220,8 +377,6 @@ class _FleetMapScreenState extends State<FleetMapScreen> {
               ),
             ),
           ),
-
-          // ── Filter / center buttons ──
           Positioned(
             top: MediaQuery.of(context).padding.top + 70,
             right: 12,
@@ -239,13 +394,11 @@ class _FleetMapScreenState extends State<FleetMapScreen> {
                 _mapButton(
                   icon: Icons.my_location,
                   label: 'Center',
-                  onTap: () => _mapCtrl.move(_miamiCenter, 11),
+                  onTap: _centerMap,
                 ),
               ],
             ),
           ),
-
-          // ── Selected driver info panel ──
           if (_selectedDriver != null)
             Positioned(
               left: 12,
@@ -257,8 +410,6 @@ class _FleetMapScreenState extends State<FleetMapScreen> {
       ),
     );
   }
-
-  // ── Helper widgets ──
 
   Widget _statChip(IconData icon, Color color, String label) {
     return Row(
@@ -352,7 +503,7 @@ class _FleetMapScreenState extends State<FleetMapScreen> {
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      '${d.vehicleType ?? 'Vehicle'} · ${d.vehiclePlate ?? 'N/A'}',
+                      '${d.vehicleType ?? "Vehicle"} · ${d.vehiclePlate ?? "N/A"}',
                       style: const TextStyle(
                         color: AppColors.textSecondary,
                         fontSize: 13,
@@ -409,11 +560,10 @@ class _FleetMapScreenState extends State<FleetMapScreen> {
   }
 
   void _showAssignDialog(_DriverPin dp) {
-    final pendingTrips = _activeTrips
+    final pending = _activeTrips
         .where((t) => t.status == TripStatus.requested)
         .toList();
-    if (pendingTrips.isEmpty) return;
-
+    if (pending.isEmpty) return;
     showModalBottomSheet(
       context: context,
       backgroundColor: AppColors.surface,
@@ -442,7 +592,7 @@ class _FleetMapScreenState extends State<FleetMapScreen> {
             ),
           ),
           const SizedBox(height: 12),
-          ...pendingTrips.map(
+          ...pending.map(
             (trip) => ListTile(
               leading: const Icon(Icons.person, color: AppColors.primary),
               title: Text(
@@ -450,7 +600,7 @@ class _FleetMapScreenState extends State<FleetMapScreen> {
                 style: const TextStyle(color: AppColors.textPrimary),
               ),
               subtitle: Text(
-                '${trip.pickupAddress} → ${trip.dropoffAddress}',
+                '${trip.pickupAddress} -> ${trip.dropoffAddress}',
                 style: const TextStyle(
                   color: AppColors.textSecondary,
                   fontSize: 12,
@@ -489,7 +639,6 @@ class _FleetMapScreenState extends State<FleetMapScreen> {
             'driverPhone': dp.driver.phone,
             'acceptedAt': FieldValue.serverTimestamp(),
           });
-
       if (mounted) {
         setState(() => _selectedDriver = null);
         ScaffoldMessenger.of(context).showSnackBar(
@@ -516,58 +665,28 @@ class _FleetMapScreenState extends State<FleetMapScreen> {
   }
 }
 
-// ── Small widget for driver dot on map ──
-
-class _DriverMarkerDot extends StatelessWidget {
-  final bool isOnline;
-  final String label;
-
-  const _DriverMarkerDot({required this.isOnline, required this.label});
-
-  @override
-  Widget build(BuildContext context) {
-    final color = isOnline ? AppColors.success : AppColors.error;
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Container(
-          width: 32,
-          height: 32,
-          decoration: BoxDecoration(
-            color: color,
-            shape: BoxShape.circle,
-            border: Border.all(color: Colors.white, width: 2),
-            boxShadow: [
-              BoxShadow(
-                color: color.withValues(alpha: 0.5),
-                blurRadius: 6,
-                spreadRadius: 1,
-              ),
-            ],
-          ),
-          alignment: Alignment.center,
-          child: Text(
-            label.toUpperCase(),
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 13,
-              fontWeight: FontWeight.w800,
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
 class _DriverPin {
   final DriverModel driver;
-  final LatLng position;
+  final double lat;
+  final double lng;
   final double bearing;
 
   const _DriverPin({
     required this.driver,
-    required this.position,
+    required this.lat,
+    required this.lng,
     this.bearing = 0,
   });
 }
+
+const String _darkMapStyle = r"""
+[
+  {"elementType":"geometry","stylers":[{"color":"#0e0e12"}]},
+  {"elementType":"labels.icon","stylers":[{"visibility":"off"}]},
+  {"elementType":"labels.text.fill","stylers":[{"color":"#757575"}]},
+  {"elementType":"labels.text.stroke","stylers":[{"color":"#0e0e12"}]},
+  {"featureType":"road","elementType":"geometry.fill","stylers":[{"color":"#1c1c28"}]},
+  {"featureType":"road.highway","elementType":"geometry.fill","stylers":[{"color":"#24242e"}]},
+  {"featureType":"water","elementType":"geometry","stylers":[{"color":"#080810"}]}
+]
+""";

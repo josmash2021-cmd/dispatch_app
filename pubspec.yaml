@@ -27,9 +27,9 @@ dependencies:
   google_fonts: ^6.2.1
   shimmer: ^3.0.0
 
-  # Maps
-  flutter_map: ^8.2.2
-  latlong2: ^0.9.1
+  # Maps — native per platform
+  google_maps_flutter: ^2.10.0  # Android (never instantiated on iOS)
+  apple_maps_flutter: ^1.4.0   # iOS (MapKit, no API key needed)
 
   # Utils
   timeago: ^3.7.0
