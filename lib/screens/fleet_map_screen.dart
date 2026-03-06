@@ -131,7 +131,7 @@ class _FleetMapScreenState extends State<FleetMapScreen> {
   }
 
   Future<gm.BitmapDescriptor> _carBitmap(Color color) async {
-    const sz = 28.0;
+    const sz = 48.0;
     final rec = ui.PictureRecorder();
     final c = Canvas(rec);
     c.drawCircle(
@@ -145,13 +145,13 @@ class _FleetMapScreenState extends State<FleetMapScreen> {
       Paint()
         ..color = Colors.white
         ..style = PaintingStyle.stroke
-        ..strokeWidth = 1.5,
+        ..strokeWidth = 2.0,
     );
     final tp = TextPainter(
       text: TextSpan(
         text: String.fromCharCode(Icons.directions_car.codePoint),
         style: const TextStyle(
-          fontSize: 14,
+          fontSize: 24,
           fontFamily: 'MaterialIcons',
           color: Colors.white,
         ),
@@ -165,7 +165,7 @@ class _FleetMapScreenState extends State<FleetMapScreen> {
   }
 
   Future<gm.BitmapDescriptor> _pickupBitmap() async {
-    const sz = 24.0;
+    const sz = 40.0;
     final rec = ui.PictureRecorder();
     final c = Canvas(rec);
     c.drawCircle(
@@ -179,13 +179,13 @@ class _FleetMapScreenState extends State<FleetMapScreen> {
       Paint()
         ..color = Colors.white
         ..style = PaintingStyle.stroke
-        ..strokeWidth = 1.5,
+        ..strokeWidth = 2.0,
     );
     final tp = TextPainter(
       text: TextSpan(
         text: String.fromCharCode(Icons.location_on.codePoint),
         style: const TextStyle(
-          fontSize: 12,
+          fontSize: 20,
           fontFamily: 'MaterialIcons',
           color: Colors.white,
         ),
@@ -201,7 +201,7 @@ class _FleetMapScreenState extends State<FleetMapScreen> {
   Future<Uint8List> _renderCarPng() async {
     const w = 42.0;
     const h = 100.0;
-    const scale = 0.22;
+    const scale = 0.45;
     final ow = (w * scale).ceil();
     final oh = (h * scale).ceil();
     final rec = ui.PictureRecorder();
