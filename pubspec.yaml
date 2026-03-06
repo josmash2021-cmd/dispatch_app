@@ -28,7 +28,8 @@ dependencies:
   shimmer: ^3.0.0
 
   # Maps
-  google_maps_flutter: ^2.10.0
+  flutter_map: ^8.2.2
+  latlong2: ^0.9.1
 
   # Utils
   timeago: ^3.7.0

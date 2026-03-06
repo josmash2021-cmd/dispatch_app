@@ -103,7 +103,8 @@ class _DashboardScreenState extends State<DashboardScreen>
         animation: _fadeAnim,
         builder: (_, _) => IndexedStack(
           index: _currentIndex,
-          children: List.generate(_pages.length, (i) {            // Don't build pages that haven't been visited yet.
+          children: List.generate(_pages.length, (i) {
+            // Don't build pages that haven't been visited yet.
             // This prevents GoogleMap from initializing before Maps SDK is ready.
             if (!_visitedPages.contains(i)) return const SizedBox.shrink();
             // Only animate the newly selected page
@@ -187,7 +188,10 @@ class _StatsContent extends StatelessWidget {
         backgroundColor: AppColors.background,
         actions: [
           IconButton(
-            icon: const Icon(Icons.event_note_rounded, color: AppColors.primary),
+            icon: const Icon(
+              Icons.event_note_rounded,
+              color: AppColors.primary,
+            ),
             tooltip: 'Scheduled Rides',
             onPressed: () => Navigator.push(
               context,
@@ -195,7 +199,10 @@ class _StatsContent extends StatelessWidget {
             ),
           ),
           IconButton(
-            icon: const Icon(Icons.assessment_rounded, color: AppColors.primary),
+            icon: const Icon(
+              Icons.assessment_rounded,
+              color: AppColors.primary,
+            ),
             tooltip: 'Financial Reports',
             onPressed: () => Navigator.push(
               context,

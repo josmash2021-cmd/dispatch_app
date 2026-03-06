@@ -1,13 +1,15 @@
 import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
-import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:flutter_map/flutter_map.dart';
+import 'package:latlong2/latlong.dart';
 import '../config/app_theme.dart';
 import '../models/driver_model.dart';
 import '../models/trip_model.dart';
 
 /// Live fleet map showing all online drivers and active trips.
-/// Dispatchers can tap a driver to see info or assign them to a pending trip.
+/// Uses flutter_map (OpenStreetMap) — works on iOS, Android, and Web
+/// without any native SDK or API key.
 class FleetMapScreen extends StatefulWidget {
   const FleetMapScreen({super.key});
 
@@ -16,9 +18,7 @@ class FleetMapScreen extends StatefulWidget {
 }
 
 class _FleetMapScreenState extends State<FleetMapScreen> {
-  GoogleMapController? _mapCtrl;
-  final Set<Marker> _markers = {};
-  final Set<Circle> _circles = {};
+  final MapController _mapCtrl = MapController();
 
   // Data
   List<_DriverPin> _driverPins = [];
@@ -32,7 +32,7 @@ class _FleetMapScreenState extends State<FleetMapScreen> {
   // Filter
   bool _showOnlineOnly = true;
 
-  static const _miamiCenter = LatLng(25.7617, -80.1918);
+  static final _miamiCenter = LatLng(25.7617, -80.1918);
 
   @override
   void initState() {
@@ -45,121 +45,132 @@ class _FleetMapScreenState extends State<FleetMapScreen> {
   void dispose() {
     _driverSub?.cancel();
     _tripSub?.cancel();
-    _mapCtrl?.dispose();
+    _mapCtrl.dispose();
     super.dispose();
   }
 
-  /// Listen to drivers collection for live locations
   void _listenDriverLocations() {
     _driverSub = FirebaseFirestore.instance
         .collection('drivers')
         .snapshots()
         .listen((snap) {
-      final pins = <_DriverPin>[];
-      for (final doc in snap.docs) {
-        final data = doc.data();
-        final lat = (data['lat'] as num?)?.toDouble() ??
-            (data['latitude'] as num?)?.toDouble();
-        final lng = (data['lng'] as num?)?.toDouble() ??
-            (data['longitude'] as num?)?.toDouble();
-        if (lat == null || lng == null) continue;
+          final pins = <_DriverPin>[];
+          for (final doc in snap.docs) {
+            final data = doc.data();
+            final lat =
+                (data['lat'] as num?)?.toDouble() ??
+                (data['latitude'] as num?)?.toDouble();
+            final lng =
+                (data['lng'] as num?)?.toDouble() ??
+                (data['longitude'] as num?)?.toDouble();
+            if (lat == null || lng == null) continue;
 
-        final driver = DriverModel.fromFirestore(doc);
-        pins.add(_DriverPin(
-          driver: driver,
-          position: LatLng(lat, lng),
-          bearing: (data['bearing'] as num?)?.toDouble() ?? 0,
-        ));
-      }
-      setState(() {
-        _driverPins = pins;
-        _rebuildMarkers();
-      });
-    });
+            final driver = DriverModel.fromFirestore(doc);
+            pins.add(
+              _DriverPin(
+                driver: driver,
+                position: LatLng(lat, lng),
+                bearing: (data['bearing'] as num?)?.toDouble() ?? 0,
+              ),
+            );
+          }
+          if (mounted) setState(() => _driverPins = pins);
+        });
   }
 
-  /// Listen to active trips for pickup/dropoff markers
   void _listenActiveTrips() {
     _tripSub = FirebaseFirestore.instance
         .collection('trips')
-        .where('status', whereIn: ['requested', 'accepted', 'driver_arrived', 'in_progress'])
+        .where(
+          'status',
+          whereIn: ['requested', 'accepted', 'driver_arrived', 'in_progress'],
+        )
         .snapshots()
         .listen((snap) {
-      setState(() {
-        _activeTrips = snap.docs.map((d) => TripModel.fromFirestore(d)).toList();
-        _rebuildMarkers();
-      });
-    });
+          if (mounted) {
+            setState(() {
+              _activeTrips = snap.docs
+                  .map((d) => TripModel.fromFirestore(d))
+                  .toList();
+            });
+          }
+        });
   }
 
-  void _rebuildMarkers() {
-    _markers.clear();
-    _circles.clear();
+  List<_DriverPin> get _displayDrivers => _showOnlineOnly
+      ? _driverPins.where((d) => d.driver.isOnline).toList()
+      : _driverPins;
 
-    // Driver markers
-    final displayDrivers = _showOnlineOnly
-        ? _driverPins.where((d) => d.driver.isOnline).toList()
-        : _driverPins;
-
-    for (final dp in displayDrivers) {
-      final isOnline = dp.driver.isOnline;
-      _markers.add(Marker(
-        markerId: MarkerId('driver_${dp.driver.driverId}'),
-        position: dp.position,
-        rotation: dp.bearing,
-        icon: BitmapDescriptor.defaultMarkerWithHue(
-          isOnline ? BitmapDescriptor.hueGreen : BitmapDescriptor.hueRed,
-        ),
-        infoWindow: InfoWindow(
-          title: dp.driver.fullName,
-          snippet: '${dp.driver.vehicleType ?? 'Vehicle'} · ${dp.driver.vehiclePlate ?? ''}',
-        ),
-        onTap: () => setState(() => _selectedDriver = dp),
-      ));
-    }
-
-    // Trip markers (pickup = gold, dropoff = red)
-    for (final trip in _activeTrips) {
-      if (trip.pickupLat != 0 && trip.pickupLng != 0) {
-        _markers.add(Marker(
-          markerId: MarkerId('pickup_${trip.tripId}'),
-          position: LatLng(trip.pickupLat, trip.pickupLng),
-          icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueOrange),
-          infoWindow: InfoWindow(
-            title: 'Pickup: ${trip.passengerName}',
-            snippet: trip.pickupAddress,
-          ),
-        ));
-      }
-    }
-  }
+  // ── Build ──
 
   @override
   Widget build(BuildContext context) {
     final onlineCount = _driverPins.where((d) => d.driver.isOnline).length;
     final offlineCount = _driverPins.length - onlineCount;
+    final drivers = _displayDrivers;
 
     return Scaffold(
       backgroundColor: AppColors.background,
       body: Stack(
         children: [
-          // Google Map
-          GoogleMap(
-            initialCameraPosition: const CameraPosition(
-              target: _miamiCenter,
-              zoom: 11,
+          // ── Map ──
+          FlutterMap(
+            mapController: _mapCtrl,
+            options: MapOptions(
+              initialCenter: _miamiCenter,
+              initialZoom: 11,
+              onTap: (_, _) => setState(() => _selectedDriver = null),
+              backgroundColor: const Color(0xFF0e0e12),
             ),
-            markers: _markers,
-            circles: _circles,
-            myLocationEnabled: false,
-            zoomControlsEnabled: false,
-            mapToolbarEnabled: false,
-            style: _darkMapStyle,
-            onMapCreated: (ctrl) => _mapCtrl = ctrl,
-            onTap: (_) => setState(() => _selectedDriver = null),
+            children: [
+              TileLayer(
+                urlTemplate:
+                    'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}@2x.png',
+                subdomains: const ['a', 'b', 'c', 'd'],
+                userAgentPackageName: 'com.uberclone.dispatch.dispatchApp',
+                maxZoom: 19,
+              ),
+              // Driver markers
+              MarkerLayer(
+                markers: [
+                  for (final dp in drivers)
+                    Marker(
+                      point: dp.position,
+                      width: 40,
+                      height: 40,
+                      child: GestureDetector(
+                        onTap: () => setState(() => _selectedDriver = dp),
+                        child: _DriverMarkerDot(
+                          isOnline: dp.driver.isOnline,
+                          label: dp.driver.fullName.isNotEmpty
+                              ? dp.driver.fullName[0]
+                              : '?',
+                        ),
+                      ),
+                    ),
+                  // Trip pickup markers
+                  for (final trip in _activeTrips)
+                    if (trip.pickupLat != 0 && trip.pickupLng != 0)
+                      Marker(
+                        point: LatLng(trip.pickupLat, trip.pickupLng),
+                        width: 32,
+                        height: 32,
+                        child: Tooltip(
+                          message:
+                              '${trip.passengerName}\n${trip.pickupAddress}',
+                          child: const Icon(
+                            Icons.location_on,
+                            color: AppColors.primary,
+                            size: 32,
+                          ),
+                        ),
+                      ),
+                ],
+              ),
+            ],
           ),
 
-          // Top bar with stats
+          // ── Top stats bar ──
           Positioned(
             top: MediaQuery.of(context).padding.top + 8,
             left: 12,
@@ -173,7 +184,11 @@ class _FleetMapScreenState extends State<FleetMapScreen> {
               ),
               child: Row(
                 children: [
-                  const Icon(Icons.map_rounded, color: AppColors.primary, size: 22),
+                  const Icon(
+                    Icons.map_rounded,
+                    color: AppColors.primary,
+                    size: 22,
+                  ),
                   const SizedBox(width: 10),
                   const Text(
                     'Fleet Map',
@@ -184,45 +199,53 @@ class _FleetMapScreenState extends State<FleetMapScreen> {
                     ),
                   ),
                   const Spacer(),
-                  _statChip(Icons.circle, AppColors.success, '$onlineCount online'),
+                  _statChip(
+                    Icons.circle,
+                    AppColors.success,
+                    '$onlineCount online',
+                  ),
                   const SizedBox(width: 8),
-                  _statChip(Icons.circle, AppColors.error, '$offlineCount offline'),
+                  _statChip(
+                    Icons.circle,
+                    AppColors.error,
+                    '$offlineCount offline',
+                  ),
                   const SizedBox(width: 8),
-                  _statChip(Icons.local_taxi, AppColors.primary, '${_activeTrips.length} trips'),
+                  _statChip(
+                    Icons.local_taxi,
+                    AppColors.primary,
+                    '${_activeTrips.length} trips',
+                  ),
                 ],
               ),
             ),
           ),
 
-          // Filter toggle
+          // ── Filter / center buttons ──
           Positioned(
             top: MediaQuery.of(context).padding.top + 70,
             right: 12,
             child: Column(
               children: [
                 _mapButton(
-                  icon: _showOnlineOnly ? Icons.visibility : Icons.visibility_off,
+                  icon: _showOnlineOnly
+                      ? Icons.visibility
+                      : Icons.visibility_off,
                   label: _showOnlineOnly ? 'Online' : 'All',
-                  onTap: () {
-                    setState(() {
-                      _showOnlineOnly = !_showOnlineOnly;
-                      _rebuildMarkers();
-                    });
-                  },
+                  onTap: () =>
+                      setState(() => _showOnlineOnly = !_showOnlineOnly),
                 ),
                 const SizedBox(height: 8),
                 _mapButton(
                   icon: Icons.my_location,
                   label: 'Center',
-                  onTap: () {
-                    _mapCtrl?.animateCamera(CameraUpdate.newLatLngZoom(_miamiCenter, 11));
-                  },
+                  onTap: () => _mapCtrl.move(_miamiCenter, 11),
                 ),
               ],
             ),
           ),
 
-          // Selected driver info panel
+          // ── Selected driver info panel ──
           if (_selectedDriver != null)
             Positioned(
               left: 12,
@@ -235,6 +258,8 @@ class _FleetMapScreenState extends State<FleetMapScreen> {
     );
   }
 
+  // ── Helper widgets ──
+
   Widget _statChip(IconData icon, Color color, String label) {
     return Row(
       mainAxisSize: MainAxisSize.min,
@@ -243,7 +268,11 @@ class _FleetMapScreenState extends State<FleetMapScreen> {
         const SizedBox(width: 4),
         Text(
           label,
-          style: TextStyle(color: AppColors.textSecondary, fontSize: 11, fontWeight: FontWeight.w500),
+          style: const TextStyle(
+            color: AppColors.textSecondary,
+            fontSize: 11,
+            fontWeight: FontWeight.w500,
+          ),
         ),
       ],
     );
@@ -268,7 +297,14 @@ class _FleetMapScreenState extends State<FleetMapScreen> {
           children: [
             Icon(icon, color: AppColors.primary, size: 16),
             const SizedBox(width: 6),
-            Text(label, style: const TextStyle(color: AppColors.textPrimary, fontSize: 12, fontWeight: FontWeight.w500)),
+            Text(
+              label,
+              style: const TextStyle(
+                color: AppColors.textPrimary,
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
           ],
         ),
       ),
@@ -289,13 +325,16 @@ class _FleetMapScreenState extends State<FleetMapScreen> {
         children: [
           Row(
             children: [
-              // Avatar
               CircleAvatar(
                 radius: 24,
                 backgroundColor: AppColors.primary.withValues(alpha: 0.2),
                 child: Text(
                   d.fullName.isNotEmpty ? d.fullName[0].toUpperCase() : '?',
-                  style: const TextStyle(color: AppColors.primary, fontSize: 20, fontWeight: FontWeight.w700),
+                  style: const TextStyle(
+                    color: AppColors.primary,
+                    fontSize: 20,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
               ),
               const SizedBox(width: 14),
@@ -305,19 +344,28 @@ class _FleetMapScreenState extends State<FleetMapScreen> {
                   children: [
                     Text(
                       d.fullName,
-                      style: const TextStyle(color: AppColors.textPrimary, fontSize: 16, fontWeight: FontWeight.w600),
+                      style: const TextStyle(
+                        color: AppColors.textPrimary,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                     const SizedBox(height: 2),
                     Text(
                       '${d.vehicleType ?? 'Vehicle'} · ${d.vehiclePlate ?? 'N/A'}',
-                      style: const TextStyle(color: AppColors.textSecondary, fontSize: 13),
+                      style: const TextStyle(
+                        color: AppColors.textSecondary,
+                        fontSize: 13,
+                      ),
                     ),
                   ],
                 ),
               ),
-              // Status badge
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 4,
+                ),
                 decoration: BoxDecoration(
                   color: d.isOnline
                       ? AppColors.success.withValues(alpha: 0.15)
@@ -335,7 +383,8 @@ class _FleetMapScreenState extends State<FleetMapScreen> {
               ),
             ],
           ),
-          if (d.isOnline && _activeTrips.any((t) => t.status == TripStatus.requested)) ...[
+          if (d.isOnline &&
+              _activeTrips.any((t) => t.status == TripStatus.requested)) ...[
             const SizedBox(height: 12),
             SizedBox(
               width: double.infinity,
@@ -346,7 +395,9 @@ class _FleetMapScreenState extends State<FleetMapScreen> {
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.primary,
                   foregroundColor: AppColors.background,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                   minimumSize: const Size.fromHeight(44),
                 ),
               ),
@@ -357,9 +408,10 @@ class _FleetMapScreenState extends State<FleetMapScreen> {
     );
   }
 
-  /// Show dialog to pick which pending trip to assign to this driver
   void _showAssignDialog(_DriverPin dp) {
-    final pendingTrips = _activeTrips.where((t) => t.status == TripStatus.requested).toList();
+    final pendingTrips = _activeTrips
+        .where((t) => t.status == TripStatus.requested)
+        .toList();
     if (pendingTrips.isEmpty) return;
 
     showModalBottomSheet(
@@ -372,50 +424,79 @@ class _FleetMapScreenState extends State<FleetMapScreen> {
         mainAxisSize: MainAxisSize.min,
         children: [
           const SizedBox(height: 12),
-          Container(width: 40, height: 4, decoration: BoxDecoration(color: AppColors.divider, borderRadius: BorderRadius.circular(2))),
+          Container(
+            width: 40,
+            height: 4,
+            decoration: BoxDecoration(
+              color: AppColors.divider,
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
           const SizedBox(height: 16),
           Text(
             'Assign ${dp.driver.fullName} to:',
-            style: const TextStyle(color: AppColors.textPrimary, fontSize: 16, fontWeight: FontWeight.w600),
+            style: const TextStyle(
+              color: AppColors.textPrimary,
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
+            ),
           ),
           const SizedBox(height: 12),
-          ...pendingTrips.map((trip) => ListTile(
-            leading: const Icon(Icons.person, color: AppColors.primary),
-            title: Text(trip.passengerName, style: const TextStyle(color: AppColors.textPrimary)),
-            subtitle: Text('${trip.pickupAddress} → ${trip.dropoffAddress}',
-              style: const TextStyle(color: AppColors.textSecondary, fontSize: 12),
-              maxLines: 1, overflow: TextOverflow.ellipsis,
+          ...pendingTrips.map(
+            (trip) => ListTile(
+              leading: const Icon(Icons.person, color: AppColors.primary),
+              title: Text(
+                trip.passengerName,
+                style: const TextStyle(color: AppColors.textPrimary),
+              ),
+              subtitle: Text(
+                '${trip.pickupAddress} → ${trip.dropoffAddress}',
+                style: const TextStyle(
+                  color: AppColors.textSecondary,
+                  fontSize: 12,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+              trailing: Text(
+                '\$${trip.fare.toStringAsFixed(2)}',
+                style: const TextStyle(
+                  color: AppColors.primary,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              onTap: () {
+                Navigator.pop(ctx);
+                _assignDriverToTrip(dp, trip);
+              },
             ),
-            trailing: Text('\$${trip.fare.toStringAsFixed(2)}',
-              style: const TextStyle(color: AppColors.primary, fontWeight: FontWeight.w600),
-            ),
-            onTap: () {
-              Navigator.pop(ctx);
-              _assignDriverToTrip(dp, trip);
-            },
-          )),
+          ),
           const SizedBox(height: 20),
         ],
       ),
     );
   }
 
-  /// Assign a driver to a trip in Firestore
   Future<void> _assignDriverToTrip(_DriverPin dp, TripModel trip) async {
     try {
-      await FirebaseFirestore.instance.collection('trips').doc(trip.tripId).update({
-        'status': 'accepted',
-        'driverId': dp.driver.driverId,
-        'driverName': dp.driver.fullName,
-        'driverPhone': dp.driver.phone,
-        'acceptedAt': FieldValue.serverTimestamp(),
-      });
+      await FirebaseFirestore.instance
+          .collection('trips')
+          .doc(trip.tripId)
+          .update({
+            'status': 'accepted',
+            'driverId': dp.driver.driverId,
+            'driverName': dp.driver.fullName,
+            'driverPhone': dp.driver.phone,
+            'acceptedAt': FieldValue.serverTimestamp(),
+          });
 
       if (mounted) {
         setState(() => _selectedDriver = null);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('${dp.driver.fullName} assigned to ${trip.passengerName}'),
+            content: Text(
+              '${dp.driver.fullName} assigned to ${trip.passengerName}',
+            ),
             backgroundColor: AppColors.primary,
             behavior: SnackBarBehavior.floating,
           ),
@@ -435,6 +516,50 @@ class _FleetMapScreenState extends State<FleetMapScreen> {
   }
 }
 
+// ── Small widget for driver dot on map ──
+
+class _DriverMarkerDot extends StatelessWidget {
+  final bool isOnline;
+  final String label;
+
+  const _DriverMarkerDot({required this.isOnline, required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    final color = isOnline ? AppColors.success : AppColors.error;
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 32,
+          height: 32,
+          decoration: BoxDecoration(
+            color: color,
+            shape: BoxShape.circle,
+            border: Border.all(color: Colors.white, width: 2),
+            boxShadow: [
+              BoxShadow(
+                color: color.withValues(alpha: 0.5),
+                blurRadius: 6,
+                spreadRadius: 1,
+              ),
+            ],
+          ),
+          alignment: Alignment.center,
+          child: Text(
+            label.toUpperCase(),
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 13,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
 class _DriverPin {
   final DriverModel driver;
   final LatLng position;
@@ -446,19 +571,3 @@ class _DriverPin {
     this.bearing = 0,
   });
 }
-
-const String _darkMapStyle = '''
-[
-  {"elementType":"geometry","stylers":[{"color":"#0e0e12"}]},
-  {"elementType":"labels.icon","stylers":[{"visibility":"off"}]},
-  {"elementType":"labels.text.fill","stylers":[{"color":"#757575"}]},
-  {"elementType":"labels.text.stroke","stylers":[{"color":"#0e0e12"}]},
-  {"featureType":"administrative","elementType":"geometry","stylers":[{"color":"#1a1a24"}]},
-  {"featureType":"poi","elementType":"geometry","stylers":[{"color":"#14141c"}]},
-  {"featureType":"road","elementType":"geometry.fill","stylers":[{"color":"#1c1c28"}]},
-  {"featureType":"road","elementType":"geometry.stroke","stylers":[{"color":"#14141c"}]},
-  {"featureType":"road.highway","elementType":"geometry.fill","stylers":[{"color":"#24242e"}]},
-  {"featureType":"transit","elementType":"geometry","stylers":[{"color":"#14141c"}]},
-  {"featureType":"water","elementType":"geometry","stylers":[{"color":"#080810"}]}
-]
-''';
