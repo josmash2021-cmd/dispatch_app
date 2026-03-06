@@ -60,9 +60,12 @@ class DefaultFirebaseOptions {
     storageBucket: 'cruise-af9f1.firebasestorage.app',
   );
 
+  // NOTE: iOS uses GoogleService-Info.plist at runtime (main.dart).
+  // These options are kept as fallback only — replace appId with the real
+  // GOOGLE_APP_ID from Firebase Console once you register the iOS app.
   static const FirebaseOptions ios = FirebaseOptions(
     apiKey: 'AIzaSyAdwPUqsI8UuaEQEXw6aaNz7umWeGdWjjg',
-    appId: '1:56054738352:ios:dispatch000000000000',
+    appId: '1:56054738352:ios:0000000000000000',
     messagingSenderId: '56054738352',
     projectId: 'cruise-af9f1',
     storageBucket: 'cruise-af9f1.firebasestorage.app',
@@ -71,7 +74,7 @@ class DefaultFirebaseOptions {
 
   static const FirebaseOptions macos = FirebaseOptions(
     apiKey: 'AIzaSyAdwPUqsI8UuaEQEXw6aaNz7umWeGdWjjg',
-    appId: '1:56054738352:macos:dispatch000000000000',
+    appId: '1:56054738352:macos:0000000000000000',
     messagingSenderId: '56054738352',
     projectId: 'cruise-af9f1',
     storageBucket: 'cruise-af9f1.firebasestorage.app',

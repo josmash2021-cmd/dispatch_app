@@ -1,4 +1,7 @@
+import 'dart:io' show Platform;
+
 import 'package:firebase_core/firebase_core.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:provider/provider.dart';
@@ -18,11 +21,19 @@ import 'screens/login_screen.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   try {
-    await Firebase.initializeApp(
-      options: DefaultFirebaseOptions.currentPlatform,
-    );
-  } catch (_) {
-    // Firebase already initialized (hot restart)
+    // On iOS/macOS: Firebase reads GoogleService-Info.plist automatically.
+    // On other platforms: use explicit options from firebase_options.dart.
+    final useNativeConfig = !kIsWeb && (Platform.isIOS || Platform.isMacOS);
+    if (useNativeConfig) {
+      await Firebase.initializeApp();
+    } else {
+      await Firebase.initializeApp(
+        options: DefaultFirebaseOptions.currentPlatform,
+      );
+    }
+  } catch (e) {
+    // Firebase already initialized (hot restart) — ignore duplicate-app error.
+    if (!e.toString().contains('duplicate-app')) rethrow;
   }
   await initializeDateFormatting('es', null);
   timeago.setLocaleMessages('es', timeago.EsMessages());
