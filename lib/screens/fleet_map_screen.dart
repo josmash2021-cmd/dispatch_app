@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:io';
+import 'dart:math';
 import 'dart:ui' as ui;
 
 import 'package:apple_maps_flutter/apple_maps_flutter.dart' as am;
@@ -31,12 +32,18 @@ class _FleetMapScreenState extends State<FleetMapScreen> {
   _DriverPin? _selectedDriver;
   bool _showOnlineOnly = true;
 
+  // Simulation demo
+  bool _simulationMode = false;
+  Timer? _simTimer;
+  List<_DriverPin> _simDrivers = [];
+  final _rand = Random();
+
   gm.BitmapDescriptor? _gmOnlineIcon;
   gm.BitmapDescriptor? _gmOfflineIcon;
   gm.BitmapDescriptor? _gmPickupIcon;
 
-  static const double _miamiLat = 25.7617;
-  static const double _miamiLng = -80.1918;
+  static const double _defaultLat = 33.5186; // Birmingham, Alabama
+  static const double _defaultLng = -86.8104;
 
   @override
   void initState() {
@@ -48,6 +55,7 @@ class _FleetMapScreenState extends State<FleetMapScreen> {
 
   @override
   void dispose() {
+    _simTimer?.cancel();
     _driverSub?.cancel();
     _tripSub?.cancel();
     _googleCtrl?.dispose();
@@ -176,26 +184,131 @@ class _FleetMapScreenState extends State<FleetMapScreen> {
     return gm.BitmapDescriptor.bytes(data!.buffer.asUint8List());
   }
 
-  List<_DriverPin> get _displayDrivers => _showOnlineOnly
-      ? _driverPins.where((d) => d.driver.isOnline).toList()
-      : _driverPins;
+  List<_DriverPin> get _displayDrivers {
+    if (_simulationMode) return _simDrivers;
+    return _showOnlineOnly
+        ? _driverPins.where((d) => d.driver.isOnline).toList()
+        : _driverPins;
+  }
 
   void _centerMap() {
     if (Platform.isIOS) {
       _appleCtrl?.animateCamera(
         am.CameraUpdate.newLatLngZoom(
-          const am.LatLng(_miamiLat, _miamiLng),
-          11,
+          const am.LatLng(_defaultLat, _defaultLng),
+          12,
         ),
       );
     } else {
       _googleCtrl?.animateCamera(
         gm.CameraUpdate.newLatLngZoom(
-          const gm.LatLng(_miamiLat, _miamiLng),
-          11,
+          const gm.LatLng(_defaultLat, _defaultLng),
+          12,
         ),
       );
     }
+  }
+
+  void _startSimulation() {
+    final simData = [
+      (
+        'sim_1',
+        'Carlos',
+        'Martinez',
+        33.5186,
+        -86.8104,
+        'Toyota Camry',
+        'ALA-001',
+      ),
+      (
+        'sim_2',
+        'Ana',
+        'González',
+        33.4950,
+        -86.8044,
+        'Honda Accord',
+        'ALA-002',
+      ),
+      (
+        'sim_3',
+        'Roberto',
+        'Silva',
+        33.5330,
+        -86.7990,
+        'Ford Fusion',
+        'ALA-003',
+      ),
+      ('sim_4', 'Maria', 'López', 33.5070, -86.8250, 'Chevy Malibu', 'ALA-004'),
+      (
+        'sim_5',
+        'José',
+        'Rodríguez',
+        33.5400,
+        -86.8180,
+        'Nissan Altima',
+        'ALA-005',
+      ),
+    ];
+    final pins = simData
+        .map(
+          (d) => _DriverPin(
+            driver: DriverModel(
+              driverId: d.$1,
+              firstName: d.$2,
+              lastName: d.$3,
+              phone: '+1-205-000-0000',
+              isOnline: true,
+              vehicleType: d.$6,
+              vehiclePlate: d.$7,
+              status: 'active',
+            ),
+            lat: d.$4,
+            lng: d.$5,
+            bearing: _rand.nextDouble() * 360,
+          ),
+        )
+        .toList();
+    setState(() {
+      _simulationMode = true;
+      _simDrivers = pins;
+    });
+    _simTimer = Timer.periodic(const Duration(milliseconds: 1500), _moveSim);
+  }
+
+  void _stopSimulation() {
+    _simTimer?.cancel();
+    _simTimer = null;
+    setState(() {
+      _simulationMode = false;
+      _simDrivers = [];
+      _selectedDriver = null;
+    });
+  }
+
+  void _moveSim(Timer t) {
+    setState(() {
+      _simDrivers = _simDrivers.map((dp) {
+        final dlat = (_rand.nextDouble() - 0.5) * 0.0012;
+        final dlng = (_rand.nextDouble() - 0.5) * 0.0012;
+        final newLat = dp.lat + dlat;
+        final newLng = dp.lng + dlng;
+        return _DriverPin(
+          driver: dp.driver,
+          lat: newLat,
+          lng: newLng,
+          bearing: _calcBearing(dp.lat, dp.lng, newLat, newLng),
+        );
+      }).toList();
+    });
+  }
+
+  double _calcBearing(double lat1, double lng1, double lat2, double lng2) {
+    final dLng = (lng2 - lng1) * pi / 180;
+    final lat1R = lat1 * pi / 180;
+    final lat2R = lat2 * pi / 180;
+    final y = sin(dLng) * cos(lat2R);
+    final x = cos(lat1R) * sin(lat2R) - sin(lat1R) * cos(lat2R) * cos(dLng);
+    return (atan2(y, x) * 180 / pi + 360) % 360;
   }
 
   Set<am.Annotation> _buildAppleAnnotations() {
@@ -238,8 +351,8 @@ class _FleetMapScreenState extends State<FleetMapScreen> {
   Widget _buildAppleMap() {
     return am.AppleMap(
       initialCameraPosition: const am.CameraPosition(
-        target: am.LatLng(_miamiLat, _miamiLng),
-        zoom: 11,
+        target: am.LatLng(_defaultLat, _defaultLng),
+        zoom: 12,
       ),
       annotations: _buildAppleAnnotations(),
       onMapCreated: (ctrl) => setState(() => _appleCtrl = ctrl),
@@ -305,8 +418,8 @@ class _FleetMapScreenState extends State<FleetMapScreen> {
   Widget _buildGoogleMap() {
     return gm.GoogleMap(
       initialCameraPosition: const gm.CameraPosition(
-        target: gm.LatLng(_miamiLat, _miamiLng),
-        zoom: 11,
+        target: gm.LatLng(_defaultLat, _defaultLng),
+        zoom: 12,
       ),
       markers: _buildGoogleMapMarkers(),
       onMapCreated: (ctrl) => setState(() => _googleCtrl = ctrl),
@@ -320,8 +433,9 @@ class _FleetMapScreenState extends State<FleetMapScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final onlineCount = _driverPins.where((d) => d.driver.isOnline).length;
-    final offlineCount = _driverPins.length - onlineCount;
+    final displayedDrivers = _displayDrivers;
+    final onlineCount = displayedDrivers.where((d) => d.driver.isOnline).length;
+    final offlineCount = displayedDrivers.length - onlineCount;
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -396,9 +510,47 @@ class _FleetMapScreenState extends State<FleetMapScreen> {
                   label: 'Center',
                   onTap: _centerMap,
                 ),
+                const SizedBox(height: 8),
+                _mapButton(
+                  icon: _simulationMode ? Icons.stop : Icons.play_arrow,
+                  label: _simulationMode ? 'Stop' : 'Demo',
+                  onTap: _simulationMode ? _stopSimulation : _startSimulation,
+                ),
               ],
             ),
           ),
+          if (_simulationMode)
+            Positioned(
+              top: MediaQuery.of(context).padding.top + 68,
+              left: 12,
+              right: 110,
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 6,
+                ),
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withValues(alpha: 0.92),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.play_arrow, color: Colors.white, size: 14),
+                    SizedBox(width: 6),
+                    Text(
+                      'SIMULATION — Demo Visual',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
           if (_selectedDriver != null)
             Positioned(
               left: 12,
