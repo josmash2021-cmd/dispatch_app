@@ -1,6 +1,105 @@
 workflows:
 
   # ─────────────────────────────────────────────────────────────────────────
+  # iOS Sideloadly — unsigned IPA, no Apple Developer account required.
+  #
+  # HOW TO USE:
+  #   1. Trigger this workflow manually from Codemagic (or push to master).
+  #   2. Download the .ipa artifact from the Codemagic build page.
+  #   3. Open Sideloadly on your Windows/Mac PC.
+  #   4. Connect your iPhone via USB and trust the computer.
+  #   5. Drag the .ipa into Sideloadly, enter your Apple ID and click Start.
+  #   6. On iPhone: Settings → General → VPN & Device Management → trust your Apple ID.
+  #
+  # NOTE: Free Apple ID = app expires in 7 days (re-run workflow + re-install).
+  #       Paid dev account ($99/yr) = expires in 1 year.
+  # ─────────────────────────────────────────────────────────────────────────
+  ios-sideloadly:
+    name: iOS Sideloadly (unsigned IPA)
+    max_build_duration: 60
+    instance_type: mac_mini_m2
+
+    environment:
+      flutter: stable
+      xcode: latest
+      cocoapods: default
+
+      # Only Firebase + Maps keys needed — NO App Store credentials required
+      # Group: "firebase_credentials"
+      #   GOOGLE_SERVICE_INFO_PLIST  — base-64 encoded GoogleService-Info.plist
+      # Group: "google_maps"
+      #   MAPS_API_KEY_IOS           — Google Maps iOS API key
+      groups:
+        - firebase_credentials
+        - google_maps
+
+      vars:
+        BUNDLE_ID: "com.uberclone.dispatch.dispatchApp"
+
+    triggering:
+      events:
+        - push
+      branch_patterns:
+        - pattern: "master"
+          include: true
+          source: true
+
+    scripts:
+      # 1 — Inject the real GoogleService-Info.plist
+      - name: Decode and install GoogleService-Info.plist
+        script: |
+          echo "$GOOGLE_SERVICE_INFO_PLIST" | base64 --decode \
+            > "$CM_BUILD_DIR/ios/Runner/GoogleService-Info.plist"
+
+      # 2 — Inject Google Maps API key into Info.plist
+      - name: Inject Google Maps API key
+        script: |
+          /usr/libexec/PlistBuddy -c \
+            "Set :GMSApiKey $MAPS_API_KEY_IOS" \
+            "$CM_BUILD_DIR/ios/Runner/Info.plist"
+
+      # 3 — Flutter dependencies
+      - name: Flutter pub get
+        script: flutter pub get
+
+      # 4 — CocoaPods
+      - name: Pod install
+        script: cd ios && pod install --repo-update
+
+      # 5 — Build iOS release WITHOUT code signing
+      - name: Flutter build iOS (no codesign)
+        script: |
+          flutter build ios \
+            --release \
+            --no-codesign
+
+      # 6 — Package .app → unsigned .ipa (Sideloadly will re-sign it locally)
+      - name: Package unsigned IPA
+        script: |
+          APP_PATH="$CM_BUILD_DIR/build/ios/iphoneos/Runner.app"
+          PAYLOAD_DIR="$CM_BUILD_DIR/Payload"
+          IPA_PATH="$CM_BUILD_DIR/CruiseDispatch_unsigned.ipa"
+
+          mkdir -p "$PAYLOAD_DIR"
+          cp -r "$APP_PATH" "$PAYLOAD_DIR/"
+          cd "$CM_BUILD_DIR"
+          zip -r "$IPA_PATH" Payload/
+          echo "IPA created: $IPA_PATH"
+
+    artifacts:
+      # ← Download this file from the Codemagic build page
+      - CruiseDispatch_unsigned.ipa
+
+    publishing:
+      email:
+        recipients:
+          - your@email.com   # ← replace with your email
+        notify:
+          success: true
+          failure: true
+
+
+  # ─────────────────────────────────────────────────────────────────────────
   # iOS Release — builds a signed IPA and optionally publishes to TestFlight
   # ─────────────────────────────────────────────────────────────────────────
   ios-release:
