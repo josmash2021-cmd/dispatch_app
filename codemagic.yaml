@@ -58,6 +58,10 @@ workflows:
           \t<true/>
           \t<key>IS_SIGNIN_ENABLED</key>
           \t<true/>
+          \t<key>CLIENT_ID</key>
+          \t<string>56054738352-placeholder.apps.googleusercontent.com</string>
+          \t<key>REVERSED_CLIENT_ID</key>
+          \t<string>com.googleusercontent.apps.56054738352-placeholder</string>
           \t<key>GOOGLE_APP_ID</key>
           \t<string>1:56054738352:ios:1e63ceaeb97cdb6bc1ba75</string>
           </dict>
