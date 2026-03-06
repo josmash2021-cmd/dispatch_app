@@ -1,15 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<!--
-  GoogleService-Info.plist — Firebase iOS configuration for Cruise Dispatch
-  =========================================================================
-  IMPORTANT: Replace these placeholder values with the real ones from your
-  Firebase Console → Project Settings → iOS app (com.uberclone.dispatch.dispatchApp).
-
-  In Codemagic, store this file as a base-64 encoded secret in the
-  "firebase_credentials" variable group (GOOGLE_SERVICE_INFO_PLIST) and
-  the CI script will decode it and write it here automatically.
--->
 <plist version="1.0">
 <dict>
 	<key>AD_UNIT_ID_FOR_BANNER_TEST</key>

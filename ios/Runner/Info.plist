@@ -4,15 +4,12 @@
 <dict>
 	<key>CADisableMinimumFrameDurationOnPhone</key>
 	<true/>
-	<!-- Google Maps iOS SDK API key — replaced by Codemagic CI with $MAPS_API_KEY_IOS -->
 	<key>GMSApiKey</key>
 	<string>$(MAPS_API_KEY_IOS)</string>
-	<!-- Location permission descriptions — required if the map requests user location -->
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>Cruise Dispatch uses your location to center the fleet map.</string>
 	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
 	<string>Cruise Dispatch uses your location to center the fleet map.</string>
-	<!-- Allow outbound network connections (Firebase, Maps tile CDN) -->
 	<key>NSAppTransportSecurity</key>
 	<dict>
 		<key>NSAllowsArbitraryLoads</key>
