@@ -668,8 +668,9 @@ class _ClientCard extends StatelessWidget {
                   children: [
                     CircleAvatar(
                       radius: 36,
-                      backgroundColor:
-                          AppColors.primary.withValues(alpha: 0.15),
+                      backgroundColor: AppColors.primary.withValues(
+                        alpha: 0.15,
+                      ),
                       backgroundImage: client.photoUrl != null
                           ? NetworkImage(client.photoUrl!)
                           : null,
@@ -695,8 +696,10 @@ class _ClientCard extends StatelessWidget {
                         decoration: BoxDecoration(
                           color: color,
                           shape: BoxShape.circle,
-                          border:
-                              Border.all(color: AppColors.surface, width: 3),
+                          border: Border.all(
+                            color: AppColors.surface,
+                            width: 3,
+                          ),
                         ),
                       ),
                     ),
@@ -721,7 +724,9 @@ class _ClientCard extends StatelessWidget {
                   children: [
                     Container(
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 12, vertical: 4),
+                        horizontal: 12,
+                        vertical: 4,
+                      ),
                       decoration: BoxDecoration(
                         color: color.withValues(alpha: 0.12),
                         borderRadius: BorderRadius.circular(20),
@@ -729,8 +734,11 @@ class _ClientCard extends StatelessWidget {
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(_statusIcon(client.status),
-                              color: color, size: 14),
+                          Icon(
+                            _statusIcon(client.status),
+                            color: color,
+                            size: 14,
+                          ),
                           const SizedBox(width: 4),
                           Text(
                             _statusLabel(client.status),
@@ -745,7 +753,9 @@ class _ClientCard extends StatelessWidget {
                     ),
                     Container(
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 12, vertical: 4),
+                        horizontal: 12,
+                        vertical: 4,
+                      ),
                       decoration: BoxDecoration(
                         color: AppColors.primary.withValues(alpha: 0.12),
                         borderRadius: BorderRadius.circular(20),
@@ -762,7 +772,9 @@ class _ClientCard extends StatelessWidget {
                     if (client.source != null)
                       Container(
                         padding: const EdgeInsets.symmetric(
-                            horizontal: 12, vertical: 4),
+                          horizontal: 12,
+                          vertical: 4,
+                        ),
                         decoration: BoxDecoration(
                           color: AppColors.textHint.withValues(alpha: 0.12),
                           borderRadius: BorderRadius.circular(20),
@@ -783,10 +795,16 @@ class _ClientCard extends StatelessWidget {
               // ── Contact Info ──
               const SizedBox(height: 20),
               _sectionHeader('Contact Info'),
-              _detailRow(Icons.phone_outlined, 'Phone',
-                  client.phone.isNotEmpty ? client.phone : 'Not set'),
-              _detailRow(Icons.email_outlined, 'Email',
-                  client.email ?? 'Not set'),
+              _detailRow(
+                Icons.phone_outlined,
+                'Phone',
+                client.phone.isNotEmpty ? client.phone : 'Not set',
+              ),
+              _detailRow(
+                Icons.email_outlined,
+                'Email',
+                client.email ?? 'Not set',
+              ),
               if (client.photoUrl != null)
                 _detailRow(Icons.image_outlined, 'Photo URL', 'Set'),
 
@@ -795,8 +813,11 @@ class _ClientCard extends StatelessWidget {
               _sectionHeader('Account Details'),
               _detailRow(Icons.badge_outlined, 'Client ID', client.clientId),
               if (client.sqliteId != null)
-                _detailRow(Icons.storage_outlined, 'SQLite ID',
-                    '${client.sqliteId}'),
+                _detailRow(
+                  Icons.storage_outlined,
+                  'SQLite ID',
+                  '${client.sqliteId}',
+                ),
               _detailRow(Icons.person_outline, 'Role', client.role),
               _detailRow(
                 Icons.lock_outlined,
@@ -811,29 +832,68 @@ class _ClientCard extends StatelessWidget {
                   '${client.passwordHash!.substring(0, (client.passwordHash!.length > 20 ? 20 : client.passwordHash!.length))}...',
                 ),
 
+              // ── Payment Info ──
+              const SizedBox(height: 16),
+              _sectionHeader('Payment Info'),
+              _detailRow(
+                Icons.payment_rounded,
+                'Method',
+                client.paymentMethod?.toUpperCase() ?? 'Not set',
+              ),
+              if (client.cardBrand != null || client.cardLast4 != null)
+                _detailRow(
+                  Icons.credit_card_rounded,
+                  'Card',
+                  '${client.cardBrand?.toUpperCase() ?? 'Card'} •••• ${client.cardLast4 ?? '----'}',
+                ),
+              if (client.bankName != null)
+                _detailRow(
+                  Icons.account_balance_rounded,
+                  'Bank',
+                  client.bankName!,
+                ),
+
               // ── Trip Stats ──
               const SizedBox(height: 16),
               _sectionHeader('Trip Stats'),
-              _detailRow(Icons.directions_car_outlined, 'Total Trips',
-                  '${client.totalTrips}'),
-              _detailRow(Icons.attach_money_rounded, 'Total Spent',
-                  currFmt.format(client.totalSpent)),
+              _detailRow(
+                Icons.directions_car_outlined,
+                'Total Trips',
+                '${client.totalTrips}',
+              ),
+              _detailRow(
+                Icons.attach_money_rounded,
+                'Total Spent',
+                currFmt.format(client.totalSpent),
+              ),
               if (client.rating != null)
-                _detailRow(Icons.star_rounded, 'Rating',
-                    client.rating!.toStringAsFixed(1)),
+                _detailRow(
+                  Icons.star_rounded,
+                  'Rating',
+                  client.rating!.toStringAsFixed(1),
+                ),
 
               // ── Timestamps ──
               const SizedBox(height: 16),
               _sectionHeader('Timestamps'),
               if (client.createdAt != null)
-                _detailRow(Icons.calendar_today_rounded, 'Registered',
-                    dateFmt.format(client.createdAt!)),
+                _detailRow(
+                  Icons.calendar_today_rounded,
+                  'Registered',
+                  dateFmt.format(client.createdAt!),
+                ),
               if (client.lastTripAt != null)
-                _detailRow(Icons.schedule_rounded, 'Last Trip',
-                    dateFmt.format(client.lastTripAt!)),
+                _detailRow(
+                  Icons.schedule_rounded,
+                  'Last Trip',
+                  dateFmt.format(client.lastTripAt!),
+                ),
               if (client.lastUpdated != null)
-                _detailRow(Icons.update_rounded, 'Last Updated',
-                    dateFmt.format(client.lastUpdated!)),
+                _detailRow(
+                  Icons.update_rounded,
+                  'Last Updated',
+                  dateFmt.format(client.lastUpdated!),
+                ),
 
               const SizedBox(height: 20),
               SizedBox(

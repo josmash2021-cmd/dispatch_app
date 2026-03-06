@@ -7,9 +7,11 @@ class DriverService {
   CollectionReference get _driversCollection =>
       _firestore.collection('drivers');
 
-  /// Real-time stream of all drivers, online ones first
+  CollectionReference get _usersCollection => _firestore.collection('users');
+
+  /// Real-time stream merging 'drivers' and driver-role docs from 'users'
   Stream<List<DriverModel>> getDriversStream() {
-    return _driversCollection
+    final driversStream = _driversCollection
         .orderBy('isOnline', descending: true)
         .snapshots()
         .map(
@@ -17,6 +19,39 @@ class DriverService {
               .map((doc) => DriverModel.fromFirestore(doc))
               .toList(),
         );
+
+    final usersStream = _usersCollection
+        .where('role', isEqualTo: 'driver')
+        .snapshots()
+        .handleError((_) => <DriverModel>[])
+        .map(
+          (snapshot) => snapshot.docs
+              .map((doc) => DriverModel.fromFirestore(doc))
+              .toList(),
+        );
+
+    return driversStream.asyncExpand((drivers) {
+      return usersStream.map((userDrivers) {
+        final driverIds = drivers.map((d) => d.driverId).toSet();
+        final driverPhones = drivers
+            .map((d) => d.phone)
+            .where((p) => p.isNotEmpty)
+            .toSet();
+        final merged = [...drivers];
+        for (final ud in userDrivers) {
+          if (!driverIds.contains(ud.driverId) &&
+              !driverPhones.contains(ud.phone)) {
+            merged.add(ud);
+          }
+        }
+        // Online first, then by name
+        merged.sort((a, b) {
+          if (a.isOnline != b.isOnline) return a.isOnline ? -1 : 1;
+          return a.fullName.compareTo(b.fullName);
+        });
+        return merged;
+      });
+    });
   }
 
   /// One-time fetch of all drivers

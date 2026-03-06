@@ -7,16 +7,44 @@ class ClientService {
   CollectionReference get _clientsCollection =>
       _firestore.collection('clients');
 
-  /// Real-time stream of all clients, most recent first
+  CollectionReference get _usersCollection => _firestore.collection('users');
+
+  /// Real-time stream merging both 'clients' and 'users' collections
   Stream<List<ClientModel>> getClientsStream() {
-    return _clientsCollection
+    final clientsStream = _clientsCollection
         .orderBy('createdAt', descending: true)
         .snapshots()
-        .map(
-          (snapshot) => snapshot.docs
-              .map((doc) => ClientModel.fromFirestore(doc))
-              .toList(),
-        );
+        .map((s) => s.docs.map((d) => ClientModel.fromFirestore(d)).toList());
+
+    final usersStream = _usersCollection
+        .orderBy('createdAt', descending: true)
+        .snapshots()
+        .handleError((_) => <ClientModel>[])
+        .map((s) => s.docs.map((d) => ClientModel.fromFirestore(d)).toList());
+
+    // Merge both streams — deduplicate by phone or ID
+    return clientsStream.asyncExpand((clients) {
+      return usersStream.map((users) {
+        final clientIds = clients.map((c) => c.clientId).toSet();
+        final clientPhones = clients
+            .map((c) => c.phone)
+            .where((p) => p.isNotEmpty)
+            .toSet();
+        final merged = [...clients];
+        for (final user in users) {
+          if (!clientIds.contains(user.clientId) &&
+              !clientPhones.contains(user.phone)) {
+            merged.add(user);
+          }
+        }
+        merged.sort((a, b) {
+          final aTime = a.createdAt ?? DateTime(2000);
+          final bTime = b.createdAt ?? DateTime(2000);
+          return bTime.compareTo(aTime);
+        });
+        return merged;
+      });
+    });
   }
 
   /// One-time fetch of all clients

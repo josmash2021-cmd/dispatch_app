@@ -23,6 +23,11 @@ class DriverModel {
   final String status; // 'active' | 'inactive' | 'blocked'
   final String? source;
   final int? sqliteId;
+  // Payment
+  final String? paymentMethod; // 'cash' | 'card' | 'transfer'
+  final String? cardLast4;
+  final String? cardBrand;
+  final String? bankName;
 
   DriverModel({
     required this.driverId,
@@ -46,6 +51,10 @@ class DriverModel {
     this.status = 'active',
     this.source,
     this.sqliteId,
+    this.paymentMethod,
+    this.cardLast4,
+    this.cardBrand,
+    this.bankName,
   });
 
   bool get isActive => status == 'active';
@@ -89,6 +98,11 @@ class DriverModel {
       status: data['status'] as String? ?? 'active',
       source: data['source'] as String?,
       sqliteId: (data['sqliteId'] as num?)?.toInt(),
+      paymentMethod:
+          data['paymentMethod'] as String? ?? data['payment_method'] as String?,
+      cardLast4: data['cardLast4'] as String? ?? data['card_last4'] as String?,
+      cardBrand: data['cardBrand'] as String? ?? data['card_brand'] as String?,
+      bankName: data['bankName'] as String? ?? data['bank_name'] as String?,
     );
   }
 
@@ -117,6 +131,10 @@ class DriverModel {
     'status': status,
     if (source != null) 'source': source,
     if (sqliteId != null) 'sqliteId': sqliteId,
+    if (paymentMethod != null) 'paymentMethod': paymentMethod,
+    if (cardLast4 != null) 'cardLast4': cardLast4,
+    if (cardBrand != null) 'cardBrand': cardBrand,
+    if (bankName != null) 'bankName': bankName,
   };
 
   DriverModel copyWith({
@@ -141,6 +159,10 @@ class DriverModel {
     String? status,
     String? source,
     int? sqliteId,
+    String? paymentMethod,
+    String? cardLast4,
+    String? cardBrand,
+    String? bankName,
   }) {
     return DriverModel(
       driverId: driverId ?? this.driverId,
@@ -164,6 +186,10 @@ class DriverModel {
       status: status ?? this.status,
       source: source ?? this.source,
       sqliteId: sqliteId ?? this.sqliteId,
+      paymentMethod: paymentMethod ?? this.paymentMethod,
+      cardLast4: cardLast4 ?? this.cardLast4,
+      cardBrand: cardBrand ?? this.cardBrand,
+      bankName: bankName ?? this.bankName,
     );
   }
 }

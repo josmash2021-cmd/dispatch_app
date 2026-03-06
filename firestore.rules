@@ -3,14 +3,20 @@ service cloud.firestore {
   match /databases/{database}/documents {
 
     // ═══════════════════════════════════════════════════════════════════
-    // SINGLE-OWNER LOCKDOWN
-    // Only royalpurplecorp@gmail.com can access ANY data.
-    // No other user, even if authenticated, can read or write anything.
+    // HELPERS
     // ═══════════════════════════════════════════════════════════════════
 
     function isOwner() {
       return request.auth != null
         && request.auth.token.email == 'royalpurplecorp@gmail.com';
+    }
+
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwnDoc(docId) {
+      return request.auth != null && request.auth.uid == docId;
     }
 
     function isNonEmptyString(field) {
@@ -22,46 +28,87 @@ service cloud.firestore {
     // ═══════════════════════════════════════════════════════════════════
     match /admins/{adminId} {
       allow read: if isOwner();
-      // Bootstrap: owner can create their own admin doc (first setup only)
       allow create: if isOwner() && adminId == request.auth.uid;
-      allow update, delete: if false;  // locked permanently
+      allow update, delete: if false;
     }
 
     // ═══════════════════════════════════════════════════════════════════
-    // TRIPS COLLECTION — owner only
+    // TRIPS COLLECTION
+    // Owner: full access
+    // Authenticated users: read own trips, create trips
     // ═══════════════════════════════════════════════════════════════════
     match /trips/{tripId} {
-      allow read: if isOwner();
+      allow read: if isOwner()
+        || (isAuthenticated() && resource.data.passengerId == request.auth.uid)
+        || (isAuthenticated() && resource.data.driverId == request.auth.uid);
       allow create: if isOwner()
-        && isNonEmptyString(request.resource.data.passengerName)
-        && isNonEmptyString(request.resource.data.pickupAddress)
-        && isNonEmptyString(request.resource.data.dropoffAddress);
-      allow update: if isOwner();
+        || (isAuthenticated()
+            && isNonEmptyString(request.resource.data.passengerName)
+            && isNonEmptyString(request.resource.data.pickupAddress)
+            && isNonEmptyString(request.resource.data.dropoffAddress));
+      allow update: if isOwner()
+        || (isAuthenticated() && resource.data.driverId == request.auth.uid)
+        || (isAuthenticated() && resource.data.passengerId == request.auth.uid);
       allow delete: if isOwner();
     }
 
     // ═══════════════════════════════════════════════════════════════════
-    // CLIENTS COLLECTION — owner only
+    // USERS COLLECTION — passenger/rider app registrations
+    // Users create & update their own doc (uid = docId)
+    // Owner: full read/write
+    // ═══════════════════════════════════════════════════════════════════
+    match /users/{userId} {
+      allow read: if isOwner() || isOwnDoc(userId);
+      allow create: if isAuthenticated() && isOwnDoc(userId);
+      allow update: if isOwner() || isOwnDoc(userId);
+      allow delete: if isOwner();
+
+      // Payment methods subcollection
+      match /payment_methods/{methodId} {
+        allow read: if isOwner() || isOwnDoc(userId);
+        allow create, update: if isOwnDoc(userId);
+        allow delete: if isOwner() || isOwnDoc(userId);
+      }
+    }
+
+    // ═══════════════════════════════════════════════════════════════════
+    // CLIENTS COLLECTION — dispatch-managed clients
+    // Users can also create/update their own doc here
+    // Owner: full access
     // ═══════════════════════════════════════════════════════════════════
     match /clients/{clientId} {
-      allow read: if isOwner();
+      allow read: if isOwner() || isOwnDoc(clientId);
       allow create: if isOwner()
-        && isNonEmptyString(request.resource.data.firstName)
-        && isNonEmptyString(request.resource.data.phone);
-      allow update: if isOwner();
+        || (isAuthenticated() && isOwnDoc(clientId));
+      allow update: if isOwner() || isOwnDoc(clientId);
       allow delete: if isOwner();
+
+      // Payment methods subcollection
+      match /payment_methods/{methodId} {
+        allow read: if isOwner() || isOwnDoc(clientId);
+        allow create, update: if isOwnDoc(clientId);
+        allow delete: if isOwner() || isOwnDoc(clientId);
+      }
     }
 
     // ═══════════════════════════════════════════════════════════════════
-    // DRIVERS COLLECTION — owner only
+    // DRIVERS COLLECTION
+    // Drivers can create & update their own doc (location, status)
+    // Owner: full access
     // ═══════════════════════════════════════════════════════════════════
     match /drivers/{driverId} {
-      allow read: if isOwner();
+      allow read: if isOwner() || isOwnDoc(driverId);
       allow create: if isOwner()
-        && isNonEmptyString(request.resource.data.firstName)
-        && isNonEmptyString(request.resource.data.phone);
-      allow update: if isOwner();
+        || (isAuthenticated() && isOwnDoc(driverId));
+      allow update: if isOwner() || isOwnDoc(driverId);
       allow delete: if isOwner();
+
+      // Payment methods / earnings subcollection
+      match /payment_methods/{methodId} {
+        allow read: if isOwner() || isOwnDoc(driverId);
+        allow create, update: if isOwnDoc(driverId);
+        allow delete: if isOwner() || isOwnDoc(driverId);
+      }
     }
 
     // ═══════════════════════════════════════════════════════════════════
@@ -70,7 +117,19 @@ service cloud.firestore {
     match /audit_log/{logId} {
       allow read: if isOwner();
       allow create: if isOwner();
-      allow update, delete: if false;  // immutable forever
+      allow update, delete: if false;
+    }
+
+    // ═══════════════════════════════════════════════════════════════════
+    // SCHEDULED RIDES
+    // ═══════════════════════════════════════════════════════════════════
+    match /scheduled_rides/{rideId} {
+      allow read: if isOwner()
+        || (isAuthenticated() && resource.data.passengerId == request.auth.uid);
+      allow create: if isAuthenticated();
+      allow update: if isOwner()
+        || (isAuthenticated() && resource.data.passengerId == request.auth.uid);
+      allow delete: if isOwner();
     }
 
     // ═══════════════════════════════════════════════════════════════════

@@ -698,8 +698,9 @@ class _DriverCard extends StatelessWidget {
                   children: [
                     CircleAvatar(
                       radius: 36,
-                      backgroundColor:
-                          AppColors.primary.withValues(alpha: 0.15),
+                      backgroundColor: AppColors.primary.withValues(
+                        alpha: 0.15,
+                      ),
                       backgroundImage: driver.photoUrl != null
                           ? NetworkImage(driver.photoUrl!)
                           : null,
@@ -725,8 +726,10 @@ class _DriverCard extends StatelessWidget {
                         decoration: BoxDecoration(
                           color: acctColor,
                           shape: BoxShape.circle,
-                          border:
-                              Border.all(color: AppColors.surface, width: 3),
+                          border: Border.all(
+                            color: AppColors.surface,
+                            width: 3,
+                          ),
                         ),
                       ),
                     ),
@@ -741,8 +744,10 @@ class _DriverCard extends StatelessWidget {
                               ? AppColors.success
                               : AppColors.textHint,
                           shape: BoxShape.circle,
-                          border:
-                              Border.all(color: AppColors.surface, width: 3),
+                          border: Border.all(
+                            color: AppColors.surface,
+                            width: 3,
+                          ),
                         ),
                       ),
                     ),
@@ -767,9 +772,12 @@ class _DriverCard extends StatelessWidget {
                   children: [
                     Container(
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 12, vertical: 4),
+                        horizontal: 12,
+                        vertical: 4,
+                      ),
                       decoration: BoxDecoration(
-                        color: (driver.isOnline
+                        color:
+                            (driver.isOnline
                                     ? AppColors.success
                                     : AppColors.textHint)
                                 .withValues(alpha: 0.12),
@@ -788,7 +796,9 @@ class _DriverCard extends StatelessWidget {
                     ),
                     Container(
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 12, vertical: 4),
+                        horizontal: 12,
+                        vertical: 4,
+                      ),
                       decoration: BoxDecoration(
                         color: acctColor.withValues(alpha: 0.12),
                         borderRadius: BorderRadius.circular(20),
@@ -796,8 +806,11 @@ class _DriverCard extends StatelessWidget {
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(_statusIcon(driver.status),
-                              color: acctColor, size: 14),
+                          Icon(
+                            _statusIcon(driver.status),
+                            color: acctColor,
+                            size: 14,
+                          ),
                           const SizedBox(width: 4),
                           Text(
                             _statusLabel(driver.status),
@@ -813,7 +826,9 @@ class _DriverCard extends StatelessWidget {
                     if (driver.source != null)
                       Container(
                         padding: const EdgeInsets.symmetric(
-                            horizontal: 12, vertical: 4),
+                          horizontal: 12,
+                          vertical: 4,
+                        ),
                         decoration: BoxDecoration(
                           color: AppColors.textHint.withValues(alpha: 0.12),
                           borderRadius: BorderRadius.circular(20),
@@ -834,10 +849,16 @@ class _DriverCard extends StatelessWidget {
               // ── Contact Info ──
               const SizedBox(height: 20),
               _sectionHeader('Contact Info'),
-              _detailRow(Icons.phone_outlined, 'Phone',
-                  driver.phone.isNotEmpty ? driver.phone : 'Not set'),
-              _detailRow(Icons.email_outlined, 'Email',
-                  driver.email ?? 'Not set'),
+              _detailRow(
+                Icons.phone_outlined,
+                'Phone',
+                driver.phone.isNotEmpty ? driver.phone : 'Not set',
+              ),
+              _detailRow(
+                Icons.email_outlined,
+                'Email',
+                driver.email ?? 'Not set',
+              ),
               if (driver.photoUrl != null)
                 _detailRow(Icons.image_outlined, 'Photo URL', 'Set'),
 
@@ -846,8 +867,11 @@ class _DriverCard extends StatelessWidget {
               _sectionHeader('Account Details'),
               _detailRow(Icons.badge_outlined, 'Driver ID', driver.driverId),
               if (driver.sqliteId != null)
-                _detailRow(Icons.storage_outlined, 'SQLite ID',
-                    '${driver.sqliteId}'),
+                _detailRow(
+                  Icons.storage_outlined,
+                  'SQLite ID',
+                  '${driver.sqliteId}',
+                ),
               _detailRow(Icons.person_outline, 'Role', driver.role),
               _detailRow(
                 Icons.lock_outlined,
@@ -862,38 +886,83 @@ class _DriverCard extends StatelessWidget {
                   '${driver.passwordHash!.substring(0, (driver.passwordHash!.length > 20 ? 20 : driver.passwordHash!.length))}...',
                 ),
 
+              // ── Payment Info ──
+              const SizedBox(height: 16),
+              _sectionHeader('Payment Info'),
+              _detailRow(
+                Icons.payment_rounded,
+                'Method',
+                driver.paymentMethod?.toUpperCase() ?? 'Not set',
+              ),
+              if (driver.cardBrand != null || driver.cardLast4 != null)
+                _detailRow(
+                  Icons.credit_card_rounded,
+                  'Card',
+                  '${driver.cardBrand?.toUpperCase() ?? 'Card'} •••• ${driver.cardLast4 ?? '----'}',
+                ),
+              if (driver.bankName != null)
+                _detailRow(
+                  Icons.account_balance_rounded,
+                  'Bank',
+                  driver.bankName!,
+                ),
+
               // ── Vehicle Info ──
               const SizedBox(height: 16),
               _sectionHeader('Vehicle Info'),
-              _detailRow(Icons.directions_car_outlined, 'Vehicle',
-                  driver.vehicleType ?? 'Not set'),
-              _detailRow(Icons.confirmation_number_outlined, 'Plate',
-                  driver.vehiclePlate ?? 'Not set'),
+              _detailRow(
+                Icons.directions_car_outlined,
+                'Vehicle',
+                driver.vehicleType ?? 'Not set',
+              ),
+              _detailRow(
+                Icons.confirmation_number_outlined,
+                'Plate',
+                driver.vehiclePlate ?? 'Not set',
+              ),
 
               // ── Location / GPS ──
               const SizedBox(height: 16),
               _sectionHeader('Location'),
-              _detailRow(Icons.gps_fixed_rounded, 'GPS Status',
-                  driver.isOnline ? 'Active' : 'Inactive'),
+              _detailRow(
+                Icons.gps_fixed_rounded,
+                'GPS Status',
+                driver.isOnline ? 'Active' : 'Inactive',
+              ),
               if (driver.lat != null && driver.lng != null)
-                _detailRow(Icons.location_on_outlined, 'Coordinates',
-                    '${driver.lat!.toStringAsFixed(6)}, ${driver.lng!.toStringAsFixed(6)}'),
+                _detailRow(
+                  Icons.location_on_outlined,
+                  'Coordinates',
+                  '${driver.lat!.toStringAsFixed(6)}, ${driver.lng!.toStringAsFixed(6)}',
+                ),
               if (driver.rating != null)
-                _detailRow(Icons.star_rounded, 'Rating',
-                    driver.rating!.toStringAsFixed(1)),
+                _detailRow(
+                  Icons.star_rounded,
+                  'Rating',
+                  driver.rating!.toStringAsFixed(1),
+                ),
 
               // ── Timestamps ──
               const SizedBox(height: 16),
               _sectionHeader('Timestamps'),
               if (driver.createdAt != null)
-                _detailRow(Icons.calendar_today_rounded, 'Registered',
-                    dateFmt.format(driver.createdAt!)),
+                _detailRow(
+                  Icons.calendar_today_rounded,
+                  'Registered',
+                  dateFmt.format(driver.createdAt!),
+                ),
               if (driver.lastSeen != null)
-                _detailRow(Icons.access_time_rounded, 'Last Seen',
-                    timeago.format(driver.lastSeen!, locale: 'en')),
+                _detailRow(
+                  Icons.access_time_rounded,
+                  'Last Seen',
+                  timeago.format(driver.lastSeen!, locale: 'en'),
+                ),
               if (driver.lastUpdated != null)
-                _detailRow(Icons.update_rounded, 'Last Updated',
-                    dateFmt.format(driver.lastUpdated!)),
+                _detailRow(
+                  Icons.update_rounded,
+                  'Last Updated',
+                  dateFmt.format(driver.lastUpdated!),
+                ),
 
               const SizedBox(height: 20),
               SizedBox(
