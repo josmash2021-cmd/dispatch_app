@@ -1,0 +1,9 @@
+# Force LF line endings for all files Xcode reads as plist or config.
+# This prevents SWBUtil.PropertyListConversionError error 2 on Xcode 16+
+# when files are edited on Windows (CRLF) and built on macOS (LF expected).
+*.plist   text eol=lf
+*.xcconfig text eol=lf
+*.yaml    text eol=lf
+*.dart    text eol=lf
+*.swift   text eol=lf
+*.md      text eol=lf
