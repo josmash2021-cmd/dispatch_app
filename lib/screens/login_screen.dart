@@ -232,8 +232,9 @@ class _LoginScreenState extends State<LoginScreen>
                               ),
                             ),
                             validator: (v) {
-                              if (v == null || v.isEmpty)
+                              if (v == null || v.isEmpty) {
                                 return 'Enter your email';
+                              }
                               if (!v.contains('@')) return 'Invalid email';
                               return null;
                             },
@@ -292,8 +293,9 @@ class _LoginScreenState extends State<LoginScreen>
                               ),
                             ),
                             validator: (v) {
-                              if (v == null || v.isEmpty)
+                              if (v == null || v.isEmpty) {
                                 return 'Enter your password';
+                              }
                               if (v.length < 6) return 'At least 6 characters';
                               return null;
                             },

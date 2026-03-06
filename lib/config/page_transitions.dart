@@ -6,10 +6,10 @@ import 'package:flutter/material.dart';
 // ─── Slide up + Fade (Dashboard → Detail) ────────────────────────────────
 Route<T> slideUpFadeRoute<T>(Widget page, {int durationMs = 450}) {
   return PageRouteBuilder<T>(
-    pageBuilder: (_, animation, __) => page,
+    pageBuilder: (_, animation, _) => page,
     transitionDuration: Duration(milliseconds: durationMs),
     reverseTransitionDuration: Duration(milliseconds: (durationMs * 0.75).round()),
-    transitionsBuilder: (_, animation, __, child) {
+    transitionsBuilder: (_, animation, _, child) {
       final curved = CurvedAnimation(
         parent: animation,
         curve: Curves.easeOutCubic,
@@ -37,10 +37,10 @@ Route<T> slideUpFadeRoute<T>(Widget page, {int durationMs = 450}) {
 // ─── Scale + Fade (FAB → Create Trip) ────────────────────────────────────
 Route<T> scaleExpandRoute<T>(Widget page, {int durationMs = 500}) {
   return PageRouteBuilder<T>(
-    pageBuilder: (_, animation, __) => page,
+    pageBuilder: (_, animation, _) => page,
     transitionDuration: Duration(milliseconds: durationMs),
     reverseTransitionDuration: Duration(milliseconds: (durationMs * 0.65).round()),
-    transitionsBuilder: (_, animation, __, child) {
+    transitionsBuilder: (_, animation, _, child) {
       final curved = CurvedAnimation(
         parent: animation,
         curve: Curves.easeOutExpo,
@@ -65,10 +65,10 @@ Route<T> scaleExpandRoute<T>(Widget page, {int durationMs = 500}) {
 // ─── Shared-axis vertical (Trip receipt / detail) ─────────────────────────
 Route<T> sharedAxisVerticalRoute<T>(Widget page, {int durationMs = 450}) {
   return PageRouteBuilder<T>(
-    pageBuilder: (_, animation, __) => page,
+    pageBuilder: (_, animation, _) => page,
     transitionDuration: Duration(milliseconds: durationMs),
     reverseTransitionDuration: Duration(milliseconds: (durationMs * 0.7).round()),
-    transitionsBuilder: (_, animation, __, child) {
+    transitionsBuilder: (_, animation, _, child) {
       final fadeIn = CurvedAnimation(
         parent: animation,
         curve: const Interval(0, 0.6, curve: Curves.easeOut),
@@ -94,10 +94,10 @@ Route<T> sharedAxisVerticalRoute<T>(Widget page, {int durationMs = 450}) {
 // ─── Smooth Fade (Splash → Home) ─────────────────────────────────────────
 Route<T> smoothFadeRoute<T>(Widget page, {int durationMs = 700}) {
   return PageRouteBuilder<T>(
-    pageBuilder: (_, animation, __) => page,
+    pageBuilder: (_, animation, _) => page,
     transitionDuration: Duration(milliseconds: durationMs),
     reverseTransitionDuration: Duration(milliseconds: (durationMs * 0.6).round()),
-    transitionsBuilder: (_, animation, __, child) {
+    transitionsBuilder: (_, animation, _, child) {
       final curved = CurvedAnimation(
         parent: animation,
         curve: Curves.easeOutQuart,
@@ -116,10 +116,10 @@ Route<T> smoothFadeRoute<T>(Widget page, {int durationMs = 700}) {
 // ─── Slide from right (General navigation) ───────────────────────────────
 Route<T> slideFromRightRoute<T>(Widget page, {int durationMs = 400}) {
   return PageRouteBuilder<T>(
-    pageBuilder: (_, animation, __) => page,
+    pageBuilder: (_, animation, _) => page,
     transitionDuration: Duration(milliseconds: durationMs),
     reverseTransitionDuration: Duration(milliseconds: (durationMs * 0.7).round()),
-    transitionsBuilder: (_, animation, __, child) {
+    transitionsBuilder: (_, animation, _, child) {
       final curved = CurvedAnimation(
         parent: animation,
         curve: Curves.easeOutCubic,

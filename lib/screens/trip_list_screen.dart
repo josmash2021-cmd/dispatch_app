@@ -289,7 +289,7 @@ class _LiveBadgeState extends State<_LiveBadge>
   Widget build(BuildContext context) {
     return AnimatedBuilder(
       animation: _anim,
-      builder: (_, __) => Container(
+      builder: (_, _) => Container(
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
         decoration: BoxDecoration(
           color: AppColors.error.withValues(alpha: 0.10 + 0.04 * _anim.value),

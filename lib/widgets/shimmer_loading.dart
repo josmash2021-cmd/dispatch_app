@@ -186,7 +186,7 @@ class ShimmerLoadingList extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 100),
       physics: const NeverScrollableScrollPhysics(),
       itemCount: itemCount,
-      itemBuilder: (_, __) {
+      itemBuilder: (_, _) {
         switch (type) {
           case ShimmerType.trip:
             return const ShimmerTripCard();

@@ -48,7 +48,7 @@ class _PulseDotState extends State<_PulseDot>
   Widget build(BuildContext context) {
     return AnimatedBuilder(
       animation: _anim,
-      builder: (_, __) => Container(
+      builder: (_, _) => Container(
         width: 8, height: 8,
         decoration: BoxDecoration(
           shape: BoxShape.circle,
@@ -186,7 +186,7 @@ class _TripCardState extends State<TripCard>
 
     return AnimatedBuilder(
       animation: _stepAnim,
-      builder: (_, __) => GestureDetector(
+      builder: (_, _) => GestureDetector(
         onTap: widget.onTap,
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 300),

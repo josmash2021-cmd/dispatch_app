@@ -129,7 +129,7 @@ class _CreateTripScreenState extends State<CreateTripScreen>
         Navigator.pop(context);
       }
     } catch (e) {
-      if (mounted)
+      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Error: $e'),
@@ -141,6 +141,7 @@ class _CreateTripScreenState extends State<CreateTripScreen>
             margin: const EdgeInsets.all(16),
           ),
         );
+      }
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -358,7 +359,7 @@ class _CreateTripScreenState extends State<CreateTripScreen>
   Widget _animated(int index, Widget child) {
     return AnimatedBuilder(
       animation: _sectionAnims[index],
-      builder: (_, __) => Transform.translate(
+      builder: (_, _) => Transform.translate(
         offset: Offset(0, 24 * (1 - _sectionAnims[index].value)),
         child: Opacity(
           opacity: _sectionAnims[index].value.clamp(0.0, 1.0),
@@ -439,7 +440,7 @@ class _CreateTripScreenState extends State<CreateTripScreen>
               children: [
                 AnimatedBuilder(
                   animation: _passengerNameCtrl,
-                  builder: (_, __) => Text(
+                  builder: (_, _) => Text(
                     _pickupAddressCtrl.text.isNotEmpty
                         ? _pickupAddressCtrl.text
                         : 'Pickup location…',
@@ -457,7 +458,7 @@ class _CreateTripScreenState extends State<CreateTripScreen>
                 const SizedBox(height: 4),
                 AnimatedBuilder(
                   animation: _dropoffAddressCtrl,
-                  builder: (_, __) => Text(
+                  builder: (_, _) => Text(
                     _dropoffAddressCtrl.text.isNotEmpty
                         ? _dropoffAddressCtrl.text
                         : 'Drop-off location…',
@@ -487,7 +488,7 @@ class _CreateTripScreenState extends State<CreateTripScreen>
             ),
             child: AnimatedBuilder(
               animation: _fareCtrl,
-              builder: (_, __) => Text(
+              builder: (_, _) => Text(
                 _fareCtrl.text.isNotEmpty ? '\$${_fareCtrl.text}' : '\$—',
                 style: const TextStyle(
                   fontSize: 15,

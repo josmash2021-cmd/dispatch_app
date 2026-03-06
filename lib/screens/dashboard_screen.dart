@@ -12,6 +12,10 @@ import '../widgets/stat_card.dart';
 import 'trip_list_screen.dart';
 import 'create_trip_screen.dart';
 import 'database_screen.dart';
+import 'admin_config_screen.dart';
+import 'fleet_map_screen.dart';
+import 'reports_screen.dart';
+import 'scheduled_rides_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -31,6 +35,7 @@ class _DashboardScreenState extends State<DashboardScreen>
 
   static const _pages = <Widget>[
     TripListScreen(),
+    FleetMapScreen(),
     DatabaseScreen(),
     _StatsContent(),
   ];
@@ -90,7 +95,7 @@ class _DashboardScreenState extends State<DashboardScreen>
     return Scaffold(
       body: AnimatedBuilder(
         animation: _fadeAnim,
-        builder: (_, __) => IndexedStack(
+        builder: (_, _) => IndexedStack(
           index: _currentIndex,
           children: List.generate(_pages.length, (i) {
             // Only animate the newly selected page
@@ -120,6 +125,11 @@ class _DashboardScreenState extends State<DashboardScreen>
             icon: Icons.directions_car_outlined,
             selectedIcon: Icons.directions_car,
             label: 'Trips',
+          ),
+          GlassNavItem(
+            icon: Icons.map_outlined,
+            selectedIcon: Icons.map,
+            label: 'Fleet',
           ),
           GlassNavItem(
             icon: Icons.storage_outlined,
@@ -168,6 +178,30 @@ class _StatsContent extends StatelessWidget {
         title: const Text('Stats'),
         backgroundColor: AppColors.background,
         actions: [
+          IconButton(
+            icon: const Icon(Icons.event_note_rounded, color: AppColors.primary),
+            tooltip: 'Scheduled Rides',
+            onPressed: () => Navigator.push(
+              context,
+              slideFromRightRoute(const ScheduledRidesScreen()),
+            ),
+          ),
+          IconButton(
+            icon: const Icon(Icons.assessment_rounded, color: AppColors.primary),
+            tooltip: 'Financial Reports',
+            onPressed: () => Navigator.push(
+              context,
+              slideFromRightRoute(const ReportsScreen()),
+            ),
+          ),
+          IconButton(
+            icon: const Icon(Icons.settings_rounded, color: AppColors.primary),
+            tooltip: 'Admin Config',
+            onPressed: () => Navigator.push(
+              context,
+              slideFromRightRoute(const AdminConfigScreen()),
+            ),
+          ),
           IconButton(
             icon: const Icon(Icons.refresh_rounded),
             onPressed: dash.refresh,

@@ -108,8 +108,9 @@ class _DriversTabState extends State<DriversTab> {
   }
 
   Widget _buildBody(DriverProvider provider) {
-    if (provider.isLoading)
+    if (provider.isLoading) {
       return const ShimmerLoadingList(itemCount: 5, type: ShimmerType.person);
+    }
     if (provider.errorMessage != null) {
       return Center(
         child: Column(

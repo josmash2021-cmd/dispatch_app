@@ -12,12 +12,12 @@ class AppColors {
   static const Color cardBorder = Color(0xFF1C1C22); // white @ 6% on #0E0F12
 
   // Primary accent — Cruise Gold
-  static const Color primary = Color(0xFFD4A843);
-  static const Color primaryDark = Color(0xFFB08C35);
+  static const Color primary = Color(0xFFE8C547);
+  static const Color primaryDark = Color(0xFFC9A83A);
   static const Color primaryLight = Color(0xFFF5D990);
 
   // Accent secondary (warm amber)
-  static const Color accent = Color(0xFFE8BD5A);
+  static const Color accent = Color(0xFFF0D060);
 
   // Text — white with opacity levels
   static const Color textPrimary = Color(0xFFFFFFFF);
@@ -25,20 +25,18 @@ class AppColors {
   static const Color textHint = Color(0x40FFFFFF); // white 25%
 
   // Status colors
-  static const Color requested = Color(0xFFD4A843); // gold — waiting
-  static const Color accepted = Color(
-    0xFFE8BD5A,
-  ); // bright gold — driver on way
+  static const Color requested = Color(0xFFE8C547); // gold — waiting
+  static const Color accepted = Color(0xFFF0D060); // bright gold — driver on way
   static const Color driverArrived = Color(0xFFF5D990); // gold-light — arrived
-  static const Color inProgress = Color(0xFFD4A843); // gold — riding
+  static const Color inProgress = Color(0xFFE8C547); // gold — riding
   static const Color completed = Color(0xFF4ADE80); // green — done
   static const Color cancelled = Color(0xFFFF5A5A); // red — cancelled
 
   // Semantic
   static const Color success = Color(0xFF4ADE80);
-  static const Color warning = Color(0xFFD4A843);
+  static const Color warning = Color(0xFFE8C547);
   static const Color error = Color(0xFFFF5A5A);
-  static const Color info = Color(0xFFD4A843);
+  static const Color info = Color(0xFFE8C547);
   static const Color divider = Color(0xFF1C1C22);
 }
 

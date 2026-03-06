@@ -218,7 +218,7 @@ class _TripDetailScreenState extends State<TripDetailScreen>
             if (trip.status != TripStatus.cancelled)
               AnimatedBuilder(
                 animation: _pipeAnim,
-                builder: (_, __) => _buildStatusPipeline(_pipeAnim.value),
+                builder: (_, _) => _buildStatusPipeline(_pipeAnim.value),
               ),
             if (trip.status == TripStatus.cancelled) _buildCancelledBanner(),
             const SizedBox(height: 16),
@@ -322,8 +322,9 @@ class _TripDetailScreenState extends State<TripDetailScreen>
 
   Widget? _buildBottomAction(BuildContext context) {
     if (trip.status == TripStatus.completed ||
-        trip.status == TripStatus.cancelled)
+        trip.status == TripStatus.cancelled) {
       return null;
+    }
     String label;
     IconData icon;
     Color color;
@@ -539,9 +540,6 @@ class _TripDetailScreenState extends State<TripDetailScreen>
       ),
     );
   }
-
-  // Keep _row as alias for backward compat
-  Widget _row(String label, String value) => _infoRow(label, value);
 
   Widget _routeWidget() {
     return Row(
@@ -1252,7 +1250,7 @@ class _DriverPickerSheetState extends State<_DriverPickerSheet> {
                       controller: scrollCtrl,
                       padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
                       itemCount: drivers.length,
-                      separatorBuilder: (_, __) => const SizedBox(height: 8),
+                      separatorBuilder: (_, _) => const SizedBox(height: 8),
                       itemBuilder: (_, i) => _DriverTile(
                         driver: drivers[i],
                         onAssign: () => widget.onAssign(drivers[i]),
@@ -1314,11 +1312,12 @@ class _DriverPickerSheetState extends State<_DriverPickerSheet> {
       _phCtrl.clear();
       _vtCtrl.clear();
       _vpCtrl.clear();
-      if (mounted)
+      if (mounted) {
         setState(() {
           _saving = false;
           _showAddForm = false;
         });
+      }
     } catch (e) {
       if (mounted) setState(() => _saving = false);
     }
