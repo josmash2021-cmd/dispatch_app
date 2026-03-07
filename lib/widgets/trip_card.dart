@@ -372,7 +372,7 @@ class _TripCardState extends State<TripCard>
 
   Widget _buildMeta() {
     return Row(children: [
-      _metaChip(Icons.straighten_rounded, '${trip.distance.toStringAsFixed(1)} km'),
+      _metaChip(Icons.straighten_rounded, '${(trip.distance * 0.621371).toStringAsFixed(1)} mi'),
       const SizedBox(width: 8),
       _metaChip(Icons.timer_rounded, '${trip.duration} min'),
       if (trip.driverName != null && trip.driverName!.isNotEmpty && _isActive) ...[

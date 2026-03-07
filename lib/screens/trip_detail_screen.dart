@@ -233,7 +233,7 @@ class _TripDetailScreenState extends State<TripDetailScreen>
                 valueColor: AppColors.primary,
                 valueBold: true,
               ),
-              _infoRow('Distance', '${trip.distance.toStringAsFixed(1)} km'),
+              _infoRow('Distance', '${(trip.distance * 0.621371).toStringAsFixed(1)} mi'),
               _infoRow('Duration', '${trip.duration} min'),
               _infoRow('Payment', _paymentLabel(trip.paymentMethod)),
               _infoRow('Vehicle', trip.vehicleType),

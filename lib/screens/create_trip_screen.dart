@@ -312,7 +312,7 @@ class _CreateTripScreenState extends State<CreateTripScreen>
                         Expanded(
                           child: _field(
                             _distanceCtrl,
-                            'Distance (km)',
+                            'Distance (mi)',
                             '0.0',
                             Icons.straighten_rounded,
                             keyboard: const TextInputType.numberWithOptions(

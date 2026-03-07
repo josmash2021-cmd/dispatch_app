@@ -130,8 +130,9 @@ class _FleetMapScreenState extends State<FleetMapScreen> {
         .listen((snap) {
           if (mounted) {
             setState(() {
-              _todayTrips =
-                  snap.docs.map((d) => TripModel.fromFirestore(d)).toList();
+              _todayTrips = snap.docs
+                  .map((d) => TripModel.fromFirestore(d))
+                  .toList();
             });
           }
         });
