@@ -105,10 +105,23 @@ workflows:
         script: flutter pub get
 
       - name: Generate iOS config
-        script: flutter build ios --config-only --no-codesign
+        script: flutter build ios --config-only --no-codesign --no-pub
 
       - name: Install CocoaPods
-        script: cd ios && pod install
+        script: |
+          cd ios
+          for i in 1 2 3; do
+            echo "=== pod install attempt $i ==="
+            pod install && break
+            echo "Attempt $i failed, waiting 30s..."
+            sleep 30
+          done
+          # Verify Pods were installed
+          if [ ! -d Pods ]; then
+            echo "ERROR: Pods directory not found after 3 attempts"
+            exit 1
+          fi
+          echo "CocoaPods installed successfully"
 
       - name: Disable code signing
         script: |
