@@ -105,19 +105,19 @@ workflows:
       - name: Disable code signing
         script: |
           cd ios
-          # 1) Patch project.pbxproj with sed for reliability
           sed -i '' 's/CODE_SIGN_IDENTITY = ".*"/CODE_SIGN_IDENTITY = ""/g' Runner.xcodeproj/project.pbxproj
           sed -i '' 's/"CODE_SIGN_IDENTITY\[sdk=iphoneos\*\]" = ".*"/"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = ""/g' Runner.xcodeproj/project.pbxproj
           sed -i '' 's/DEVELOPMENT_TEAM = .*/DEVELOPMENT_TEAM = "";/g' Runner.xcodeproj/project.pbxproj
           sed -i '' 's/CODE_SIGN_STYLE = Automatic/CODE_SIGN_STYLE = Manual/g' Runner.xcodeproj/project.pbxproj
           sed -i '' 's/PROVISIONING_PROFILE_SPECIFIER = ".*"/PROVISIONING_PROFILE_SPECIFIER = ""/g' Runner.xcodeproj/project.pbxproj
-          # 2) Inject CODE_SIGNING_ALLOWED = NO into every build‐settings block
-          sed -i '' '/PRODUCT_BUNDLE_IDENTIFIER/{
-            /CODE_SIGNING_ALLOWED/! s/PRODUCT_BUNDLE_IDENTIFIER/CODE_SIGNING_ALLOWED = NO;\
-				CODE_SIGNING_REQUIRED = NO;\
-				PRODUCT_BUNDLE_IDENTIFIER/
-          }' Runner.xcodeproj/project.pbxproj
-          # 3) Also set it in the xcconfig files Flutter uses
+          python3 -c "
+          p='Runner.xcodeproj/project.pbxproj'
+          t=open(p).read()
+          if 'CODE_SIGNING_ALLOWED' not in t:
+            t=t.replace('PRODUCT_BUNDLE_IDENTIFIER','CODE_SIGNING_ALLOWED = NO;\n\t\t\t\tCODE_SIGNING_REQUIRED = NO;\n\t\t\t\tPRODUCT_BUNDLE_IDENTIFIER')
+          open(p,'w').write(t)
+          print('Injected CODE_SIGNING_ALLOWED=NO')
+          "
           echo "CODE_SIGNING_ALLOWED=NO" >> Flutter/Debug.xcconfig
           echo "CODE_SIGNING_REQUIRED=NO" >> Flutter/Debug.xcconfig
           echo "CODE_SIGN_IDENTITY=" >> Flutter/Debug.xcconfig
