@@ -15,7 +15,6 @@ workflows:
         BUNDLE_ID: "com.uberclone.dispatch.dispatchApp"
         FLUTTER_XCODE_CODE_SIGNING_ALLOWED: "NO"
         FLUTTER_XCODE_CODE_SIGNING_REQUIRED: "NO"
-        FLUTTER_XCODE_CODE_SIGN_IDENTITY: ""
     triggering:
       events:
         - push
