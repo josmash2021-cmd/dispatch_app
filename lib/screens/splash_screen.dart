@@ -14,9 +14,9 @@ class SplashScreen extends StatefulWidget {
 
 class _SplashScreenState extends State<SplashScreen>
     with TickerProviderStateMixin {
-  static const _bg        = Color(0xFF000000);
-  static const _gold      = Color(0xFFE8C547);
-  static const _goldBright = Color(0xFFFFF1C1);
+  static const _bg = Color(0xFF000000);
+  static const _gold = Color(0xFFFFFFFF);
+  static const _goldBright = Color(0xFFE0E0E0);
 
   static const _letters = ['C', 'r', 'u', 'i', 's', 'e'];
 
@@ -45,12 +45,14 @@ class _SplashScreenState extends State<SplashScreen>
   void initState() {
     super.initState();
 
-    SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
-      statusBarColor: Colors.transparent,
-      statusBarIconBrightness: Brightness.light,
-      systemNavigationBarColor: _bg,
-      systemNavigationBarIconBrightness: Brightness.light,
-    ));
+    SystemChrome.setSystemUIOverlayStyle(
+      const SystemUiOverlayStyle(
+        statusBarColor: Colors.transparent,
+        statusBarIconBrightness: Brightness.light,
+        systemNavigationBarColor: _bg,
+        systemNavigationBarIconBrightness: Brightness.light,
+      ),
+    );
 
     _setupAnimations();
     _runSequence();
@@ -64,21 +66,37 @@ class _SplashScreenState extends State<SplashScreen>
     );
 
     _letterSlide = [];
-    _letterFade  = [];
+    _letterFade = [];
     _letterScale = [];
 
     for (int i = 0; i < _letters.length; i++) {
       final start = (i * 0.10).clamp(0.0, 1.0);
-      final end   = (start + 0.45).clamp(0.0, 1.0);
+      final end = (start + 0.45).clamp(0.0, 1.0);
       final curveI = Interval(start, end, curve: Curves.elasticOut);
-      final fadeI  = Interval(start, (start + 0.22).clamp(0.0, 1.0), curve: Curves.easeOut);
+      final fadeI = Interval(
+        start,
+        (start + 0.22).clamp(0.0, 1.0),
+        curve: Curves.easeOut,
+      );
 
-      _letterSlide.add(Tween<double>(begin: 60.0, end: 0.0).animate(
-          CurvedAnimation(parent: _entranceCtrl, curve: curveI)));
-      _letterFade.add(Tween<double>(begin: 0.0, end: 1.0).animate(
-          CurvedAnimation(parent: _entranceCtrl, curve: fadeI)));
-      _letterScale.add(Tween<double>(begin: 0.3, end: 1.0).animate(
-          CurvedAnimation(parent: _entranceCtrl, curve: curveI)));
+      _letterSlide.add(
+        Tween<double>(
+          begin: 60.0,
+          end: 0.0,
+        ).animate(CurvedAnimation(parent: _entranceCtrl, curve: curveI)),
+      );
+      _letterFade.add(
+        Tween<double>(
+          begin: 0.0,
+          end: 1.0,
+        ).animate(CurvedAnimation(parent: _entranceCtrl, curve: fadeI)),
+      );
+      _letterScale.add(
+        Tween<double>(
+          begin: 0.3,
+          end: 1.0,
+        ).animate(CurvedAnimation(parent: _entranceCtrl, curve: curveI)),
+      );
     }
 
     // Icon enters slightly before letters
@@ -86,10 +104,16 @@ class _SplashScreenState extends State<SplashScreen>
       vsync: this,
       duration: const Duration(milliseconds: 700),
     );
-    _iconSlide = Tween<double>(begin: -30.0, end: 0.0).animate(
-      CurvedAnimation(parent: _iconCtrl, curve: Curves.elasticOut));
+    _iconSlide = Tween<double>(
+      begin: -30.0,
+      end: 0.0,
+    ).animate(CurvedAnimation(parent: _iconCtrl, curve: Curves.elasticOut));
     _iconFade = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _iconCtrl, curve: const Interval(0, 0.4, curve: Curves.easeOut)));
+      CurvedAnimation(
+        parent: _iconCtrl,
+        curve: const Interval(0, 0.4, curve: Curves.easeOut),
+      ),
+    );
 
     // Shimmer glow
     _glowCtrl = AnimationController(
@@ -102,10 +126,14 @@ class _SplashScreenState extends State<SplashScreen>
       vsync: this,
       duration: const Duration(milliseconds: 600),
     );
-    _exitFade = Tween<double>(begin: 1.0, end: 0.0).animate(
-      CurvedAnimation(parent: _exitCtrl, curve: Curves.easeInQuart));
-    _exitScale = Tween<double>(begin: 1.0, end: 1.35).animate(
-      CurvedAnimation(parent: _exitCtrl, curve: Curves.easeIn));
+    _exitFade = Tween<double>(
+      begin: 1.0,
+      end: 0.0,
+    ).animate(CurvedAnimation(parent: _exitCtrl, curve: Curves.easeInQuart));
+    _exitScale = Tween<double>(
+      begin: 1.0,
+      end: 1.35,
+    ).animate(CurvedAnimation(parent: _exitCtrl, curve: Curves.easeIn));
   }
 
   Future<void> _runSequence() async {
@@ -138,9 +166,9 @@ class _SplashScreenState extends State<SplashScreen>
 
   void _navigate() {
     if (!mounted) return;
-    Navigator.of(context).pushReplacement(
-      smoothFadeRoute(const AuthWrapper(), durationMs: 400),
-    );
+    Navigator.of(
+      context,
+    ).pushReplacement(smoothFadeRoute(const AuthWrapper(), durationMs: 400));
   }
 
   @override
@@ -158,7 +186,12 @@ class _SplashScreenState extends State<SplashScreen>
     return Scaffold(
       backgroundColor: _bg,
       body: AnimatedBuilder(
-        animation: Listenable.merge([_entranceCtrl, _glowCtrl, _exitCtrl, _iconCtrl]),
+        animation: Listenable.merge([
+          _entranceCtrl,
+          _glowCtrl,
+          _exitCtrl,
+          _iconCtrl,
+        ]),
         builder: (_, _) {
           final exitOpacity = (_exitCtrl.isAnimating || _exitCtrl.isCompleted)
               ? _exitFade.value
@@ -181,13 +214,18 @@ class _SplashScreenState extends State<SplashScreen>
                       child: Opacity(
                         opacity: _iconFade.value.clamp(0.0, 1.0),
                         child: Container(
-                          width: 64, height: 64,
+                          width: 64,
+                          height: 64,
                           decoration: BoxDecoration(
-                            color: _gold,
+                            color: Colors.white.withValues(alpha: 0.12),
                             borderRadius: BorderRadius.circular(18),
+                            border: Border.all(
+                              color: Colors.white.withValues(alpha: 0.25),
+                              width: 1,
+                            ),
                             boxShadow: [
                               BoxShadow(
-                                color: _gold.withValues(alpha: 0.45),
+                                color: Colors.white.withValues(alpha: 0.15),
                                 blurRadius: 32,
                                 offset: const Offset(0, 12),
                               ),
@@ -195,7 +233,7 @@ class _SplashScreenState extends State<SplashScreen>
                           ),
                           child: const Icon(
                             Icons.local_taxi_rounded,
-                            color: Color(0xFF08090C),
+                            color: Colors.white,
                             size: 36,
                           ),
                         ),
@@ -206,23 +244,26 @@ class _SplashScreenState extends State<SplashScreen>
                     Row(
                       mainAxisSize: MainAxisSize.min,
                       children: List.generate(_letters.length, (i) {
-                        final dy      = _letterSlide[i].value;
+                        final dy = _letterSlide[i].value;
                         final opacity = _letterFade[i].value.clamp(0.0, 1.0);
-                        final scale   = _letterScale[i].value.clamp(0.0, 2.0);
+                        final scale = _letterScale[i].value.clamp(0.0, 2.0);
 
                         // Shimmer sweep L→R
-                        final glowProgress  = _glowCtrl.value;
-                        final letterCenter  = i / (_letters.length - 1);
-                        final dist          = (glowProgress - letterCenter).abs();
-                        final glowAmount    = (1.0 - (dist / 0.35).clamp(0.0, 1.0));
-                        final letterColor   = Color.lerp(
+                        final glowProgress = _glowCtrl.value;
+                        final letterCenter = i / (_letters.length - 1);
+                        final dist = (glowProgress - letterCenter).abs();
+                        final glowAmount =
+                            (1.0 - (dist / 0.35).clamp(0.0, 1.0));
+                        final letterColor = Color.lerp(
                           _gold,
                           _goldBright,
                           glowAmount * (_glowCtrl.isAnimating ? 1.0 : 0.0),
                         )!;
-                        final shadowOpacity = (glowAmount * 0.7 *
-                            (_glowCtrl.isAnimating ? 1.0 : 0.0))
-                            .clamp(0.0, 1.0);
+                        final shadowOpacity =
+                            (glowAmount *
+                                    0.7 *
+                                    (_glowCtrl.isAnimating ? 1.0 : 0.0))
+                                .clamp(0.0, 1.0);
 
                         return Transform.translate(
                           offset: Offset(0, dy),
@@ -239,11 +280,15 @@ class _SplashScreenState extends State<SplashScreen>
                                   color: letterColor,
                                   shadows: [
                                     Shadow(
-                                      color: _gold.withValues(alpha: shadowOpacity),
+                                      color: _gold.withValues(
+                                        alpha: shadowOpacity,
+                                      ),
                                       blurRadius: 24,
                                     ),
                                     Shadow(
-                                      color: _goldBright.withValues(alpha: shadowOpacity * 0.5),
+                                      color: _goldBright.withValues(
+                                        alpha: shadowOpacity * 0.5,
+                                      ),
                                       blurRadius: 48,
                                     ),
                                   ],

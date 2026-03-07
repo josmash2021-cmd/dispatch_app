@@ -133,22 +133,21 @@ class _LoginScreenState extends State<LoginScreen>
                                   width: 72,
                                   height: 72,
                                   decoration: BoxDecoration(
-                                    color: _gold,
+                                    color: Colors.white.withValues(alpha: 0.12),
                                     borderRadius: BorderRadius.circular(20),
+                                    border: Border.all(
+                                      color: Colors.white.withValues(
+                                        alpha: 0.25,
+                                      ),
+                                      width: 1,
+                                    ),
                                     boxShadow: [
                                       BoxShadow(
-                                        color: _gold.withValues(
-                                          alpha: _glowAnim.value,
+                                        color: Colors.white.withValues(
+                                          alpha: _glowAnim.value * 0.2,
                                         ),
                                         blurRadius: 40 + 10 * _glowAnim.value,
                                         offset: const Offset(0, 14),
-                                      ),
-                                      BoxShadow(
-                                        color: _goldLight.withValues(
-                                          alpha: _glowAnim.value * 0.3,
-                                        ),
-                                        blurRadius: 60,
-                                        spreadRadius: 2,
                                       ),
                                     ],
                                   ),
@@ -156,7 +155,7 @@ class _LoginScreenState extends State<LoginScreen>
                                 ),
                                 child: const Icon(
                                   Icons.local_taxi_rounded,
-                                  color: Color(0xFF08090C),
+                                  color: Colors.white,
                                   size: 38,
                                 ),
                               ),
