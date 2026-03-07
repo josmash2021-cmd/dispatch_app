@@ -15,8 +15,8 @@ class SplashScreen extends StatefulWidget {
 class _SplashScreenState extends State<SplashScreen>
     with TickerProviderStateMixin {
   static const _bg = Color(0xFF000000);
-  static const _gold = Color(0xFFFFFFFF);
-  static const _goldBright = Color(0xFFE0E0E0);
+  static const _gold = Color(0xFFE8C547);
+  static const _goldBright = Color(0xFFFFF1C1);
 
   static const _letters = ['C', 'r', 'u', 'i', 's', 'e'];
 
@@ -217,15 +217,11 @@ class _SplashScreenState extends State<SplashScreen>
                           width: 64,
                           height: 64,
                           decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.12),
+                            color: _gold,
                             borderRadius: BorderRadius.circular(18),
-                            border: Border.all(
-                              color: Colors.white.withValues(alpha: 0.25),
-                              width: 1,
-                            ),
                             boxShadow: [
                               BoxShadow(
-                                color: Colors.white.withValues(alpha: 0.15),
+                                color: _gold.withValues(alpha: 0.45),
                                 blurRadius: 32,
                                 offset: const Offset(0, 12),
                               ),
@@ -233,7 +229,7 @@ class _SplashScreenState extends State<SplashScreen>
                           ),
                           child: const Icon(
                             Icons.local_taxi_rounded,
-                            color: Colors.white,
+                            color: Color(0xFF08090C),
                             size: 36,
                           ),
                         ),
