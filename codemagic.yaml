@@ -167,27 +167,50 @@ workflows:
 
           # Inject into xcconfig (no leading spaces)
           printf 'CODE_SIGNING_ALLOWED=NO\nCODE_SIGNING_REQUIRED=NO\nCODE_SIGN_IDENTITY=\nCODE_SIGN_ENTITLEMENTS=\nEXPANDED_CODE_SIGN_IDENTITY=\n' >> Flutter/Release.xcconfig
+          printf 'CODE_SIGNING_ALLOWED=NO\nCODE_SIGNING_REQUIRED=NO\nCODE_SIGN_IDENTITY=\nCODE_SIGN_ENTITLEMENTS=\nEXPANDED_CODE_SIGN_IDENTITY=\n' >> Flutter/Debug.xcconfig
           echo "Code signing disabled."
 
-      - name: Flutter build iOS no codesign
+      - name: Build iOS with xcodebuild (no codesign)
         script: |
           set -e
-          flutter build ios --release --no-codesign --no-tree-shake-icons
-          APP=$(find "$CM_BUILD_DIR/build/ios" -name "*.app" -type d | head -1)
+          # Use xcodebuild directly to avoid Flutter's Development Team check
+          cd "$CM_BUILD_DIR/ios"
+          xcodebuild \
+            -workspace Runner.xcworkspace \
+            -scheme Runner \
+            -configuration Release \
+            -sdk iphoneos \
+            -destination 'generic/platform=iOS' \
+            -archivePath "$CM_BUILD_DIR/build/ios/Runner.xcarchive" \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" \
+            DEVELOPMENT_TEAM="" \
+            PROVISIONING_PROFILE_SPECIFIER="" \
+            archive | tail -20
+
+          # Extract .app from archive
+          APP=$(find "$CM_BUILD_DIR/build/ios/Runner.xcarchive" -name "*.app" -type d | head -1)
           if [ -z "$APP" ]; then
-            echo "ERROR: No .app bundle found."
+            echo "ERROR: No .app found in archive"
+            find "$CM_BUILD_DIR/build/ios" -name "*.app" -type d || true
             exit 1
           fi
+
+          # Copy .app to expected location for packaging step
+          mkdir -p "$CM_BUILD_DIR/build/ios/iphoneos"
+          ditto "$APP" "$CM_BUILD_DIR/build/ios/iphoneos/Runner.app"
           echo "Build succeeded: $APP"
-          ls -la "$APP"
+          echo "Size: $(du -sh "$APP" | cut -f1)"
 
       - name: Package unsigned IPA
         script: |
           set -e
+          # Look for Runner.app in multiple possible locations
           APP_PATH=$(find "$CM_BUILD_DIR/build/ios" -name "Runner.app" -type d | head -1)
           if [ -z "$APP_PATH" ]; then
-            echo "ERROR: Runner.app not found"
-            find "$CM_BUILD_DIR/build/ios" -maxdepth 4 -type d -name "*.app" || true
+            echo "ERROR: Runner.app not found anywhere"
+            find "$CM_BUILD_DIR/build/ios" -maxdepth 5 -type d -name "*.app" || true
             exit 1
           fi
           echo "Found app: $APP_PATH"
