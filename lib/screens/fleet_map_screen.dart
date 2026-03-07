@@ -27,8 +27,10 @@ class _FleetMapScreenState extends State<FleetMapScreen> {
 
   List<_DriverPin> _driverPins = [];
   List<TripModel> _activeTrips = [];
+  List<TripModel> _todayTrips = [];
   StreamSubscription? _driverSub;
   StreamSubscription? _tripSub;
+  StreamSubscription? _todayTripSub;
 
   _DriverPin? _selectedDriver;
   bool _showOnlineOnly = true;
@@ -54,6 +56,7 @@ class _FleetMapScreenState extends State<FleetMapScreen> {
     super.initState();
     _listenDriverLocations();
     _listenActiveTrips();
+    _listenTodayTrips();
     _initMarkers();
   }
 
@@ -62,6 +65,7 @@ class _FleetMapScreenState extends State<FleetMapScreen> {
     _simTimer?.cancel();
     _driverSub?.cancel();
     _tripSub?.cancel();
+    _todayTripSub?.cancel();
     _googleCtrl?.dispose();
     super.dispose();
   }
@@ -108,6 +112,26 @@ class _FleetMapScreenState extends State<FleetMapScreen> {
               _activeTrips = snap.docs
                   .map((d) => TripModel.fromFirestore(d))
                   .toList();
+            });
+          }
+        });
+  }
+
+  void _listenTodayTrips() {
+    final now = DateTime.now();
+    final startOfDay = DateTime(now.year, now.month, now.day);
+    _todayTripSub = FirebaseFirestore.instance
+        .collection('trips')
+        .where(
+          'createdAt',
+          isGreaterThanOrEqualTo: Timestamp.fromDate(startOfDay),
+        )
+        .snapshots()
+        .listen((snap) {
+          if (mounted) {
+            setState(() {
+              _todayTrips =
+                  snap.docs.map((d) => TripModel.fromFirestore(d)).toList();
             });
           }
         });
@@ -648,9 +672,19 @@ class _FleetMapScreenState extends State<FleetMapScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final displayedDrivers = _displayDrivers;
-    final onlineCount = displayedDrivers.where((d) => d.driver.isOnline).length;
-    final offlineCount = displayedDrivers.length - onlineCount;
+    // Counts from ALL drivers (not filtered by _showOnlineOnly)
+    final int onlineCount;
+    final int offlineCount;
+    final int todayTripCount;
+    if (_simulationMode) {
+      onlineCount = _simStates.where((s) => s.driver.isOnline).length;
+      offlineCount = _simStates.length - onlineCount;
+      todayTripCount = _activeTrips.length;
+    } else {
+      onlineCount = _driverPins.where((d) => d.driver.isOnline).length;
+      offlineCount = _driverPins.length - onlineCount;
+      todayTripCount = _todayTrips.length;
+    }
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -700,7 +734,7 @@ class _FleetMapScreenState extends State<FleetMapScreen> {
                   _statChip(
                     Icons.local_taxi,
                     AppColors.primary,
-                    '${_activeTrips.length} trips',
+                    '$todayTripCount trips',
                   ),
                 ],
               ),
