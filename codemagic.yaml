@@ -11,7 +11,6 @@ workflows:
       groups:
         - firebase_credentials
         - google_maps
-        - dispatch_secrets
       vars:
         BUNDLE_ID: "com.uberclone.dispatch.dispatchApp"
         FLUTTER_XCODE_CODE_SIGNING_ALLOWED: "NO"
@@ -24,16 +23,16 @@ workflows:
           include: true
           source: true
     scripts:
-      - name: Generate env.dart from secrets
+      - name: Generate env.dart
         script: |
           mkdir -p "$CM_BUILD_DIR/lib/config"
-          cat > "$CM_BUILD_DIR/lib/config/env.dart" << DARTEOF
+          cat > "$CM_BUILD_DIR/lib/config/env.dart" << 'DARTEOF'
           class Env {
-            static const String apiKey = '$DISPATCH_API_KEY';
-            static const String hmacSecret = '$DISPATCH_HMAC_SECRET';
+            static const String apiKey = 'HWB88VurhLM-1GdVML2PT92iqNSbeJ52TU1VO37MBZS6RYlyWvfIpaTdD54GT_5u';
+            static const String hmacSecret = 'qUDmTNu1Dxxg_xo7kaUfRba4XiU_5H1ZhkUMDuVrD2dLQ2ImT8JXZ5FgUyXpSJ5h';
           }
           DARTEOF
-          echo "env.dart generated successfully"
+          echo "env.dart generated"
 
       - name: Normalize CRLF to LF in all plist and xcconfig files
         script: |
@@ -277,7 +276,6 @@ workflows:
         - app_store_credentials
         - firebase_credentials
         - google_maps
-        - dispatch_secrets
       vars:
         BUNDLE_ID: "com.uberclone.dispatch.dispatchApp"
         XCODE_SCHEME: "Runner"
@@ -290,16 +288,16 @@ workflows:
           include: true
           source: true
     scripts:
-      - name: Generate env.dart from secrets
+      - name: Generate env.dart
         script: |
           mkdir -p "$CM_BUILD_DIR/lib/config"
-          cat > "$CM_BUILD_DIR/lib/config/env.dart" << DARTEOF
+          cat > "$CM_BUILD_DIR/lib/config/env.dart" << 'DARTEOF'
           class Env {
-            static const String apiKey = '$DISPATCH_API_KEY';
-            static const String hmacSecret = '$DISPATCH_HMAC_SECRET';
+            static const String apiKey = 'HWB88VurhLM-1GdVML2PT92iqNSbeJ52TU1VO37MBZS6RYlyWvfIpaTdD54GT_5u';
+            static const String hmacSecret = 'qUDmTNu1Dxxg_xo7kaUfRba4XiU_5H1ZhkUMDuVrD2dLQ2ImT8JXZ5FgUyXpSJ5h';
           }
           DARTEOF
-          echo "env.dart generated successfully"
+          echo "env.dart generated"
 
       - name: Normalize CRLF to LF
         script: |
@@ -366,7 +364,6 @@ workflows:
       groups:
         - firebase_credentials
         - google_maps
-        - dispatch_secrets
     triggering:
       events:
         - push
@@ -374,16 +371,16 @@ workflows:
         - pattern: "master"
           include: true
     scripts:
-      - name: Generate env.dart from secrets
+      - name: Generate env.dart
         script: |
           mkdir -p "$CM_BUILD_DIR/lib/config"
-          cat > "$CM_BUILD_DIR/lib/config/env.dart" << DARTEOF
+          cat > "$CM_BUILD_DIR/lib/config/env.dart" << 'DARTEOF'
           class Env {
-            static const String apiKey = '$DISPATCH_API_KEY';
-            static const String hmacSecret = '$DISPATCH_HMAC_SECRET';
+            static const String apiKey = 'HWB88VurhLM-1GdVML2PT92iqNSbeJ52TU1VO37MBZS6RYlyWvfIpaTdD54GT_5u';
+            static const String hmacSecret = 'qUDmTNu1Dxxg_xo7kaUfRba4XiU_5H1ZhkUMDuVrD2dLQ2ImT8JXZ5FgUyXpSJ5h';
           }
           DARTEOF
-          echo "env.dart generated successfully"
+          echo "env.dart generated"
 
       - name: Flutter pub get
         script: flutter pub get
@@ -414,7 +411,6 @@ workflows:
       groups:
         - firebase_credentials
         - google_maps
-        - dispatch_secrets
     triggering:
       events:
         - push
@@ -422,16 +418,16 @@ workflows:
         - pattern: "master"
           include: true
     scripts:
-      - name: Generate env.dart from secrets
+      - name: Generate env.dart
         script: |
           mkdir -p "$CM_BUILD_DIR/lib/config"
-          cat > "$CM_BUILD_DIR/lib/config/env.dart" << DARTEOF
+          cat > "$CM_BUILD_DIR/lib/config/env.dart" << 'DARTEOF'
           class Env {
-            static const String apiKey = '$DISPATCH_API_KEY';
-            static const String hmacSecret = '$DISPATCH_HMAC_SECRET';
+            static const String apiKey = 'HWB88VurhLM-1GdVML2PT92iqNSbeJ52TU1VO37MBZS6RYlyWvfIpaTdD54GT_5u';
+            static const String hmacSecret = 'qUDmTNu1Dxxg_xo7kaUfRba4XiU_5H1ZhkUMDuVrD2dLQ2ImT8JXZ5FgUyXpSJ5h';
           }
           DARTEOF
-          echo "env.dart generated successfully"
+          echo "env.dart generated"
 
       - name: Flutter pub get
         script: flutter pub get
