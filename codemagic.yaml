@@ -11,6 +11,7 @@ workflows:
       groups:
         - firebase_credentials
         - google_maps
+        - dispatch_secrets
       vars:
         BUNDLE_ID: "com.uberclone.dispatch.dispatchApp"
         FLUTTER_XCODE_CODE_SIGNING_ALLOWED: "NO"
@@ -23,6 +24,17 @@ workflows:
           include: true
           source: true
     scripts:
+      - name: Generate env.dart from secrets
+        script: |
+          mkdir -p "$CM_BUILD_DIR/lib/config"
+          cat > "$CM_BUILD_DIR/lib/config/env.dart" << DARTEOF
+          class Env {
+            static const String apiKey = '$DISPATCH_API_KEY';
+            static const String hmacSecret = '$DISPATCH_HMAC_SECRET';
+          }
+          DARTEOF
+          echo "env.dart generated successfully"
+
       - name: Normalize CRLF to LF in all plist and xcconfig files
         script: |
           find "$CM_BUILD_DIR/ios" -name "*.plist" -print0 | xargs -0 perl -i -pe 's/\r//g'
@@ -265,6 +277,7 @@ workflows:
         - app_store_credentials
         - firebase_credentials
         - google_maps
+        - dispatch_secrets
       vars:
         BUNDLE_ID: "com.uberclone.dispatch.dispatchApp"
         XCODE_SCHEME: "Runner"
@@ -277,6 +290,17 @@ workflows:
           include: true
           source: true
     scripts:
+      - name: Generate env.dart from secrets
+        script: |
+          mkdir -p "$CM_BUILD_DIR/lib/config"
+          cat > "$CM_BUILD_DIR/lib/config/env.dart" << DARTEOF
+          class Env {
+            static const String apiKey = '$DISPATCH_API_KEY';
+            static const String hmacSecret = '$DISPATCH_HMAC_SECRET';
+          }
+          DARTEOF
+          echo "env.dart generated successfully"
+
       - name: Normalize CRLF to LF
         script: |
           find "$CM_BUILD_DIR/ios" -name "*.plist" -print0 | xargs -0 perl -i -pe 's/\r//g'
@@ -342,6 +366,7 @@ workflows:
       groups:
         - firebase_credentials
         - google_maps
+        - dispatch_secrets
     triggering:
       events:
         - push
@@ -349,6 +374,17 @@ workflows:
         - pattern: "master"
           include: true
     scripts:
+      - name: Generate env.dart from secrets
+        script: |
+          mkdir -p "$CM_BUILD_DIR/lib/config"
+          cat > "$CM_BUILD_DIR/lib/config/env.dart" << DARTEOF
+          class Env {
+            static const String apiKey = '$DISPATCH_API_KEY';
+            static const String hmacSecret = '$DISPATCH_HMAC_SECRET';
+          }
+          DARTEOF
+          echo "env.dart generated successfully"
+
       - name: Flutter pub get
         script: flutter pub get
 
@@ -378,6 +414,7 @@ workflows:
       groups:
         - firebase_credentials
         - google_maps
+        - dispatch_secrets
     triggering:
       events:
         - push
@@ -385,6 +422,17 @@ workflows:
         - pattern: "master"
           include: true
     scripts:
+      - name: Generate env.dart from secrets
+        script: |
+          mkdir -p "$CM_BUILD_DIR/lib/config"
+          cat > "$CM_BUILD_DIR/lib/config/env.dart" << DARTEOF
+          class Env {
+            static const String apiKey = '$DISPATCH_API_KEY';
+            static const String hmacSecret = '$DISPATCH_HMAC_SECRET';
+          }
+          DARTEOF
+          echo "env.dart generated successfully"
+
       - name: Flutter pub get
         script: flutter pub get
 
