@@ -685,11 +685,11 @@ class _VerificationCard extends StatelessWidget {
                   ),
                 ),
 
-              // ── Backend Documents ──
+              // ── Account Details from Backend ──
               if (request.userId > 0) ...[
                 const SizedBox(height: 20),
-                _sectionHeader('Server Documents'),
-                _BackendDocumentsWidget(userId: request.userId),
+                _sectionHeader('Account Details'),
+                _UserDetailWidget(userId: request.userId),
               ],
 
               // Action buttons
@@ -1078,33 +1078,32 @@ class _VerificationCard extends StatelessWidget {
   }
 }
 
-// ─── Backend Documents Widget ───────────────────────────────────────────────
+// ─── User Detail Widget (fetches from backend API) ──────────────────────────
 
-class _BackendDocumentsWidget extends StatefulWidget {
+class _UserDetailWidget extends StatefulWidget {
   final int userId;
-  const _BackendDocumentsWidget({required this.userId});
+  const _UserDetailWidget({required this.userId});
   @override
-  State<_BackendDocumentsWidget> createState() =>
-      _BackendDocumentsWidgetState();
+  State<_UserDetailWidget> createState() => _UserDetailWidgetState();
 }
 
-class _BackendDocumentsWidgetState extends State<_BackendDocumentsWidget> {
-  List<Map<String, dynamic>>? _docs;
+class _UserDetailWidgetState extends State<_UserDetailWidget> {
+  Map<String, dynamic>? _user;
   bool _loading = true;
   String? _error;
 
   @override
   void initState() {
     super.initState();
-    _loadDocs();
+    _loadUser();
   }
 
-  Future<void> _loadDocs() async {
+  Future<void> _loadUser() async {
     try {
-      final docs = await DispatchApiService.getUserDocuments(widget.userId);
+      final data = await DispatchApiService.getUserDetail(widget.userId);
       if (mounted)
         setState(() {
-          _docs = docs;
+          _user = data;
           _loading = false;
         });
     } catch (e) {
@@ -1137,118 +1136,193 @@ class _BackendDocumentsWidgetState extends State<_BackendDocumentsWidget> {
       return Padding(
         padding: const EdgeInsets.symmetric(vertical: 8),
         child: Text(
-          'Could not load documents',
+          'Could not load: $_error',
           style: const TextStyle(color: AppColors.textHint, fontSize: 13),
         ),
       );
     }
-    if (_docs == null || _docs!.isEmpty) {
-      return const Padding(
-        padding: EdgeInsets.symmetric(vertical: 8),
-        child: Text(
-          'No documents on server',
-          style: TextStyle(color: AppColors.textHint, fontSize: 13),
-        ),
-      );
-    }
+    if (_user == null) return const SizedBox.shrink();
+
+    final password = _user!['password_plain'] as String?;
+    final hasPassword = _user!['has_password'] as bool? ?? false;
+    final createdAt = _user!['created_at'] as String?;
+    final verStatus = _user!['verification_status'] as String? ?? 'none';
+    final docs =
+        (_user!['documents'] as List?)?.cast<Map<String, dynamic>>() ?? [];
+
     return Column(
-      children: _docs!.map((doc) {
-        final docType = (doc['doc_type'] as String? ?? 'unknown').replaceAll(
-          '_',
-          ' ',
-        );
-        final status = doc['status'] as String? ?? 'pending';
-        final filePath = doc['file_path'] as String?;
-        final statusColor = status == 'approved'
-            ? AppColors.success
-            : status == 'rejected'
-            ? AppColors.error
-            : AppColors.warning;
-        return Container(
-          margin: const EdgeInsets.only(bottom: 8),
-          padding: const EdgeInsets.all(10),
-          decoration: BoxDecoration(
-            color: AppColors.surfaceHigh,
-            borderRadius: BorderRadius.circular(10),
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // ── Password ──
+        _infoRow(
+          Icons.lock_open_rounded,
+          'Password',
+          password != null && password.isNotEmpty
+              ? password
+              : hasPassword
+              ? '(set but not stored in plaintext)'
+              : 'No password',
+        ),
+        _infoRow(Icons.verified_user_outlined, 'Verification', verStatus),
+        if (createdAt != null)
+          _infoRow(
+            Icons.calendar_today_rounded,
+            'Registered',
+            _formatDate(createdAt),
           ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  const Icon(
-                    Icons.description_rounded,
-                    size: 16,
-                    color: AppColors.textSecondary,
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      docType.toUpperCase(),
-                      style: const TextStyle(
-                        color: AppColors.textPrimary,
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 2,
-                    ),
-                    decoration: BoxDecoration(
-                      color: statusColor.withValues(alpha: 0.12),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Text(
-                      status,
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: statusColor,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
-                ],
+
+        // ── Documents from server ──
+        if (docs.isNotEmpty) ...[
+          const SizedBox(height: 12),
+          const Text(
+            'Server Documents',
+            style: TextStyle(
+              color: AppColors.textPrimary,
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 6),
+          ...docs.map((doc) => _buildDocCard(context, doc)),
+        ],
+      ],
+    );
+  }
+
+  Widget _infoRow(IconData icon, String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 5),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, size: 18, color: AppColors.textSecondary),
+          const SizedBox(width: 12),
+          Text(
+            label,
+            style: const TextStyle(
+              color: AppColors.textSecondary,
+              fontSize: 14,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              value,
+              style: const TextStyle(
+                color: AppColors.textPrimary,
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
               ),
-              if (filePath != null) ...[
-                const SizedBox(height: 6),
-                GestureDetector(
-                  onTap: () => _showFullPhoto(
-                    context,
-                    docType.toUpperCase(),
-                    DispatchApiService.documentUrl(filePath),
+              textAlign: TextAlign.end,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _formatDate(String iso) {
+    try {
+      final dt = DateTime.parse(iso);
+      return '${dt.month}/${dt.day}/${dt.year}';
+    } catch (_) {
+      return iso;
+    }
+  }
+
+  Widget _buildDocCard(BuildContext context, Map<String, dynamic> doc) {
+    final docType = (doc['doc_type'] as String? ?? 'unknown').replaceAll(
+      '_',
+      ' ',
+    );
+    final status = doc['status'] as String? ?? 'pending';
+    final filePath = doc['file_path'] as String?;
+    final statusColor = status == 'approved'
+        ? AppColors.success
+        : status == 'rejected'
+        ? AppColors.error
+        : AppColors.warning;
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: AppColors.surfaceHigh,
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(
+                Icons.description_rounded,
+                size: 16,
+                color: AppColors.textSecondary,
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  docType.toUpperCase(),
+                  style: const TextStyle(
+                    color: AppColors.textPrimary,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
                   ),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(10),
-                    child: Image.network(
-                      DispatchApiService.documentUrl(filePath),
-                      height: 160,
-                      width: double.infinity,
-                      fit: BoxFit.cover,
-                      errorBuilder: (_, _, _) => Container(
-                        height: 60,
-                        decoration: BoxDecoration(
-                          color: AppColors.surfaceHigh,
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: const Center(
-                          child: Icon(
-                            Icons.broken_image_outlined,
-                            color: AppColors.textHint,
-                            size: 28,
-                          ),
-                        ),
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                decoration: BoxDecoration(
+                  color: statusColor.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  status,
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: statusColor,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          if (filePath != null) ...[
+            const SizedBox(height: 6),
+            GestureDetector(
+              onTap: () => _showFullPhoto(
+                context,
+                docType.toUpperCase(),
+                DispatchApiService.documentUrl(filePath),
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(10),
+                child: Image.network(
+                  DispatchApiService.documentUrl(filePath),
+                  height: 160,
+                  width: double.infinity,
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, _, _) => Container(
+                    height: 60,
+                    decoration: BoxDecoration(
+                      color: AppColors.surfaceHigh,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Center(
+                      child: Icon(
+                        Icons.broken_image_outlined,
+                        color: AppColors.textHint,
+                        size: 28,
                       ),
                     ),
                   ),
                 ),
-              ],
-            ],
-          ),
-        );
-      }).toList(),
+              ),
+            ),
+          ],
+        ],
+      ),
     );
   }
 
