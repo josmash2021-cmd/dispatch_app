@@ -114,7 +114,7 @@ class TripService {
     }
   }
 
-  /// Asignar un conductor a un viaje
+  /// Asignar un conductor a un viaje — syncs to backend
   Future<void> assignDriver({
     required String tripId,
     required String driverId,
@@ -128,6 +128,30 @@ class TripService {
       'status': TripStatus.accepted.value,
       'acceptedAt': FieldValue.serverTimestamp(),
     });
+    // Sync assignment to backend
+    _syncAssignToBackend(tripId, driverId, driverName, driverPhone);
+  }
+
+  /// Sync driver assignment to backend via sqliteId
+  void _syncAssignToBackend(
+    String firestoreId,
+    String driverId,
+    String driverName,
+    String driverPhone,
+  ) async {
+    try {
+      final doc = await _tripsCollection.doc(firestoreId).get();
+      if (!doc.exists) return;
+      final data = doc.data() as Map<String, dynamic>? ?? {};
+      final sqliteId = data['sqliteId'] as int?;
+      // Parse driver SQLite ID from Firestore format "sql_123"
+      final driverSqlId = int.tryParse(driverId.replaceFirst('sql_', ''));
+      if (sqliteId != null && driverSqlId != null) {
+        await DispatchApiService.acceptTripBackend(sqliteId, driverSqlId);
+      }
+    } catch (e) {
+      debugPrint('[TripService] Backend assign sync failed: $e');
+    }
   }
 
   /// Cancelar un viaje con razón — syncs to backend
@@ -137,7 +161,22 @@ class TripService {
       'cancelReason': reason,
       'cancelledAt': FieldValue.serverTimestamp(),
     });
-    _syncStatusToBackend(tripId, 'cancelled');
+    _syncCancelToBackend(tripId, reason);
+  }
+
+  /// Sync cancel + reason to backend via sqliteId
+  void _syncCancelToBackend(String firestoreId, String reason) async {
+    try {
+      final doc = await _tripsCollection.doc(firestoreId).get();
+      if (!doc.exists) return;
+      final data = doc.data() as Map<String, dynamic>? ?? {};
+      final sqliteId = data['sqliteId'] as int?;
+      if (sqliteId != null) {
+        await DispatchApiService.cancelTripBackend(sqliteId, reason);
+      }
+    } catch (e) {
+      debugPrint('[TripService] Backend cancel sync failed: $e');
+    }
   }
 
   /// Actualizar datos de un viaje

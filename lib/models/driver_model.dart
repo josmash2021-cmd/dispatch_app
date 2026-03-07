@@ -1,6 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
-/// Status values: 'active', 'inactive', 'blocked'
+/// Status values: 'active', 'deactivated', 'blocked'
 class DriverModel {
   final String driverId;
   final String firstName;
@@ -20,7 +20,7 @@ class DriverModel {
   final DateTime? lastSeen;
   final DateTime? createdAt;
   final DateTime? lastUpdated;
-  final String status; // 'active' | 'inactive' | 'blocked'
+  final String status; // 'active' | 'deactivated' | 'blocked'
   final String? source;
   final int? sqliteId;
   // Payment
@@ -70,7 +70,7 @@ class DriverModel {
   });
 
   bool get isActive => status == 'active';
-  bool get isInactive => status == 'inactive';
+  bool get isInactive => status == 'deactivated';
   bool get isBlocked => status == 'blocked';
 
   String get fullName => '$firstName $lastName'.trim();

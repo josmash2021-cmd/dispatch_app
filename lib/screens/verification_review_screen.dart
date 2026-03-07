@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import 'package:timeago/timeago.dart' as timeago;
 import '../config/app_theme.dart';
 import '../providers/verification_provider.dart';
+import '../services/dispatch_api_service.dart';
 import '../services/verification_service.dart';
 
 class VerificationReviewScreen extends StatefulWidget {
@@ -456,16 +457,31 @@ class _VerificationCard extends StatelessWidget {
                 child: CircleAvatar(
                   radius: 40,
                   backgroundColor: AppColors.primary.withValues(alpha: 0.15),
-                  child: Text(
-                    request.fullName.isNotEmpty
-                        ? request.fullName[0].toUpperCase()
-                        : '?',
-                    style: const TextStyle(
-                      color: AppColors.primary,
-                      fontSize: 32,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
+                  backgroundImage: request.profilePhotoUrl != null
+                      ? NetworkImage(
+                          DispatchApiService.fullUrl(request.profilePhotoUrl!),
+                        )
+                      : request.userId > 0
+                      ? NetworkImage(
+                          DispatchApiService.photoUrl(request.userId),
+                        )
+                      : null,
+                  onBackgroundImageError:
+                      request.profilePhotoUrl != null || request.userId > 0
+                      ? (_, _) {}
+                      : null,
+                  child: request.profilePhotoUrl == null && request.userId <= 0
+                      ? Text(
+                          request.fullName.isNotEmpty
+                              ? request.fullName[0].toUpperCase()
+                              : '?',
+                          style: const TextStyle(
+                            color: AppColors.primary,
+                            fontSize: 32,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        )
+                      : null,
                 ),
               ),
               const SizedBox(height: 12),
@@ -605,6 +621,54 @@ class _VerificationCard extends StatelessWidget {
                       ),
                     ],
                   ),
+                ),
+              ],
+
+              // ── Verification Photos ──
+              if (request.idPhotoUrl != null ||
+                  request.selfieUrl != null ||
+                  request.profilePhotoUrl != null) ...[
+                const SizedBox(height: 20),
+                _sectionHeader('Verification Photos'),
+                if (request.profilePhotoUrl != null) ...[
+                  const SizedBox(height: 8),
+                  _photoCard(
+                    context,
+                    'Profile Photo',
+                    DispatchApiService.fullUrl(request.profilePhotoUrl!),
+                  ),
+                ] else if (request.userId > 0) ...[
+                  const SizedBox(height: 8),
+                  _photoCard(
+                    context,
+                    'Profile Photo',
+                    DispatchApiService.photoUrl(request.userId),
+                  ),
+                ],
+                if (request.idPhotoUrl != null) ...[
+                  const SizedBox(height: 8),
+                  _photoCard(
+                    context,
+                    'ID Document',
+                    DispatchApiService.fullUrl(request.idPhotoUrl!),
+                  ),
+                ],
+                if (request.selfieUrl != null) ...[
+                  const SizedBox(height: 8),
+                  _photoCard(
+                    context,
+                    'Verification Selfie',
+                    DispatchApiService.fullUrl(request.selfieUrl!),
+                  ),
+                ],
+              ] else if (request.userId > 0) ...[
+                const SizedBox(height: 20),
+                _sectionHeader('Photos'),
+                const SizedBox(height: 8),
+                _photoCard(
+                  context,
+                  'Profile Photo',
+                  DispatchApiService.photoUrl(request.userId),
                 ),
               ],
 
@@ -871,6 +935,124 @@ class _VerificationCard extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _photoCard(BuildContext context, String label, String url) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: const TextStyle(
+            color: AppColors.textSecondary,
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        const SizedBox(height: 6),
+        GestureDetector(
+          onTap: () => _showFullPhoto(context, label, url),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(12),
+            child: Image.network(
+              url,
+              height: 180,
+              width: double.infinity,
+              fit: BoxFit.cover,
+              errorBuilder: (_, _, _) => Container(
+                height: 180,
+                width: double.infinity,
+                decoration: BoxDecoration(
+                  color: AppColors.surfaceHigh,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.broken_image_rounded,
+                      color: AppColors.textHint,
+                      size: 36,
+                    ),
+                    SizedBox(height: 6),
+                    Text(
+                      'Photo not available',
+                      style: TextStyle(color: AppColors.textHint, fontSize: 12),
+                    ),
+                  ],
+                ),
+              ),
+              loadingBuilder: (_, child, progress) {
+                if (progress == null) return child;
+                return Container(
+                  height: 180,
+                  width: double.infinity,
+                  color: AppColors.surfaceHigh,
+                  child: const Center(
+                    child: CircularProgressIndicator(
+                      color: AppColors.primary,
+                      strokeWidth: 2,
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  void _showFullPhoto(BuildContext context, String label, String url) {
+    showDialog(
+      context: context,
+      builder: (ctx) => Dialog(
+        backgroundColor: Colors.black,
+        insetPadding: const EdgeInsets.all(16),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Padding(
+              padding: const EdgeInsets.all(12),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      label,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close_rounded, color: Colors.white),
+                    onPressed: () => Navigator.pop(ctx),
+                  ),
+                ],
+              ),
+            ),
+            InteractiveViewer(
+              child: Image.network(
+                url,
+                fit: BoxFit.contain,
+                errorBuilder: (_, _, _) => const SizedBox(
+                  height: 200,
+                  child: Center(
+                    child: Icon(
+                      Icons.broken_image_rounded,
+                      color: Colors.white54,
+                      size: 48,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

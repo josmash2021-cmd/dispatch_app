@@ -182,7 +182,7 @@ Color _statusColor(String status) {
   switch (status) {
     case 'active':
       return AppColors.success;
-    case 'inactive':
+    case 'deactivated':
       return AppColors.warning;
     case 'blocked':
       return AppColors.error;
@@ -195,7 +195,7 @@ IconData _statusIcon(String status) {
   switch (status) {
     case 'active':
       return Icons.check_circle_rounded;
-    case 'inactive':
+    case 'deactivated':
       return Icons.pause_circle_filled_rounded;
     case 'blocked':
       return Icons.block_rounded;
@@ -208,8 +208,8 @@ String _statusLabel(String status) {
   switch (status) {
     case 'active':
       return 'Active';
-    case 'inactive':
-      return 'Inactive';
+    case 'deactivated':
+      return 'Deactivated';
     case 'blocked':
       return 'Blocked';
     default:
@@ -505,7 +505,7 @@ class _ClientCard extends StatelessWidget {
                   color: AppColors.warning,
                   onTap: () {
                     Navigator.pop(ctx);
-                    _changeStatus(context, client, 'inactive');
+                    _changeStatus(context, client, 'deactivated');
                   },
                 ),
               if (!client.isBlocked)
@@ -1365,8 +1365,9 @@ class _ClientCard extends StatelessWidget {
                     'Deleting "${client.fullName}" is permanent.',
               );
               if (confirmed && context.mounted) {
-                context.read<ClientProvider>().deleteClient(
+                context.read<ClientProvider>().updateClientStatus(
                   client.clientId,
+                  'deleted',
                   clientName: client.fullName,
                 );
               }

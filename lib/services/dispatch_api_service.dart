@@ -261,6 +261,30 @@ class DispatchApiService {
     await _delete('/admin/trips/$tripId');
   }
 
+  /// Cancel a trip on the backend with reason.
+  static Future<Map<String, dynamic>> cancelTripBackend(
+    int tripId,
+    String reason,
+  ) async {
+    final result = await _post(
+      '/trips/$tripId/cancel',
+      body: {'cancel_reason': reason},
+    );
+    return result as Map<String, dynamic>;
+  }
+
+  /// Accept/assign a trip to a driver on the backend.
+  static Future<Map<String, dynamic>> acceptTripBackend(
+    int tripId,
+    int driverId,
+  ) async {
+    final result = await _post(
+      '/trips/$tripId/accept',
+      body: {'driver_id': driverId},
+    );
+    return result as Map<String, dynamic>;
+  }
+
   /// Get dashboard statistics.
   static Future<Map<String, dynamic>> getDashboardStats() async {
     final result = await _get('/admin/stats');
@@ -324,8 +348,19 @@ class DispatchApiService {
   }
 
   /// Build full URL for a user's photo from the backend.
+  /// Tries both .jpg and .png extensions.
   static String photoUrl(int userId) {
     return '$_activeUrl/photos/user_$userId.jpg';
+  }
+
+  /// Build full URL for a user's photo with fallback for PNG.
+  static String photoUrlPng(int userId) {
+    return '$_activeUrl/photos/user_$userId.png';
+  }
+
+  /// Build full URL from a relative path (e.g. /uploads/documents/...).
+  static String fullUrl(String relativePath) {
+    return '$_activeUrl$relativePath';
   }
 }
 

@@ -13,6 +13,9 @@ class VerificationRequest {
   final String? reason;
   final DateTime? submittedAt;
   final DateTime? reviewedAt;
+  final String? idPhotoUrl;
+  final String? selfieUrl;
+  final String? profilePhotoUrl;
 
   VerificationRequest({
     required this.docId,
@@ -27,6 +30,9 @@ class VerificationRequest {
     this.reason,
     this.submittedAt,
     this.reviewedAt,
+    this.idPhotoUrl,
+    this.selfieUrl,
+    this.profilePhotoUrl,
   });
 
   String get fullName => '$firstName $lastName'.trim();
@@ -50,6 +56,9 @@ class VerificationRequest {
       reason: data['reason'] as String?,
       submittedAt: (data['submittedAt'] as Timestamp?)?.toDate(),
       reviewedAt: (data['reviewedAt'] as Timestamp?)?.toDate(),
+      idPhotoUrl: data['idPhotoUrl'] as String?,
+      selfieUrl: data['selfieUrl'] as String?,
+      profilePhotoUrl: data['profilePhotoUrl'] as String?,
     );
   }
 }
@@ -57,17 +66,18 @@ class VerificationRequest {
 class VerificationService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
-  CollectionReference get _collection =>
-      _firestore.collection('verifications');
+  CollectionReference get _collection => _firestore.collection('verifications');
 
   /// Real-time stream of all verification requests
   Stream<List<VerificationRequest>> getVerificationsStream() {
     return _collection
         .orderBy('submittedAt', descending: true)
         .snapshots()
-        .map((snap) => snap.docs
-            .map((d) => VerificationRequest.fromFirestore(d))
-            .toList());
+        .map(
+          (snap) => snap.docs
+              .map((d) => VerificationRequest.fromFirestore(d))
+              .toList(),
+        );
   }
 
   /// Approve a verification request

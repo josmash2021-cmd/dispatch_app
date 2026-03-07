@@ -874,17 +874,16 @@ class _TripDetailScreenState extends State<TripDetailScreen>
   }
 
   void _showCancelDialog(BuildContext context) {
-    final rc = TextEditingController();
+    final rc = TextEditingController(
+      text: 'No hay drivers disponibles cerca de tu zona en estos momentos',
+    );
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Cancel Trip'),
         content: TextField(
           controller: rc,
-          decoration: const InputDecoration(
-            labelText: 'Reason',
-            hintText: 'Enter reason...',
-          ),
+          decoration: const InputDecoration(labelText: 'Reason'),
           maxLines: 3,
           style: const TextStyle(color: AppColors.textPrimary),
         ),
