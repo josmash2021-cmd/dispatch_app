@@ -46,21 +46,24 @@ class ClientService {
         .snapshots()
         .map((s) => s.docs.map((d) => ClientModel.fromFirestore(d)).toList())
         .listen((clients) {
-      lastClients = clients;
-      merge();
-    }, onError: (e) => controller.addError(e));
+          lastClients = clients;
+          merge();
+        }, onError: (e) => controller.addError(e));
 
     final sub2 = _usersCollection
         .orderBy('createdAt', descending: true)
         .snapshots()
         .map((s) => s.docs.map((d) => ClientModel.fromFirestore(d)).toList())
-        .listen((users) {
-      lastUsers = users;
-      if (lastClients != null) merge();
-    }, onError: (_) {
-      lastUsers = [];
-      if (lastClients != null) merge();
-    });
+        .listen(
+          (users) {
+            lastUsers = users;
+            if (lastClients != null) merge();
+          },
+          onError: (_) {
+            lastUsers = [];
+            if (lastClients != null) merge();
+          },
+        );
 
     controller.onCancel = () {
       sub1.cancel();

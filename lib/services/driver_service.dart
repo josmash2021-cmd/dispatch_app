@@ -45,21 +45,24 @@ class DriverService {
         .snapshots()
         .map((s) => s.docs.map((d) => DriverModel.fromFirestore(d)).toList())
         .listen((drivers) {
-      lastDrivers = drivers;
-      merge();
-    }, onError: (e) => controller.addError(e));
+          lastDrivers = drivers;
+          merge();
+        }, onError: (e) => controller.addError(e));
 
     final sub2 = _usersCollection
         .where('role', isEqualTo: 'driver')
         .snapshots()
         .map((s) => s.docs.map((d) => DriverModel.fromFirestore(d)).toList())
-        .listen((userDrivers) {
-      lastUserDrivers = userDrivers;
-      if (lastDrivers != null) merge();
-    }, onError: (_) {
-      lastUserDrivers = [];
-      if (lastDrivers != null) merge();
-    });
+        .listen(
+          (userDrivers) {
+            lastUserDrivers = userDrivers;
+            if (lastDrivers != null) merge();
+          },
+          onError: (_) {
+            lastUserDrivers = [];
+            if (lastDrivers != null) merge();
+          },
+        );
 
     controller.onCancel = () {
       sub1.cancel();
