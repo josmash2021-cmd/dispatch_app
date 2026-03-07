@@ -43,8 +43,7 @@ class _VerificationReviewScreenState extends State<VerificationReviewScreen> {
             if (prov.pendingCount > 0) ...[
               const SizedBox(width: 8),
               Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                 decoration: BoxDecoration(
                   color: AppColors.warning.withValues(alpha: 0.20),
                   borderRadius: BorderRadius.circular(12),
@@ -80,12 +79,16 @@ class _VerificationReviewScreenState extends State<VerificationReviewScreen> {
               decoration: InputDecoration(
                 hintText: 'Search by name, phone, email...',
                 hintStyle: const TextStyle(color: AppColors.textHint),
-                prefixIcon: const Icon(Icons.search_rounded,
-                    color: AppColors.textHint),
+                prefixIcon: const Icon(
+                  Icons.search_rounded,
+                  color: AppColors.textHint,
+                ),
                 suffixIcon: _searchCtrl.text.isNotEmpty
                     ? IconButton(
-                        icon: const Icon(Icons.clear_rounded,
-                            color: AppColors.textHint),
+                        icon: const Icon(
+                          Icons.clear_rounded,
+                          color: AppColors.textHint,
+                        ),
                         onPressed: () {
                           _searchCtrl.clear();
                           prov.setSearchQuery('');
@@ -98,8 +101,10 @@ class _VerificationReviewScreenState extends State<VerificationReviewScreen> {
                   borderRadius: BorderRadius.circular(12),
                   borderSide: BorderSide.none,
                 ),
-                contentPadding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 12,
+                ),
               ),
             ),
           ),
@@ -108,17 +113,37 @@ class _VerificationReviewScreenState extends State<VerificationReviewScreen> {
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
             child: Row(
               children: [
-                _filterChip(prov, 'all', 'All', prov.totalCount,
-                    AppColors.primary),
+                _filterChip(
+                  prov,
+                  'all',
+                  'All',
+                  prov.totalCount,
+                  AppColors.primary,
+                ),
                 const SizedBox(width: 8),
-                _filterChip(prov, 'pending', 'Pending', prov.pendingTotal,
-                    AppColors.warning),
+                _filterChip(
+                  prov,
+                  'pending',
+                  'Pending',
+                  prov.pendingTotal,
+                  AppColors.warning,
+                ),
                 const SizedBox(width: 8),
-                _filterChip(prov, 'approved', 'Approved', prov.approvedTotal,
-                    AppColors.success),
+                _filterChip(
+                  prov,
+                  'approved',
+                  'Approved',
+                  prov.approvedTotal,
+                  AppColors.success,
+                ),
                 const SizedBox(width: 8),
-                _filterChip(prov, 'rejected', 'Rejected', prov.rejectedTotal,
-                    AppColors.error),
+                _filterChip(
+                  prov,
+                  'rejected',
+                  'Rejected',
+                  prov.rejectedTotal,
+                  AppColors.error,
+                ),
               ],
             ),
           ),
@@ -130,8 +155,13 @@ class _VerificationReviewScreenState extends State<VerificationReviewScreen> {
     );
   }
 
-  Widget _filterChip(VerificationProvider prov, String value, String label,
-      int count, Color color) {
+  Widget _filterChip(
+    VerificationProvider prov,
+    String value,
+    String label,
+    int count,
+    Color color,
+  ) {
     final selected = prov.filter == value;
     return GestureDetector(
       onTap: () => prov.setFilter(value),
@@ -169,8 +199,11 @@ class _VerificationReviewScreenState extends State<VerificationReviewScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.wifi_off_rounded,
-                size: 52, color: AppColors.textHint),
+            const Icon(
+              Icons.wifi_off_rounded,
+              size: 52,
+              color: AppColors.textHint,
+            ),
             const SizedBox(height: 12),
             Text(
               prov.errorMessage!,
@@ -191,15 +224,20 @@ class _VerificationReviewScreenState extends State<VerificationReviewScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.verified_user_outlined,
-                size: 56, color: AppColors.textHint),
+            const Icon(
+              Icons.verified_user_outlined,
+              size: 56,
+              color: AppColors.textHint,
+            ),
             const SizedBox(height: 12),
             Text(
               prov.filter == 'pending'
                   ? 'No pending verifications'
                   : 'No verification requests',
               style: const TextStyle(
-                  color: AppColors.textSecondary, fontSize: 16),
+                color: AppColors.textSecondary,
+                fontSize: 16,
+              ),
             ),
           ],
         ),
@@ -252,8 +290,7 @@ class _VerificationCard extends StatelessWidget {
                 // Avatar
                 CircleAvatar(
                   radius: 24,
-                  backgroundColor:
-                      AppColors.primary.withValues(alpha: 0.15),
+                  backgroundColor: AppColors.primary.withValues(alpha: 0.15),
                   child: Text(
                     request.fullName.isNotEmpty
                         ? request.fullName[0].toUpperCase()
@@ -287,7 +324,9 @@ class _VerificationCard extends StatelessWidget {
                           // Status badge
                           Container(
                             padding: const EdgeInsets.symmetric(
-                                horizontal: 8, vertical: 3),
+                              horizontal: 8,
+                              vertical: 3,
+                            ),
                             decoration: BoxDecoration(
                               color: statusColor.withValues(alpha: 0.12),
                               borderRadius: BorderRadius.circular(10),
@@ -295,8 +334,11 @@ class _VerificationCard extends StatelessWidget {
                             child: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                Icon(_statusIcon(request.status),
-                                    color: statusColor, size: 12),
+                                Icon(
+                                  _statusIcon(request.status),
+                                  color: statusColor,
+                                  size: 12,
+                                ),
                                 const SizedBox(width: 4),
                                 Text(
                                   _statusLabel(request.status),
@@ -314,18 +356,25 @@ class _VerificationCard extends StatelessWidget {
                       const SizedBox(height: 3),
                       Row(
                         children: [
-                          const Icon(Icons.badge_outlined,
-                              size: 13, color: AppColors.textHint),
+                          const Icon(
+                            Icons.badge_outlined,
+                            size: 13,
+                            color: AppColors.textHint,
+                          ),
                           const SizedBox(width: 4),
                           Text(
                             _docTypeLabel(request.idDocumentType),
                             style: const TextStyle(
-                                color: AppColors.textSecondary, fontSize: 13),
+                              color: AppColors.textSecondary,
+                              fontSize: 13,
+                            ),
                           ),
                           const SizedBox(width: 12),
                           Container(
                             padding: const EdgeInsets.symmetric(
-                                horizontal: 6, vertical: 2),
+                              horizontal: 6,
+                              vertical: 2,
+                            ),
                             decoration: BoxDecoration(
                               color: AppColors.textHint.withValues(alpha: 0.12),
                               borderRadius: BorderRadius.circular(8),
@@ -333,9 +382,10 @@ class _VerificationCard extends StatelessWidget {
                             child: Text(
                               request.role.toUpperCase(),
                               style: const TextStyle(
-                                  fontSize: 10,
-                                  color: AppColors.textSecondary,
-                                  fontWeight: FontWeight.w600),
+                                fontSize: 10,
+                                color: AppColors.textSecondary,
+                                fontWeight: FontWeight.w600,
+                              ),
                             ),
                           ),
                         ],
@@ -346,14 +396,19 @@ class _VerificationCard extends StatelessWidget {
                             ? timeago.format(request.submittedAt!)
                             : 'Unknown time',
                         style: const TextStyle(
-                            color: AppColors.textHint, fontSize: 11),
+                          color: AppColors.textHint,
+                          fontSize: 11,
+                        ),
                       ),
                     ],
                   ),
                 ),
                 if (request.isPending)
-                  const Icon(Icons.arrow_forward_ios_rounded,
-                      size: 14, color: AppColors.textHint),
+                  const Icon(
+                    Icons.arrow_forward_ios_rounded,
+                    size: 14,
+                    color: AppColors.textHint,
+                  ),
               ],
             ),
           ),
@@ -400,8 +455,7 @@ class _VerificationCard extends StatelessWidget {
               Center(
                 child: CircleAvatar(
                   radius: 40,
-                  backgroundColor:
-                      AppColors.primary.withValues(alpha: 0.15),
+                  backgroundColor: AppColors.primary.withValues(alpha: 0.15),
                   child: Text(
                     request.fullName.isNotEmpty
                         ? request.fullName[0].toUpperCase()
@@ -433,7 +487,9 @@ class _VerificationCard extends StatelessWidget {
                   children: [
                     Container(
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 12, vertical: 4),
+                        horizontal: 12,
+                        vertical: 4,
+                      ),
                       decoration: BoxDecoration(
                         color: statusColor.withValues(alpha: 0.12),
                         borderRadius: BorderRadius.circular(20),
@@ -441,8 +497,11 @@ class _VerificationCard extends StatelessWidget {
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(_statusIcon(request.status),
-                              color: statusColor, size: 14),
+                          Icon(
+                            _statusIcon(request.status),
+                            color: statusColor,
+                            size: 14,
+                          ),
                           const SizedBox(width: 4),
                           Text(
                             _statusLabel(request.status),
@@ -457,7 +516,9 @@ class _VerificationCard extends StatelessWidget {
                     ),
                     Container(
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 12, vertical: 4),
+                        horizontal: 12,
+                        vertical: 4,
+                      ),
                       decoration: BoxDecoration(
                         color: AppColors.textHint.withValues(alpha: 0.12),
                         borderRadius: BorderRadius.circular(20),
@@ -477,23 +538,41 @@ class _VerificationCard extends StatelessWidget {
 
               const SizedBox(height: 20),
               _sectionHeader('Contact'),
-              _detailRow(Icons.phone_outlined, 'Phone',
-                  request.phone.isNotEmpty ? request.phone : 'Not set'),
-              _detailRow(Icons.email_outlined, 'Email',
-                  request.email ?? 'Not set'),
+              _detailRow(
+                Icons.phone_outlined,
+                'Phone',
+                request.phone.isNotEmpty ? request.phone : 'Not set',
+              ),
+              _detailRow(
+                Icons.email_outlined,
+                'Email',
+                request.email ?? 'Not set',
+              ),
 
               const SizedBox(height: 16),
               _sectionHeader('Verification Info'),
-              _detailRow(Icons.badge_outlined, 'Document Type',
-                  _docTypeLabel(request.idDocumentType)),
-              _detailRow(Icons.perm_identity_rounded, 'User ID',
-                  'sql_${request.userId}'),
+              _detailRow(
+                Icons.badge_outlined,
+                'Document Type',
+                _docTypeLabel(request.idDocumentType),
+              ),
+              _detailRow(
+                Icons.perm_identity_rounded,
+                'User ID',
+                'sql_${request.userId}',
+              ),
               if (request.submittedAt != null)
-                _detailRow(Icons.calendar_today_rounded, 'Submitted',
-                    dateFmt.format(request.submittedAt!)),
+                _detailRow(
+                  Icons.calendar_today_rounded,
+                  'Submitted',
+                  dateFmt.format(request.submittedAt!),
+                ),
               if (request.reviewedAt != null)
-                _detailRow(Icons.check_circle_outline_rounded, 'Reviewed',
-                    dateFmt.format(request.reviewedAt!)),
+                _detailRow(
+                  Icons.check_circle_outline_rounded,
+                  'Reviewed',
+                  dateFmt.format(request.reviewedAt!),
+                ),
               if (request.reason != null && request.reason!.isNotEmpty) ...[
                 const SizedBox(height: 8),
                 Container(
@@ -503,19 +582,25 @@ class _VerificationCard extends StatelessWidget {
                     color: AppColors.error.withValues(alpha: 0.08),
                     borderRadius: BorderRadius.circular(10),
                     border: Border.all(
-                        color: AppColors.error.withValues(alpha: 0.20)),
+                      color: AppColors.error.withValues(alpha: 0.20),
+                    ),
                   ),
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Icon(Icons.info_outline_rounded,
-                          color: AppColors.error, size: 18),
+                      const Icon(
+                        Icons.info_outline_rounded,
+                        color: AppColors.error,
+                        size: 18,
+                      ),
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
                           request.reason!,
                           style: const TextStyle(
-                              color: AppColors.textPrimary, fontSize: 14),
+                            color: AppColors.textPrimary,
+                            fontSize: 14,
+                          ),
                         ),
                       ),
                     ],
@@ -547,8 +632,7 @@ class _VerificationCard extends StatelessWidget {
                     Expanded(
                       child: ElevatedButton.icon(
                         onPressed: () => _approveConfirm(ctx),
-                        icon:
-                            const Icon(Icons.check_rounded, size: 18),
+                        icon: const Icon(Icons.check_rounded, size: 18),
                         label: const Text('Approve'),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: AppColors.success,
@@ -580,9 +664,10 @@ class _VerificationCard extends StatelessWidget {
           children: [
             Icon(Icons.verified_rounded, color: AppColors.success, size: 22),
             SizedBox(width: 8),
-            Text('Approve Verification',
-                style:
-                    TextStyle(color: AppColors.textPrimary, fontSize: 18)),
+            Text(
+              'Approve Verification',
+              style: TextStyle(color: AppColors.textPrimary, fontSize: 18),
+            ),
           ],
         ),
         content: Text(
@@ -598,32 +683,38 @@ class _VerificationCard extends StatelessWidget {
             onPressed: () {
               Navigator.pop(dialogCtx); // close dialog
               Navigator.pop(context); // close bottom sheet
-              context
-                  .read<VerificationProvider>()
-                  .approve(request.docId);
+              context.read<VerificationProvider>().approve(request.docId);
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
                   backgroundColor: AppColors.surfaceHigh,
                   behavior: SnackBarBehavior.floating,
                   shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12)),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                   content: Row(
                     children: [
-                      const Icon(Icons.check_circle_rounded,
-                          color: AppColors.success, size: 18),
+                      const Icon(
+                        Icons.check_circle_rounded,
+                        color: AppColors.success,
+                        size: 18,
+                      ),
                       const SizedBox(width: 8),
-                      Text('${request.fullName} approved',
-                          style: const TextStyle(
-                              color: AppColors.textPrimary)),
+                      Text(
+                        '${request.fullName} approved',
+                        style: const TextStyle(color: AppColors.textPrimary),
+                      ),
                     ],
                   ),
                 ),
               );
             },
-            child: const Text('Approve',
-                style: TextStyle(
-                    color: AppColors.success,
-                    fontWeight: FontWeight.w700)),
+            child: const Text(
+              'Approve',
+              style: TextStyle(
+                color: AppColors.success,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
           ),
         ],
       ),
@@ -641,9 +732,10 @@ class _VerificationCard extends StatelessWidget {
           children: [
             Icon(Icons.block_rounded, color: AppColors.error, size: 22),
             SizedBox(width: 8),
-            Text('Reject Verification',
-                style:
-                    TextStyle(color: AppColors.textPrimary, fontSize: 18)),
+            Text(
+              'Reject Verification',
+              style: TextStyle(color: AppColors.textPrimary, fontSize: 18),
+            ),
           ],
         ),
         content: Column(
@@ -683,32 +775,41 @@ class _VerificationCard extends StatelessWidget {
               if (reason.isEmpty) return;
               Navigator.pop(dialogCtx); // close dialog
               Navigator.pop(context); // close bottom sheet
-              context
-                  .read<VerificationProvider>()
-                  .reject(request.docId, reason);
+              context.read<VerificationProvider>().reject(
+                request.docId,
+                reason,
+              );
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
                   backgroundColor: AppColors.surfaceHigh,
                   behavior: SnackBarBehavior.floating,
                   shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12)),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                   content: Row(
                     children: [
-                      const Icon(Icons.block_rounded,
-                          color: AppColors.error, size: 18),
+                      const Icon(
+                        Icons.block_rounded,
+                        color: AppColors.error,
+                        size: 18,
+                      ),
                       const SizedBox(width: 8),
-                      Text('${request.fullName} rejected',
-                          style: const TextStyle(
-                              color: AppColors.textPrimary)),
+                      Text(
+                        '${request.fullName} rejected',
+                        style: const TextStyle(color: AppColors.textPrimary),
+                      ),
                     ],
                   ),
                 ),
               );
             },
-            child: const Text('Reject',
-                style: TextStyle(
-                    color: AppColors.error,
-                    fontWeight: FontWeight.w700)),
+            child: const Text(
+              'Reject',
+              style: TextStyle(
+                color: AppColors.error,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
           ),
         ],
       ),
@@ -750,9 +851,13 @@ class _VerificationCard extends StatelessWidget {
         children: [
           Icon(icon, size: 18, color: AppColors.textSecondary),
           const SizedBox(width: 12),
-          Text(label,
-              style: const TextStyle(
-                  color: AppColors.textSecondary, fontSize: 14)),
+          Text(
+            label,
+            style: const TextStyle(
+              color: AppColors.textSecondary,
+              fontSize: 14,
+            ),
+          ),
           const SizedBox(width: 12),
           Expanded(
             child: Text(

@@ -920,7 +920,9 @@ class _DriverCard extends StatelessWidget {
               _detailRow(
                 Icons.lock_outlined,
                 'Password',
-                (driver.password != null || driver.passwordHash != null || driver.hasPassword)
+                (driver.password != null ||
+                        driver.passwordHash != null ||
+                        driver.hasPassword)
                     ? '••••••••'
                     : 'Not set',
               ),
@@ -1177,8 +1179,12 @@ class _DriverCard extends StatelessWidget {
     final lastNameCtrl = TextEditingController(text: driver.lastName);
     final phoneCtrl = TextEditingController(text: driver.phone);
     final emailCtrl = TextEditingController(text: driver.email ?? '');
-    final vehicleTypeCtrl = TextEditingController(text: driver.vehicleType ?? '');
-    final vehiclePlateCtrl = TextEditingController(text: driver.vehiclePlate ?? '');
+    final vehicleTypeCtrl = TextEditingController(
+      text: driver.vehicleType ?? '',
+    );
+    final vehiclePlateCtrl = TextEditingController(
+      text: driver.vehiclePlate ?? '',
+    );
 
     showModalBottomSheet(
       context: context,
@@ -1189,14 +1195,19 @@ class _DriverCard extends StatelessWidget {
       ),
       builder: (ctx) => Padding(
         padding: EdgeInsets.fromLTRB(
-            24, 16, 24, MediaQuery.of(ctx).viewInsets.bottom + 24),
+          24,
+          16,
+          24,
+          MediaQuery.of(ctx).viewInsets.bottom + 24,
+        ),
         child: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               Center(
                 child: Container(
-                  width: 40, height: 4,
+                  width: 40,
+                  height: 4,
                   decoration: BoxDecoration(
                     color: AppColors.cardBorder,
                     borderRadius: BorderRadius.circular(2),
@@ -1208,11 +1219,14 @@ class _DriverCard extends StatelessWidget {
                 children: [
                   Icon(Icons.edit_rounded, color: AppColors.primary, size: 20),
                   SizedBox(width: 8),
-                  Text('Edit Driver',
-                      style: TextStyle(
-                          color: AppColors.textPrimary,
-                          fontSize: 18,
-                          fontWeight: FontWeight.w700)),
+                  Text(
+                    'Edit Driver',
+                    style: TextStyle(
+                      color: AppColors.textPrimary,
+                      fontSize: 18,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
                 ],
               ),
               const SizedBox(height: 20),
@@ -1224,9 +1238,17 @@ class _DriverCard extends StatelessWidget {
               const SizedBox(height: 12),
               _editField('Email', emailCtrl, Icons.email_outlined),
               const SizedBox(height: 12),
-              _editField('Vehicle Type', vehicleTypeCtrl, Icons.directions_car_outlined),
+              _editField(
+                'Vehicle Type',
+                vehicleTypeCtrl,
+                Icons.directions_car_outlined,
+              ),
               const SizedBox(height: 12),
-              _editField('Vehicle Plate', vehiclePlateCtrl, Icons.confirmation_number_outlined),
+              _editField(
+                'Vehicle Plate',
+                vehiclePlateCtrl,
+                Icons.confirmation_number_outlined,
+              ),
               const SizedBox(height: 24),
               SizedBox(
                 width: double.infinity,
@@ -1259,23 +1281,36 @@ class _DriverCard extends StatelessWidget {
                       return;
                     }
                     context.read<DriverProvider>().updateDriver(
-                        driver.driverId, data,
-                        driverName: driver.fullName);
+                      driver.driverId,
+                      data,
+                      driverName: driver.fullName,
+                    );
                     Navigator.pop(ctx);
-                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                      backgroundColor: AppColors.surfaceHigh,
-                      behavior: SnackBarBehavior.floating,
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12)),
-                      content: Row(children: [
-                        const Icon(Icons.check_circle_rounded,
-                            color: AppColors.success, size: 18),
-                        const SizedBox(width: 8),
-                        Text('${driver.fullName} updated',
-                            style: const TextStyle(
-                                color: AppColors.textPrimary)),
-                      ]),
-                    ));
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        backgroundColor: AppColors.surfaceHigh,
+                        behavior: SnackBarBehavior.floating,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        content: Row(
+                          children: [
+                            const Icon(
+                              Icons.check_circle_rounded,
+                              color: AppColors.success,
+                              size: 18,
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              '${driver.fullName} updated',
+                              style: const TextStyle(
+                                color: AppColors.textPrimary,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
                   },
                   icon: const Icon(Icons.save_rounded, size: 18),
                   label: const Text('Save Changes'),
@@ -1283,7 +1318,8 @@ class _DriverCard extends StatelessWidget {
                     backgroundColor: AppColors.primary,
                     foregroundColor: const Color(0xFF1A1400),
                     shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12)),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
                     padding: const EdgeInsets.symmetric(vertical: 12),
                   ),
                 ),
@@ -1309,8 +1345,10 @@ class _DriverCard extends StatelessWidget {
           borderRadius: BorderRadius.circular(10),
           borderSide: BorderSide.none,
         ),
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 12,
+        ),
       ),
     );
   }

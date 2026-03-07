@@ -866,7 +866,9 @@ class _ClientCard extends StatelessWidget {
               _detailRow(
                 Icons.lock_outlined,
                 'Password',
-                (client.password != null || client.passwordHash != null || client.hasPassword)
+                (client.password != null ||
+                        client.passwordHash != null ||
+                        client.hasPassword)
                     ? '••••••••'
                     : 'Not set',
               ),
@@ -1148,14 +1150,19 @@ class _ClientCard extends StatelessWidget {
       ),
       builder: (ctx) => Padding(
         padding: EdgeInsets.fromLTRB(
-            24, 16, 24, MediaQuery.of(ctx).viewInsets.bottom + 24),
+          24,
+          16,
+          24,
+          MediaQuery.of(ctx).viewInsets.bottom + 24,
+        ),
         child: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               Center(
                 child: Container(
-                  width: 40, height: 4,
+                  width: 40,
+                  height: 4,
                   decoration: BoxDecoration(
                     color: AppColors.cardBorder,
                     borderRadius: BorderRadius.circular(2),
@@ -1167,11 +1174,14 @@ class _ClientCard extends StatelessWidget {
                 children: [
                   Icon(Icons.edit_rounded, color: AppColors.primary, size: 20),
                   SizedBox(width: 8),
-                  Text('Edit Client',
-                      style: TextStyle(
-                          color: AppColors.textPrimary,
-                          fontSize: 18,
-                          fontWeight: FontWeight.w700)),
+                  Text(
+                    'Edit Client',
+                    style: TextStyle(
+                      color: AppColors.textPrimary,
+                      fontSize: 18,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
                 ],
               ),
               const SizedBox(height: 20),
@@ -1206,23 +1216,36 @@ class _ClientCard extends StatelessWidget {
                       return;
                     }
                     context.read<ClientProvider>().updateClient(
-                        client.clientId, data,
-                        clientName: client.fullName);
+                      client.clientId,
+                      data,
+                      clientName: client.fullName,
+                    );
                     Navigator.pop(ctx);
-                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                      backgroundColor: AppColors.surfaceHigh,
-                      behavior: SnackBarBehavior.floating,
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12)),
-                      content: Row(children: [
-                        const Icon(Icons.check_circle_rounded,
-                            color: AppColors.success, size: 18),
-                        const SizedBox(width: 8),
-                        Text('${client.fullName} updated',
-                            style: const TextStyle(
-                                color: AppColors.textPrimary)),
-                      ]),
-                    ));
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        backgroundColor: AppColors.surfaceHigh,
+                        behavior: SnackBarBehavior.floating,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        content: Row(
+                          children: [
+                            const Icon(
+                              Icons.check_circle_rounded,
+                              color: AppColors.success,
+                              size: 18,
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              '${client.fullName} updated',
+                              style: const TextStyle(
+                                color: AppColors.textPrimary,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
                   },
                   icon: const Icon(Icons.save_rounded, size: 18),
                   label: const Text('Save Changes'),
@@ -1230,7 +1253,8 @@ class _ClientCard extends StatelessWidget {
                     backgroundColor: AppColors.primary,
                     foregroundColor: const Color(0xFF1A1400),
                     shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12)),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
                     padding: const EdgeInsets.symmetric(vertical: 12),
                   ),
                 ),
@@ -1256,8 +1280,10 @@ class _ClientCard extends StatelessWidget {
           borderRadius: BorderRadius.circular(10),
           borderSide: BorderSide.none,
         ),
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 12,
+        ),
       ),
     );
   }

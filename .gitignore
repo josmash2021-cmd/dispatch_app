@@ -12,6 +12,13 @@
 .swiftpm/
 migrate_working_dir/
 
+# Secrets & environment files
+.env
+lib/config/env.dart
+local.properties
+google-services.json
+GoogleService-Info.plist
+
 # IntelliJ related
 *.iml
 *.ipr
