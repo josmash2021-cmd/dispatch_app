@@ -343,3 +343,42 @@ workflows:
         notify:
           success: true
           failure: true
+
+
+  android-apk:
+    name: Android APK (installable)
+    max_build_duration: 60
+    instance_type: linux_x2
+    environment:
+      flutter: stable
+      java: 17
+      groups:
+        - firebase_credentials
+        - google_maps
+    triggering:
+      events:
+        - push
+      branch_patterns:
+        - pattern: "master"
+          include: true
+    scripts:
+      - name: Flutter pub get
+        script: flutter pub get
+
+      - name: Build APK
+        script: |
+          flutter build apk --release --no-tree-shake-icons
+          APK_PATH=$(find build/app/outputs -name "*.apk" -type f | head -1)
+          echo "APK: $APK_PATH"
+          echo "Size: $(du -sh "$APK_PATH" | cut -f1)"
+
+    artifacts:
+      - build/app/outputs/**/*.apk
+
+    publishing:
+      email:
+        recipients:
+          - josmash2021@gmail.com
+        notify:
+          success: true
+          failure: true
