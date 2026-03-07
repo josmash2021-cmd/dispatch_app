@@ -158,28 +158,46 @@ workflows:
 
       - name: Flutter build iOS no codesign
         script: |
-          flutter build ios --release --no-codesign --no-tree-shake-icons || true
-          # Verify .app was actually built
+          set -e
+          flutter build ios --release --no-codesign --no-tree-shake-icons
           APP=$(find "$CM_BUILD_DIR/build/ios" -name "*.app" -type d | head -1)
           if [ -z "$APP" ]; then
-            echo "ERROR: No .app bundle found. Build truly failed."
+            echo "ERROR: No .app bundle found."
             exit 1
           fi
           echo "Build succeeded: $APP"
+          ls -la "$APP"
 
       - name: Package unsigned IPA
         script: |
+          set -e
           APP_PATH=$(find "$CM_BUILD_DIR/build/ios" -name "*.app" -type d | head -1)
-          PAYLOAD="$CM_BUILD_DIR/Payload"
-          IPA="$CM_BUILD_DIR/CruiseDispatch_unsigned.ipa"
+          if [ -z "$APP_PATH" ]; then
+            echo "ERROR: .app not found"
+            exit 1
+          fi
+          echo "Found app: $APP_PATH"
+          echo "App size: $(du -sh "$APP_PATH" | cut -f1)"
+          
+          PAYLOAD="$CM_BUILD_DIR/build/ios/ipa/Payload"
           mkdir -p "$PAYLOAD"
           cp -r "$APP_PATH" "$PAYLOAD/"
-          cd "$CM_BUILD_DIR"
-          zip -r "$IPA" Payload/
-          echo "IPA ready: $IPA"
+          
+          # Verify Payload has content
+          PAYLOAD_SIZE=$(du -s "$PAYLOAD" | cut -f1)
+          echo "Payload size: ${PAYLOAD_SIZE}K"
+          if [ "$PAYLOAD_SIZE" -lt 100 ]; then
+            echo "ERROR: Payload too small, copy failed"
+            ls -la "$PAYLOAD/"
+            exit 1
+          fi
+          
+          cd "$CM_BUILD_DIR/build/ios/ipa"
+          zip -r CruiseDispatch_unsigned.ipa Payload/
+          echo "IPA size: $(du -sh CruiseDispatch_unsigned.ipa | cut -f1)"
 
     artifacts:
-      - CruiseDispatch_unsigned.ipa
+      - build/ios/ipa/CruiseDispatch_unsigned.ipa
 
     publishing:
       email:
