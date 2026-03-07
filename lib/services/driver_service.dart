@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/driver_model.dart';
 
@@ -9,49 +10,64 @@ class DriverService {
 
   CollectionReference get _usersCollection => _firestore.collection('users');
 
-  /// Real-time stream merging 'drivers' and driver-role docs from 'users'
+  /// Real-time stream merging 'drivers' and driver-role docs from 'users'.
+  /// Uses combineLatest so ANY change in EITHER collection triggers an update.
   Stream<List<DriverModel>> getDriversStream() {
-    final driversStream = _driversCollection
+    final controller = StreamController<List<DriverModel>>();
+
+    List<DriverModel>? lastDrivers;
+    List<DriverModel>? lastUserDrivers;
+
+    void merge() {
+      final drivers = lastDrivers ?? [];
+      final userDrivers = lastUserDrivers ?? [];
+      final driverIds = drivers.map((d) => d.driverId).toSet();
+      final driverPhones = drivers
+          .map((d) => d.phone)
+          .where((p) => p.isNotEmpty)
+          .toSet();
+      final merged = [...drivers];
+      for (final ud in userDrivers) {
+        if (!driverIds.contains(ud.driverId) &&
+            !driverPhones.contains(ud.phone)) {
+          merged.add(ud);
+        }
+      }
+      merged.sort((a, b) {
+        if (a.isOnline != b.isOnline) return a.isOnline ? -1 : 1;
+        return a.fullName.compareTo(b.fullName);
+      });
+      controller.add(merged);
+    }
+
+    final sub1 = _driversCollection
         .orderBy('isOnline', descending: true)
         .snapshots()
-        .map(
-          (snapshot) => snapshot.docs
-              .map((doc) => DriverModel.fromFirestore(doc))
-              .toList(),
-        );
+        .map((s) => s.docs.map((d) => DriverModel.fromFirestore(d)).toList())
+        .listen((drivers) {
+      lastDrivers = drivers;
+      merge();
+    }, onError: (e) => controller.addError(e));
 
-    final usersStream = _usersCollection
+    final sub2 = _usersCollection
         .where('role', isEqualTo: 'driver')
         .snapshots()
-        .handleError((_) => <DriverModel>[])
-        .map(
-          (snapshot) => snapshot.docs
-              .map((doc) => DriverModel.fromFirestore(doc))
-              .toList(),
-        );
-
-    return driversStream.asyncExpand((drivers) {
-      return usersStream.map((userDrivers) {
-        final driverIds = drivers.map((d) => d.driverId).toSet();
-        final driverPhones = drivers
-            .map((d) => d.phone)
-            .where((p) => p.isNotEmpty)
-            .toSet();
-        final merged = [...drivers];
-        for (final ud in userDrivers) {
-          if (!driverIds.contains(ud.driverId) &&
-              !driverPhones.contains(ud.phone)) {
-            merged.add(ud);
-          }
-        }
-        // Online first, then by name
-        merged.sort((a, b) {
-          if (a.isOnline != b.isOnline) return a.isOnline ? -1 : 1;
-          return a.fullName.compareTo(b.fullName);
-        });
-        return merged;
-      });
+        .map((s) => s.docs.map((d) => DriverModel.fromFirestore(d)).toList())
+        .listen((userDrivers) {
+      lastUserDrivers = userDrivers;
+      if (lastDrivers != null) merge();
+    }, onError: (_) {
+      lastUserDrivers = [];
+      if (lastDrivers != null) merge();
     });
+
+    controller.onCancel = () {
+      sub1.cancel();
+      sub2.cancel();
+      controller.close();
+    };
+
+    return controller.stream;
   }
 
   /// One-time fetch of all drivers

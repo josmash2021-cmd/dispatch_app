@@ -5,7 +5,9 @@ import 'package:provider/provider.dart';
 import '../config/app_theme.dart';
 import '../config/page_transitions.dart';
 import '../providers/auth_provider.dart';
+import '../providers/client_provider.dart';
 import '../providers/dashboard_provider.dart';
+import '../providers/driver_provider.dart';
 import '../providers/trip_provider.dart';
 import '../widgets/glass_nav_bar.dart';
 import '../widgets/stat_card.dart';
@@ -66,6 +68,8 @@ class _DashboardScreenState extends State<DashboardScreen>
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<DashboardProvider>().loadDashboardData();
       context.read<TripProvider>().startListening();
+      context.read<ClientProvider>().startListening();
+      context.read<DriverProvider>().startListening();
     });
   }
 

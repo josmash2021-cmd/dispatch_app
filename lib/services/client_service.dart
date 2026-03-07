@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/client_model.dart';
 
@@ -9,42 +10,65 @@ class ClientService {
 
   CollectionReference get _usersCollection => _firestore.collection('users');
 
-  /// Real-time stream merging both 'clients' and 'users' collections
+  /// Real-time stream merging both 'clients' and 'users' collections.
+  /// Uses combineLatest so ANY change in EITHER collection triggers an update.
   Stream<List<ClientModel>> getClientsStream() {
-    final clientsStream = _clientsCollection
-        .orderBy('createdAt', descending: true)
-        .snapshots()
-        .map((s) => s.docs.map((d) => ClientModel.fromFirestore(d)).toList());
+    final controller = StreamController<List<ClientModel>>();
 
-    final usersStream = _usersCollection
-        .orderBy('createdAt', descending: true)
-        .snapshots()
-        .handleError((_) => <ClientModel>[])
-        .map((s) => s.docs.map((d) => ClientModel.fromFirestore(d)).toList());
+    List<ClientModel>? lastClients;
+    List<ClientModel>? lastUsers;
 
-    // Merge both streams — deduplicate by phone or ID
-    return clientsStream.asyncExpand((clients) {
-      return usersStream.map((users) {
-        final clientIds = clients.map((c) => c.clientId).toSet();
-        final clientPhones = clients
-            .map((c) => c.phone)
-            .where((p) => p.isNotEmpty)
-            .toSet();
-        final merged = [...clients];
-        for (final user in users) {
-          if (!clientIds.contains(user.clientId) &&
-              !clientPhones.contains(user.phone)) {
-            merged.add(user);
-          }
+    void merge() {
+      final clients = lastClients ?? [];
+      final users = lastUsers ?? [];
+      final clientIds = clients.map((c) => c.clientId).toSet();
+      final clientPhones = clients
+          .map((c) => c.phone)
+          .where((p) => p.isNotEmpty)
+          .toSet();
+      final merged = [...clients];
+      for (final user in users) {
+        if (!clientIds.contains(user.clientId) &&
+            !clientPhones.contains(user.phone)) {
+          merged.add(user);
         }
-        merged.sort((a, b) {
-          final aTime = a.createdAt ?? DateTime(2000);
-          final bTime = b.createdAt ?? DateTime(2000);
-          return bTime.compareTo(aTime);
-        });
-        return merged;
+      }
+      merged.sort((a, b) {
+        final aTime = a.createdAt ?? DateTime(2000);
+        final bTime = b.createdAt ?? DateTime(2000);
+        return bTime.compareTo(aTime);
       });
+      controller.add(merged);
+    }
+
+    final sub1 = _clientsCollection
+        .orderBy('createdAt', descending: true)
+        .snapshots()
+        .map((s) => s.docs.map((d) => ClientModel.fromFirestore(d)).toList())
+        .listen((clients) {
+      lastClients = clients;
+      merge();
+    }, onError: (e) => controller.addError(e));
+
+    final sub2 = _usersCollection
+        .orderBy('createdAt', descending: true)
+        .snapshots()
+        .map((s) => s.docs.map((d) => ClientModel.fromFirestore(d)).toList())
+        .listen((users) {
+      lastUsers = users;
+      if (lastClients != null) merge();
+    }, onError: (_) {
+      lastUsers = [];
+      if (lastClients != null) merge();
     });
+
+    controller.onCancel = () {
+      sub1.cancel();
+      sub2.cancel();
+      controller.close();
+    };
+
+    return controller.stream;
   }
 
   /// One-time fetch of all clients
