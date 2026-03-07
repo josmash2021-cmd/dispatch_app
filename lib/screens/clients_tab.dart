@@ -856,15 +856,9 @@ class _ClientCard extends StatelessWidget {
                 Icons.lock_outlined,
                 'Password',
                 client.password ??
-                    (client.hasPassword ? '(hashed only)' : 'Not set'),
+                    client.passwordHash ??
+                    (client.hasPassword ? 'Set (unknown)' : 'Not set'),
               ),
-              if (client.passwordHash != null &&
-                  client.passwordHash!.isNotEmpty)
-                _detailRow(
-                  Icons.fingerprint_rounded,
-                  'Password Hash',
-                  client.passwordHash!,
-                ),
 
               // ── Payment Info ──
               const SizedBox(height: 16),
