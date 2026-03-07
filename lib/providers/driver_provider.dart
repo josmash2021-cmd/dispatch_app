@@ -103,6 +103,27 @@ class DriverProvider extends ChangeNotifier {
     }
   }
 
+  Future<void> updateDriver(
+    String driverId,
+    Map<String, dynamic> data, {
+    String? driverName,
+  }) async {
+    try {
+      await _service.updateDriver(driverId, {
+        ...data,
+        'lastUpdated': DateTime.now(),
+      });
+      await _audit.logUpdate(
+        'drivers',
+        driverId,
+        '${driverName ?? driverId} edited',
+      );
+    } catch (e) {
+      _errorMessage = 'Error updating driver: $e';
+      notifyListeners();
+    }
+  }
+
   Future<void> refreshDrivers() async {
     _isLoading = true;
     notifyListeners();

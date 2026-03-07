@@ -473,6 +473,17 @@ class _ClientCard extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: 20),
+              _actionTile(
+                icon: Icons.edit_rounded,
+                label: 'Edit Client',
+                subtitle: 'Update profile information',
+                color: AppColors.primary,
+                onTap: () {
+                  Navigator.pop(ctx);
+                  _showEditClient(context, client);
+                },
+              ),
+              const Divider(color: AppColors.cardBorder, height: 16),
               if (!client.isActive)
                 _actionTile(
                   icon: Icons.check_circle_outline_rounded,
@@ -855,9 +866,9 @@ class _ClientCard extends StatelessWidget {
               _detailRow(
                 Icons.lock_outlined,
                 'Password',
-                client.password ??
-                    client.passwordHash ??
-                    (client.hasPassword ? 'Set (unknown)' : 'Not set'),
+                (client.password != null || client.passwordHash != null || client.hasPassword)
+                    ? '••••••••'
+                    : 'Not set',
               ),
 
               // ── Documents ──
@@ -1116,6 +1127,137 @@ class _ClientCard extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  // ─── Edit Client ────────────────────────────────────────────────────────
+
+  void _showEditClient(BuildContext context, ClientModel client) {
+    final firstNameCtrl = TextEditingController(text: client.firstName);
+    final lastNameCtrl = TextEditingController(text: client.lastName);
+    final phoneCtrl = TextEditingController(text: client.phone);
+    final emailCtrl = TextEditingController(text: client.email ?? '');
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: AppColors.surface,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => Padding(
+        padding: EdgeInsets.fromLTRB(
+            24, 16, 24, MediaQuery.of(ctx).viewInsets.bottom + 24),
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Center(
+                child: Container(
+                  width: 40, height: 4,
+                  decoration: BoxDecoration(
+                    color: AppColors.cardBorder,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              const Row(
+                children: [
+                  Icon(Icons.edit_rounded, color: AppColors.primary, size: 20),
+                  SizedBox(width: 8),
+                  Text('Edit Client',
+                      style: TextStyle(
+                          color: AppColors.textPrimary,
+                          fontSize: 18,
+                          fontWeight: FontWeight.w700)),
+                ],
+              ),
+              const SizedBox(height: 20),
+              _editField('First Name', firstNameCtrl, Icons.person_outline),
+              const SizedBox(height: 12),
+              _editField('Last Name', lastNameCtrl, Icons.person_outline),
+              const SizedBox(height: 12),
+              _editField('Phone', phoneCtrl, Icons.phone_outlined),
+              const SizedBox(height: 12),
+              _editField('Email', emailCtrl, Icons.email_outlined),
+              const SizedBox(height: 24),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: () {
+                    final data = <String, dynamic>{};
+                    if (firstNameCtrl.text.trim() != client.firstName) {
+                      data['firstName'] = firstNameCtrl.text.trim();
+                    }
+                    if (lastNameCtrl.text.trim() != client.lastName) {
+                      data['lastName'] = lastNameCtrl.text.trim();
+                    }
+                    if (phoneCtrl.text.trim() != client.phone) {
+                      data['phone'] = phoneCtrl.text.trim();
+                    }
+                    final email = emailCtrl.text.trim();
+                    if (email != (client.email ?? '')) {
+                      data['email'] = email.isEmpty ? null : email;
+                    }
+                    if (data.isEmpty) {
+                      Navigator.pop(ctx);
+                      return;
+                    }
+                    context.read<ClientProvider>().updateClient(
+                        client.clientId, data,
+                        clientName: client.fullName);
+                    Navigator.pop(ctx);
+                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                      backgroundColor: AppColors.surfaceHigh,
+                      behavior: SnackBarBehavior.floating,
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12)),
+                      content: Row(children: [
+                        const Icon(Icons.check_circle_rounded,
+                            color: AppColors.success, size: 18),
+                        const SizedBox(width: 8),
+                        Text('${client.fullName} updated',
+                            style: const TextStyle(
+                                color: AppColors.textPrimary)),
+                      ]),
+                    ));
+                  },
+                  icon: const Icon(Icons.save_rounded, size: 18),
+                  label: const Text('Save Changes'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    foregroundColor: const Color(0xFF1A1400),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12)),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _editField(String label, TextEditingController ctrl, IconData icon) {
+    return TextField(
+      controller: ctrl,
+      style: const TextStyle(color: AppColors.textPrimary),
+      decoration: InputDecoration(
+        labelText: label,
+        labelStyle: const TextStyle(color: AppColors.textSecondary),
+        prefixIcon: Icon(icon, color: AppColors.textHint, size: 20),
+        filled: true,
+        fillColor: AppColors.surfaceHigh,
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(10),
+          borderSide: BorderSide.none,
+        ),
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       ),
     );
   }

@@ -11,6 +11,7 @@ import 'providers/client_provider.dart';
 import 'providers/dashboard_provider.dart';
 import 'providers/driver_provider.dart';
 import 'providers/trip_provider.dart';
+import 'providers/verification_provider.dart';
 import 'screens/splash_screen.dart';
 import 'screens/dashboard_screen.dart';
 import 'screens/login_screen.dart';
@@ -45,6 +46,7 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => DashboardProvider()),
         ChangeNotifierProvider(create: (_) => ClientProvider()),
         ChangeNotifierProvider(create: (_) => DriverProvider()),
+        ChangeNotifierProvider(create: (_) => VerificationProvider()),
       ],
       child: MaterialApp(
         title: 'Dispatch Admin',

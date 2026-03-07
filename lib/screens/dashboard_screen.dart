@@ -9,6 +9,7 @@ import '../providers/client_provider.dart';
 import '../providers/dashboard_provider.dart';
 import '../providers/driver_provider.dart';
 import '../providers/trip_provider.dart';
+import '../providers/verification_provider.dart';
 import '../widgets/glass_nav_bar.dart';
 import '../widgets/stat_card.dart';
 import 'trip_list_screen.dart';
@@ -18,6 +19,7 @@ import 'admin_config_screen.dart';
 import 'fleet_map_screen.dart';
 import 'reports_screen.dart';
 import 'scheduled_rides_screen.dart';
+import 'verification_review_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -191,6 +193,7 @@ class _StatsContent extends StatelessWidget {
         title: const Text('Stats'),
         backgroundColor: AppColors.background,
         actions: [
+          _VerificationBadgeButton(),
           IconButton(
             icon: const Icon(
               Icons.event_note_rounded,
@@ -724,5 +727,52 @@ class _StatsContent extends StatelessWidget {
       if (t > max) max = t;
     }
     return max < 5 ? 5 : max + 2;
+  }
+}
+
+// ─── Verification Badge Button ──────────────────────────────────────────────
+
+class _VerificationBadgeButton extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    final prov = context.watch<VerificationProvider>();
+    final count = prov.pendingCount;
+    return Stack(
+      children: [
+        IconButton(
+          icon: const Icon(
+            Icons.verified_user_outlined,
+            color: AppColors.primary,
+          ),
+          tooltip: 'Verification Review',
+          onPressed: () => Navigator.push(
+            context,
+            slideFromRightRoute(const VerificationReviewScreen()),
+          ),
+        ),
+        if (count > 0)
+          Positioned(
+            right: 4,
+            top: 4,
+            child: Container(
+              padding: const EdgeInsets.all(4),
+              decoration: const BoxDecoration(
+                color: AppColors.error,
+                shape: BoxShape.circle,
+              ),
+              constraints: const BoxConstraints(minWidth: 18, minHeight: 18),
+              child: Text(
+                count > 9 ? '9+' : '$count',
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 10,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+          ),
+      ],
+    );
   }
 }

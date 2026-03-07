@@ -100,6 +100,27 @@ class ClientProvider extends ChangeNotifier {
     }
   }
 
+  Future<void> updateClient(
+    String clientId,
+    Map<String, dynamic> data, {
+    String? clientName,
+  }) async {
+    try {
+      await _service.updateClient(clientId, {
+        ...data,
+        'lastUpdated': DateTime.now(),
+      });
+      await _audit.logUpdate(
+        'clients',
+        clientId,
+        '${clientName ?? clientId} edited',
+      );
+    } catch (e) {
+      _errorMessage = 'Error updating client: $e';
+      notifyListeners();
+    }
+  }
+
   Future<void> refreshClients() async {
     _isLoading = true;
     notifyListeners();

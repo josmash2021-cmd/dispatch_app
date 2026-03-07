@@ -500,6 +500,17 @@ class _DriverCard extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: 20),
+              _actionTile(
+                icon: Icons.edit_rounded,
+                label: 'Edit Driver',
+                subtitle: 'Update profile information',
+                color: AppColors.primary,
+                onTap: () {
+                  Navigator.pop(ctx);
+                  _showEditDriver(context, driver);
+                },
+              ),
+              const Divider(color: AppColors.cardBorder, height: 16),
               if (!driver.isActive)
                 _actionTile(
                   icon: Icons.check_circle_outline_rounded,
@@ -909,9 +920,9 @@ class _DriverCard extends StatelessWidget {
               _detailRow(
                 Icons.lock_outlined,
                 'Password',
-                driver.password ??
-                    driver.passwordHash ??
-                    (driver.hasPassword ? 'Set (unknown)' : 'Not set'),
+                (driver.password != null || driver.passwordHash != null || driver.hasPassword)
+                    ? '••••••••'
+                    : 'Not set',
               ),
 
               // ── Documents ──
@@ -1155,6 +1166,151 @@ class _DriverCard extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  // ─── Edit Driver ────────────────────────────────────────────────────────
+
+  void _showEditDriver(BuildContext context, DriverModel driver) {
+    final firstNameCtrl = TextEditingController(text: driver.firstName);
+    final lastNameCtrl = TextEditingController(text: driver.lastName);
+    final phoneCtrl = TextEditingController(text: driver.phone);
+    final emailCtrl = TextEditingController(text: driver.email ?? '');
+    final vehicleTypeCtrl = TextEditingController(text: driver.vehicleType ?? '');
+    final vehiclePlateCtrl = TextEditingController(text: driver.vehiclePlate ?? '');
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: AppColors.surface,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => Padding(
+        padding: EdgeInsets.fromLTRB(
+            24, 16, 24, MediaQuery.of(ctx).viewInsets.bottom + 24),
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Center(
+                child: Container(
+                  width: 40, height: 4,
+                  decoration: BoxDecoration(
+                    color: AppColors.cardBorder,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              const Row(
+                children: [
+                  Icon(Icons.edit_rounded, color: AppColors.primary, size: 20),
+                  SizedBox(width: 8),
+                  Text('Edit Driver',
+                      style: TextStyle(
+                          color: AppColors.textPrimary,
+                          fontSize: 18,
+                          fontWeight: FontWeight.w700)),
+                ],
+              ),
+              const SizedBox(height: 20),
+              _editField('First Name', firstNameCtrl, Icons.person_outline),
+              const SizedBox(height: 12),
+              _editField('Last Name', lastNameCtrl, Icons.person_outline),
+              const SizedBox(height: 12),
+              _editField('Phone', phoneCtrl, Icons.phone_outlined),
+              const SizedBox(height: 12),
+              _editField('Email', emailCtrl, Icons.email_outlined),
+              const SizedBox(height: 12),
+              _editField('Vehicle Type', vehicleTypeCtrl, Icons.directions_car_outlined),
+              const SizedBox(height: 12),
+              _editField('Vehicle Plate', vehiclePlateCtrl, Icons.confirmation_number_outlined),
+              const SizedBox(height: 24),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: () {
+                    final data = <String, dynamic>{};
+                    if (firstNameCtrl.text.trim() != driver.firstName) {
+                      data['firstName'] = firstNameCtrl.text.trim();
+                    }
+                    if (lastNameCtrl.text.trim() != driver.lastName) {
+                      data['lastName'] = lastNameCtrl.text.trim();
+                    }
+                    if (phoneCtrl.text.trim() != driver.phone) {
+                      data['phone'] = phoneCtrl.text.trim();
+                    }
+                    final email = emailCtrl.text.trim();
+                    if (email != (driver.email ?? '')) {
+                      data['email'] = email.isEmpty ? null : email;
+                    }
+                    final vt = vehicleTypeCtrl.text.trim();
+                    if (vt != (driver.vehicleType ?? '')) {
+                      data['vehicleType'] = vt.isEmpty ? null : vt;
+                    }
+                    final vp = vehiclePlateCtrl.text.trim();
+                    if (vp != (driver.vehiclePlate ?? '')) {
+                      data['vehiclePlate'] = vp.isEmpty ? null : vp;
+                    }
+                    if (data.isEmpty) {
+                      Navigator.pop(ctx);
+                      return;
+                    }
+                    context.read<DriverProvider>().updateDriver(
+                        driver.driverId, data,
+                        driverName: driver.fullName);
+                    Navigator.pop(ctx);
+                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                      backgroundColor: AppColors.surfaceHigh,
+                      behavior: SnackBarBehavior.floating,
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12)),
+                      content: Row(children: [
+                        const Icon(Icons.check_circle_rounded,
+                            color: AppColors.success, size: 18),
+                        const SizedBox(width: 8),
+                        Text('${driver.fullName} updated',
+                            style: const TextStyle(
+                                color: AppColors.textPrimary)),
+                      ]),
+                    ));
+                  },
+                  icon: const Icon(Icons.save_rounded, size: 18),
+                  label: const Text('Save Changes'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    foregroundColor: const Color(0xFF1A1400),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12)),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _editField(String label, TextEditingController ctrl, IconData icon) {
+    return TextField(
+      controller: ctrl,
+      style: const TextStyle(color: AppColors.textPrimary),
+      decoration: InputDecoration(
+        labelText: label,
+        labelStyle: const TextStyle(color: AppColors.textSecondary),
+        prefixIcon: Icon(icon, color: AppColors.textHint, size: 20),
+        filled: true,
+        fillColor: AppColors.surfaceHigh,
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(10),
+          borderSide: BorderSide.none,
+        ),
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       ),
     );
   }
