@@ -1,5 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/foundation.dart';
 import '../models/trip_model.dart';
+import 'dispatch_api_service.dart';
 
 class TripService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -45,13 +47,30 @@ class TripService {
     });
   }
 
-  /// Crear un nuevo viaje
+  /// Crear un nuevo viaje — writes to Firestore AND syncs to backend
   Future<String> createTrip(TripModel trip) async {
     final docRef = await _tripsCollection.add(trip.toMap());
+    // Sync to backend
+    try {
+      await DispatchApiService.createTrip({
+        'pickup_address': trip.pickupAddress,
+        'dropoff_address': trip.dropoffAddress,
+        'pickup_lat': trip.pickupLat,
+        'pickup_lng': trip.pickupLng,
+        'dropoff_lat': trip.dropoffLat,
+        'dropoff_lng': trip.dropoffLng,
+        'fare': trip.fare,
+        'vehicle_type': trip.vehicleType,
+        'status': trip.status.value,
+        'notes': 'dispatch:${docRef.id}',
+      });
+    } catch (e) {
+      debugPrint('[TripService] Backend sync failed on create: $e');
+    }
     return docRef.id;
   }
 
-  /// Actualizar el estado de un viaje
+  /// Actualizar el estado de un viaje — syncs to backend via SQLite ID
   Future<void> updateTripStatus(String tripId, TripStatus newStatus) async {
     final Map<String, dynamic> updateData = {'status': newStatus.value};
 
@@ -76,6 +95,23 @@ class TripService {
     }
 
     await _tripsCollection.doc(tripId).update(updateData);
+    // Sync status to backend if we have a sqliteId
+    _syncStatusToBackend(tripId, newStatus.value);
+  }
+
+  /// Best-effort sync: find the backend trip by notes field containing Firestore docId
+  void _syncStatusToBackend(String firestoreId, String status) async {
+    try {
+      final doc = await _tripsCollection.doc(firestoreId).get();
+      if (!doc.exists) return;
+      final data = doc.data() as Map<String, dynamic>? ?? {};
+      final sqliteId = data['sqliteId'] as int?;
+      if (sqliteId != null) {
+        await DispatchApiService.updateTrip(sqliteId, {'status': status});
+      }
+    } catch (e) {
+      debugPrint('[TripService] Backend status sync failed: $e');
+    }
   }
 
   /// Asignar un conductor a un viaje
@@ -94,13 +130,14 @@ class TripService {
     });
   }
 
-  /// Cancelar un viaje con razón
+  /// Cancelar un viaje con razón — syncs to backend
   Future<void> cancelTrip(String tripId, String reason) async {
     await _tripsCollection.doc(tripId).update({
       'status': TripStatus.cancelled.value,
       'cancelReason': reason,
       'cancelledAt': FieldValue.serverTimestamp(),
     });
+    _syncStatusToBackend(tripId, 'cancelled');
   }
 
   /// Actualizar datos de un viaje
@@ -113,8 +150,31 @@ class TripService {
     await _tripsCollection.doc(tripId).delete();
   }
 
-  /// Obtener estadísticas del dashboard
+  /// Obtener estadísticas del dashboard — tries backend first, falls back to Firestore
   Future<Map<String, dynamic>> getDashboardStats() async {
+    // Try backend first (authoritative source)
+    try {
+      final backendStats = await DispatchApiService.getDashboardStats();
+      return {
+        'todayTrips': backendStats['today_trips'] ?? 0,
+        'weekTrips': backendStats['week_trips'] ?? 0,
+        'monthTrips': backendStats['month_trips'] ?? 0,
+        'activeTrips': backendStats['active_trips'] ?? 0,
+        'todayRevenue': (backendStats['today_revenue'] ?? 0).toDouble(),
+        'weekRevenue': (backendStats['week_revenue'] ?? 0).toDouble(),
+        'monthRevenue': (backendStats['month_revenue'] ?? 0).toDouble(),
+        'todayCompleted': backendStats['today_completed'] ?? 0,
+        'todayCancelled': backendStats['today_cancelled'] ?? 0,
+        'todayCompletionRate': (backendStats['completion_rate'] ?? 0)
+            .toDouble(),
+        'onlineDrivers': backendStats['online_drivers'] ?? 0,
+        'totalDrivers': backendStats['total_drivers'] ?? 0,
+      };
+    } catch (e) {
+      debugPrint('[TripService] Backend stats failed, using Firestore: $e');
+    }
+
+    // Fallback to Firestore
     final now = DateTime.now();
     final startOfDay = DateTime(now.year, now.month, now.day);
     final startOfWeek = startOfDay.subtract(
@@ -123,51 +183,46 @@ class TripService {
     final startOfMonth = DateTime(now.year, now.month, 1);
 
     // Viajes de hoy
-    final todaySnapshot =
-        await _tripsCollection
-            .where(
-              'createdAt',
-              isGreaterThanOrEqualTo: Timestamp.fromDate(startOfDay),
-            )
-            .get();
+    final todaySnapshot = await _tripsCollection
+        .where(
+          'createdAt',
+          isGreaterThanOrEqualTo: Timestamp.fromDate(startOfDay),
+        )
+        .get();
 
     // Viajes de la semana
-    final weekSnapshot =
-        await _tripsCollection
-            .where(
-              'createdAt',
-              isGreaterThanOrEqualTo: Timestamp.fromDate(startOfWeek),
-            )
-            .get();
+    final weekSnapshot = await _tripsCollection
+        .where(
+          'createdAt',
+          isGreaterThanOrEqualTo: Timestamp.fromDate(startOfWeek),
+        )
+        .get();
 
     // Viajes del mes
-    final monthSnapshot =
-        await _tripsCollection
-            .where(
-              'createdAt',
-              isGreaterThanOrEqualTo: Timestamp.fromDate(startOfMonth),
-            )
-            .get();
+    final monthSnapshot = await _tripsCollection
+        .where(
+          'createdAt',
+          isGreaterThanOrEqualTo: Timestamp.fromDate(startOfMonth),
+        )
+        .get();
 
     // Viajes activos (no completados ni cancelados)
-    final activeSnapshot =
-        await _tripsCollection
-            .where('status', whereIn: [
-              'requested',
-              'accepted',
-              'driver_arrived',
-              'in_progress',
-            ])
-            .get();
+    final activeSnapshot = await _tripsCollection
+        .where(
+          'status',
+          whereIn: ['requested', 'accepted', 'driver_arrived', 'in_progress'],
+        )
+        .get();
 
-    final todayTrips =
-        todaySnapshot.docs
-            .map((d) => TripModel.fromFirestore(d))
-            .toList();
-    final weekTrips =
-        weekSnapshot.docs.map((d) => TripModel.fromFirestore(d)).toList();
-    final monthTrips =
-        monthSnapshot.docs.map((d) => TripModel.fromFirestore(d)).toList();
+    final todayTrips = todaySnapshot.docs
+        .map((d) => TripModel.fromFirestore(d))
+        .toList();
+    final weekTrips = weekSnapshot.docs
+        .map((d) => TripModel.fromFirestore(d))
+        .toList();
+    final monthTrips = monthSnapshot.docs
+        .map((d) => TripModel.fromFirestore(d))
+        .toList();
 
     double todayRevenue = todayTrips
         .where((t) => t.status == TripStatus.completed)
@@ -181,10 +236,12 @@ class TripService {
         .where((t) => t.status == TripStatus.completed)
         .fold(0.0, (total, t) => total + t.fare);
 
-    int todayCompleted =
-        todayTrips.where((t) => t.status == TripStatus.completed).length;
-    int todayCancelled =
-        todayTrips.where((t) => t.status == TripStatus.cancelled).length;
+    int todayCompleted = todayTrips
+        .where((t) => t.status == TripStatus.completed)
+        .length;
+    int todayCancelled = todayTrips
+        .where((t) => t.status == TripStatus.cancelled)
+        .length;
 
     return {
       'todayTrips': todayTrips.length,
@@ -196,10 +253,9 @@ class TripService {
       'monthRevenue': monthRevenue,
       'todayCompleted': todayCompleted,
       'todayCancelled': todayCancelled,
-      'todayCompletionRate':
-          todayTrips.isNotEmpty
-              ? (todayCompleted / todayTrips.length * 100)
-              : 0.0,
+      'todayCompletionRate': todayTrips.isNotEmpty
+          ? (todayCompleted / todayTrips.length * 100)
+          : 0.0,
     };
   }
 
@@ -212,24 +268,20 @@ class TripService {
       final day = DateTime(now.year, now.month, now.day - i);
       final nextDay = day.add(const Duration(days: 1));
 
-      final snapshot =
-          await _tripsCollection
-              .where(
-                'createdAt',
-                isGreaterThanOrEqualTo: Timestamp.fromDate(day),
-              )
-              .where(
-                'createdAt',
-                isLessThan: Timestamp.fromDate(nextDay),
-              )
-              .get();
+      final snapshot = await _tripsCollection
+          .where('createdAt', isGreaterThanOrEqualTo: Timestamp.fromDate(day))
+          .where('createdAt', isLessThan: Timestamp.fromDate(nextDay))
+          .get();
 
-      final trips =
-          snapshot.docs.map((d) => TripModel.fromFirestore(d)).toList();
-      final completed =
-          trips.where((t) => t.status == TripStatus.completed).length;
-      final cancelled =
-          trips.where((t) => t.status == TripStatus.cancelled).length;
+      final trips = snapshot.docs
+          .map((d) => TripModel.fromFirestore(d))
+          .toList();
+      final completed = trips
+          .where((t) => t.status == TripStatus.completed)
+          .length;
+      final cancelled = trips
+          .where((t) => t.status == TripStatus.cancelled)
+          .length;
       final revenue = trips
           .where((t) => t.status == TripStatus.completed)
           .fold(0.0, (total, t) => total + t.fare);

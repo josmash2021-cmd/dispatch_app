@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/foundation.dart';
 import '../models/driver_model.dart';
+import 'dispatch_api_service.dart';
 
 class DriverService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -98,7 +100,7 @@ class DriverService {
   }
 
   /// Update driver status (active / inactive / blocked)
-  /// Also syncs to the 'users' collection so the Cruise app sees the change.
+  /// Syncs to 'users' collection AND backend SQLite.
   Future<void> updateStatus(String driverId, String status) async {
     await _driversCollection.doc(driverId).update({
       'status': status,
@@ -106,6 +108,23 @@ class DriverService {
     });
     // Sync to users collection
     await _syncStatusToUsers(driverId, status);
+    // Sync to backend SQLite
+    _syncStatusToBackend(driverId, status);
+  }
+
+  /// Best-effort sync status to backend via sqliteId
+  void _syncStatusToBackend(String firestoreId, String status) async {
+    try {
+      final doc = await _driversCollection.doc(firestoreId).get();
+      if (!doc.exists) return;
+      final data = doc.data() as Map<String, dynamic>? ?? {};
+      final sqliteId = data['sqliteId'] as int?;
+      if (sqliteId != null) {
+        await DispatchApiService.updateUserStatus(sqliteId, status);
+      }
+    } catch (e) {
+      debugPrint('[DriverService] Backend status sync failed: $e');
+    }
   }
 
   /// Update driver fields

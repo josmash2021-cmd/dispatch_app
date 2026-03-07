@@ -48,8 +48,8 @@ class _FleetMapScreenState extends State<FleetMapScreen> {
   gm.BitmapDescriptor? _gmOfflineIcon;
   gm.BitmapDescriptor? _gmPickupIcon;
 
-  static const double _defaultLat = 33.5186; // Birmingham, Alabama
-  static const double _defaultLng = -86.8104;
+  static const double _defaultLat = 25.7617; // Miami, Florida
+  static const double _defaultLng = -80.1918;
 
   @override
   void initState() {

@@ -14,6 +14,7 @@ import 'providers/trip_provider.dart';
 import 'screens/splash_screen.dart';
 import 'screens/dashboard_screen.dart';
 import 'screens/login_screen.dart';
+import 'services/dispatch_api_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -24,6 +25,9 @@ void main() async {
   } catch (_) {
     // Already initialized (hot restart) — safe to ignore.
   }
+  await DispatchApiService.init();
+  // Auto-detect best backend URL in background
+  DispatchApiService.probeAndSetBestUrl();
   await initializeDateFormatting('es', null);
   timeago.setLocaleMessages('es', timeago.EsMessages());
   runApp(const MyApp());

@@ -159,10 +159,9 @@ class DriverModel {
     if (cardLast4 != null) 'cardLast4': cardLast4,
     if (cardBrand != null) 'cardBrand': cardBrand,
     if (bankName != null) 'bankName': bankName,
-    if (bankRoutingNumber != null) 'bankRoutingNumber': bankRoutingNumber,
-    if (bankAccountNumber != null) 'bankAccountNumber': bankAccountNumber,
+    // bankRoutingNumber and bankAccountNumber excluded — never write to Firestore
     if (username != null) 'username': username,
-    if (password != null) 'password': password,
+    // password excluded — never write plaintext passwords to Firestore
     if (licenseUrl != null) 'licenseUrl': licenseUrl,
     if (documentUrl != null) 'documentUrl': documentUrl,
   };

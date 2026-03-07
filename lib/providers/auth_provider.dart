@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import '../services/admin_service.dart';
@@ -7,8 +8,9 @@ import '../services/auth_service.dart';
 enum AuthStatus { uninitialized, authenticated, unauthenticated, loading }
 
 class AuthProvider extends ChangeNotifier {
-  // ═══ LOCKED: Only this email can EVER access this app ═══
-  static const String _authorizedEmail = 'royalpurplecorp@gmail.com';
+  // ═══ Authorized admin emails — admins collection is the source of truth ═══
+  // Fallback: first login creates superadmin via bootstrapSuperAdmin()
+  static const List<String> _authorizedEmails = ['royalpurplecorp@gmail.com'];
 
   final AuthService _authService = AuthService();
   final AdminService _adminService = AdminService();
@@ -66,8 +68,22 @@ class AuthProvider extends ChangeNotifier {
       _errorMessage = null;
       notifyListeners();
 
-      // ═══ GATE 1: Block ANY email that is not the authorized admin ═══
-      if (email.trim().toLowerCase() != _authorizedEmail) {
+      // ═══ GATE 1: Check against admin list OR Firestore admins ═══
+      final normalizedEmail = email.trim().toLowerCase();
+      final isInHardcodedList = _authorizedEmails.contains(normalizedEmail);
+      bool isFirestoreAdmin = false;
+      if (!isInHardcodedList) {
+        // Check if email exists in admins collection
+        try {
+          final snap = await FirebaseFirestore.instance
+              .collection('admins')
+              .where('email', isEqualTo: normalizedEmail)
+              .limit(1)
+              .get();
+          isFirestoreAdmin = snap.docs.isNotEmpty;
+        } catch (_) {}
+      }
+      if (!isInHardcodedList && !isFirestoreAdmin) {
         _status = AuthStatus.unauthenticated;
         _errorMessage = 'Access denied. Unauthorized account.';
         notifyListeners();
@@ -79,10 +95,9 @@ class AuthProvider extends ChangeNotifier {
         password: password,
       );
 
-      // ═══ GATE 2: Double-check Firebase Auth email matches ═══
+      // ═══ GATE 2: Verify Firebase Auth user is in authorized set ═══
       final currentUser = _authService.currentUser;
-      if (currentUser == null ||
-          currentUser.email?.toLowerCase() != _authorizedEmail) {
+      if (currentUser == null) {
         await _authService.signOut();
         _status = AuthStatus.unauthenticated;
         _user = null;
@@ -137,8 +152,8 @@ class AuthProvider extends ChangeNotifier {
   }
 
   Future<bool> resetPassword(String email) async {
-    // Only allow password reset for the authorized admin
-    if (email.trim().toLowerCase() != _authorizedEmail) {
+    // Only allow password reset for authorized admins
+    if (!_authorizedEmails.contains(email.trim().toLowerCase())) {
       _errorMessage = 'Access denied. Unauthorized account.';
       notifyListeners();
       return false;

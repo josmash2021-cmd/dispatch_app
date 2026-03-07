@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/foundation.dart';
 import '../models/client_model.dart';
+import 'dispatch_api_service.dart';
 
 class ClientService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -96,7 +98,7 @@ class ClientService {
   }
 
   /// Update client status (active / inactive / blocked)
-  /// Also syncs to the 'users' collection so the Cruise app sees the change.
+  /// Syncs to 'users' collection AND backend SQLite.
   Future<void> updateStatus(String clientId, String status) async {
     await _clientsCollection.doc(clientId).update({
       'status': status,
@@ -104,6 +106,23 @@ class ClientService {
     });
     // Sync to users collection (same docId or matched by phone)
     await _syncStatusToUsers(clientId, status);
+    // Sync to backend SQLite
+    _syncStatusToBackend(clientId, status);
+  }
+
+  /// Best-effort sync status to backend via sqliteId
+  void _syncStatusToBackend(String firestoreId, String status) async {
+    try {
+      final doc = await _clientsCollection.doc(firestoreId).get();
+      if (!doc.exists) return;
+      final data = doc.data() as Map<String, dynamic>? ?? {};
+      final sqliteId = data['sqliteId'] as int?;
+      if (sqliteId != null) {
+        await DispatchApiService.updateUserStatus(sqliteId, status);
+      }
+    } catch (e) {
+      debugPrint('[ClientService] Backend status sync failed: $e');
+    }
   }
 
   /// Delete a client — also removes from 'users' collection

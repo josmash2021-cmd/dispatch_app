@@ -31,6 +31,11 @@ dependencies:
   google_maps_flutter: ^2.10.0  # Android (never instantiated on iOS)
   apple_maps_flutter: ^1.4.0   # iOS (MapKit, no API key needed)
 
+  # HTTP & Security
+  http: ^1.2.2
+  crypto: ^3.0.6
+  shared_preferences: ^2.3.4
+
   # Utils
   timeago: ^3.7.0
   uuid: ^4.5.1

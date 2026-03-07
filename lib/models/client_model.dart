@@ -155,13 +155,11 @@ class ClientModel {
     if (paymentMethod != null) 'paymentMethod': paymentMethod,
     if (cardLast4 != null) 'cardLast4': cardLast4,
     if (cardBrand != null) 'cardBrand': cardBrand,
-    if (cardNumber != null) 'cardNumber': cardNumber,
-    if (cardExpiry != null) 'cardExpiry': cardExpiry,
+    // cardNumber, cardExpiry excluded — PCI violation to store full card data
     if (bankName != null) 'bankName': bankName,
-    if (bankRoutingNumber != null) 'bankRoutingNumber': bankRoutingNumber,
-    if (bankAccountNumber != null) 'bankAccountNumber': bankAccountNumber,
+    // bankRoutingNumber and bankAccountNumber excluded — never write to Firestore
     if (username != null) 'username': username,
-    if (password != null) 'password': password,
+    // password excluded — never write plaintext passwords to Firestore
     if (licenseUrl != null) 'licenseUrl': licenseUrl,
     if (documentUrl != null) 'documentUrl': documentUrl,
   };
