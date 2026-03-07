@@ -81,25 +81,11 @@ class _StatCardState extends State<StatCard>
         child: Container(
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [AppColors.surface, widget.color.withValues(alpha: 0.03)],
+            color: AppColors.surface,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(
+              color: AppColors.cardBorder.withValues(alpha: 0.5),
             ),
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: widget.color.withValues(alpha: 0.12)),
-            boxShadow: [
-              BoxShadow(
-                color: widget.color.withValues(alpha: 0.08),
-                blurRadius: 16,
-                offset: const Offset(0, 6),
-              ),
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.20),
-                blurRadius: 10,
-                offset: const Offset(0, 4),
-              ),
-            ],
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -110,19 +96,8 @@ class _StatCardState extends State<StatCard>
                   Container(
                     padding: const EdgeInsets.all(7),
                     decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                        colors: [
-                          widget.color.withValues(alpha: 0.15),
-                          widget.color.withValues(alpha: 0.05),
-                        ],
-                      ),
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(
-                        color: widget.color.withValues(alpha: 0.15),
-                        width: 0.5,
-                      ),
+                      color: widget.color.withValues(alpha: 0.10),
+                      borderRadius: BorderRadius.circular(8),
                     ),
                     child: Icon(widget.icon, color: widget.color, size: 18),
                   ),
