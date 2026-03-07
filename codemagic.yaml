@@ -105,22 +105,10 @@ workflows:
       - name: Disable code signing
         script: |
           cd ios
-          sed -i '' 's/CODE_SIGN_IDENTITY = ".*"/CODE_SIGN_IDENTITY = ""/g' Runner.xcodeproj/project.pbxproj
-          sed -i '' 's/"CODE_SIGN_IDENTITY\[sdk=iphoneos\*\]" = ".*"/"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = ""/g' Runner.xcodeproj/project.pbxproj
-          sed -i '' 's/DEVELOPMENT_TEAM = .*/DEVELOPMENT_TEAM = "";/g' Runner.xcodeproj/project.pbxproj
-          sed -i '' 's/CODE_SIGN_STYLE = Automatic/CODE_SIGN_STYLE = Manual/g' Runner.xcodeproj/project.pbxproj
-          sed -i '' 's/PROVISIONING_PROFILE_SPECIFIER = ".*"/PROVISIONING_PROFILE_SPECIFIER = ""/g' Runner.xcodeproj/project.pbxproj
-          python3 -c "
-          p='Runner.xcodeproj/project.pbxproj'
-          t=open(p).read()
-          if 'CODE_SIGNING_ALLOWED' not in t:
-            t=t.replace('PRODUCT_BUNDLE_IDENTIFIER','CODE_SIGNING_ALLOWED = NO;\n\t\t\t\tCODE_SIGNING_REQUIRED = NO;\n\t\t\t\tPRODUCT_BUNDLE_IDENTIFIER')
-          open(p,'w').write(t)
-          print('Injected CODE_SIGNING_ALLOWED=NO')
-          "
-          echo "CODE_SIGNING_ALLOWED=NO" >> Flutter/Debug.xcconfig
-          echo "CODE_SIGNING_REQUIRED=NO" >> Flutter/Debug.xcconfig
-          echo "CODE_SIGN_IDENTITY=" >> Flutter/Debug.xcconfig
+          sed -i '' 's/CODE_SIGN_IDENTITY = .*;/CODE_SIGN_IDENTITY = "";/g' Runner.xcodeproj/project.pbxproj
+          sed -i '' 's/DEVELOPMENT_TEAM = [^;]*;/DEVELOPMENT_TEAM = "";/g' Runner.xcodeproj/project.pbxproj
+          sed -i '' 's/CODE_SIGN_STYLE = Automatic;/CODE_SIGN_STYLE = Manual;/g' Runner.xcodeproj/project.pbxproj
+          sed -i '' 's/"CODE_SIGN_IDENTITY\[sdk=iphoneos\*\]" = .*;/"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "";/g' Runner.xcodeproj/project.pbxproj
           echo "CODE_SIGNING_ALLOWED=NO" >> Flutter/Release.xcconfig
           echo "CODE_SIGNING_REQUIRED=NO" >> Flutter/Release.xcconfig
           echo "CODE_SIGN_IDENTITY=" >> Flutter/Release.xcconfig
@@ -128,8 +116,19 @@ workflows:
 
       - name: Flutter build iOS no codesign
         script: |
-          flutter build ios --release --no-codesign --no-tree-shake-icons \
-            -- CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" DEVELOPMENT_TEAM=""
+          flutter build ios --release --no-codesign --no-tree-shake-icons 2>&1 || true
+          cd ios
+          xcodebuild -workspace Runner.xcworkspace \
+            -scheme Runner \
+            -configuration Release \
+            -sdk iphoneos \
+            -destination 'generic/platform=iOS' \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" \
+            DEVELOPMENT_TEAM="" \
+            COMPILER_INDEX_STORE_ENABLE=NO \
+            -allowProvisioningUpdates 2>&1 | tail -20
 
       - name: Package unsigned IPA
         script: |
