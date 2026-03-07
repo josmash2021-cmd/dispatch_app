@@ -130,13 +130,44 @@ class DriverService {
   /// Update driver fields
   Future<void> updateDriver(String driverId, Map<String, dynamic> data) async {
     await _driversCollection.doc(driverId).update(data);
+    // Sync to backend SQLite
+    _syncEditToBackend(driverId, data);
   }
 
-  /// Delete a driver — also removes from 'users' collection
+  /// Sync edit to backend via sqliteId
+  void _syncEditToBackend(String firestoreId, Map<String, dynamic> data) async {
+    try {
+      final doc = await _driversCollection.doc(firestoreId).get();
+      if (!doc.exists) return;
+      final docData = doc.data() as Map<String, dynamic>? ?? {};
+      final sqliteId = docData['sqliteId'] as int?;
+      if (sqliteId != null) {
+        final backendData = <String, dynamic>{};
+        if (data.containsKey('firstName')) {
+          backendData['first_name'] = data['firstName'];
+        }
+        if (data.containsKey('lastName')) {
+          backendData['last_name'] = data['lastName'];
+        }
+        if (data.containsKey('phone')) backendData['phone'] = data['phone'];
+        if (data.containsKey('email')) backendData['email'] = data['email'];
+        if (data.containsKey('status')) backendData['status'] = data['status'];
+        if (backendData.isNotEmpty) {
+          await DispatchApiService.updateUser(sqliteId, backendData);
+        }
+      }
+    } catch (e) {
+      debugPrint('[DriverService] Backend edit sync failed: $e');
+    }
+  }
+
+  /// Delete a driver — also removes from 'users' collection and backend
   Future<void> deleteDriver(String driverId) async {
+    int? sqliteId;
     final driverDoc = await _driversCollection.doc(driverId).get();
     if (driverDoc.exists) {
       final data = driverDoc.data() as Map<String, dynamic>? ?? {};
+      sqliteId = data['sqliteId'] as int?;
       final phone = data['phone'] as String? ?? '';
       final userDoc = await _usersCollection.doc(driverId).get();
       if (userDoc.exists) {
@@ -152,6 +183,14 @@ class DriverService {
       }
     }
     await _driversCollection.doc(driverId).delete();
+    // Sync delete to backend
+    if (sqliteId != null) {
+      try {
+        await DispatchApiService.deleteUser(sqliteId);
+      } catch (e) {
+        debugPrint('[DriverService] Backend delete sync failed: $e');
+      }
+    }
   }
 
   /// Sync status change to the 'users' collection

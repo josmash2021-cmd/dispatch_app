@@ -95,6 +95,36 @@ class ClientService {
   /// Update a client
   Future<void> updateClient(String clientId, Map<String, dynamic> data) async {
     await _clientsCollection.doc(clientId).update(data);
+    // Sync to backend SQLite
+    _syncEditToBackend(clientId, data);
+  }
+
+  /// Sync edit to backend via sqliteId
+  void _syncEditToBackend(String firestoreId, Map<String, dynamic> data) async {
+    try {
+      final doc = await _clientsCollection.doc(firestoreId).get();
+      if (!doc.exists) return;
+      final docData = doc.data() as Map<String, dynamic>? ?? {};
+      final sqliteId = docData['sqliteId'] as int?;
+      if (sqliteId != null) {
+        // Map Firestore field names to backend field names
+        final backendData = <String, dynamic>{};
+        if (data.containsKey('firstName')) {
+          backendData['first_name'] = data['firstName'];
+        }
+        if (data.containsKey('lastName')) {
+          backendData['last_name'] = data['lastName'];
+        }
+        if (data.containsKey('phone')) backendData['phone'] = data['phone'];
+        if (data.containsKey('email')) backendData['email'] = data['email'];
+        if (data.containsKey('status')) backendData['status'] = data['status'];
+        if (backendData.isNotEmpty) {
+          await DispatchApiService.updateUser(sqliteId, backendData);
+        }
+      }
+    } catch (e) {
+      debugPrint('[ClientService] Backend edit sync failed: $e');
+    }
   }
 
   /// Update client status (active / inactive / blocked)
@@ -125,12 +155,14 @@ class ClientService {
     }
   }
 
-  /// Delete a client — also removes from 'users' collection
+  /// Delete a client — also removes from 'users' collection and backend
   Future<void> deleteClient(String clientId) async {
-    // Try to find matching user doc
+    // Get sqliteId before deleting
+    int? sqliteId;
     final clientDoc = await _clientsCollection.doc(clientId).get();
     if (clientDoc.exists) {
       final data = clientDoc.data() as Map<String, dynamic>? ?? {};
+      sqliteId = data['sqliteId'] as int?;
       final phone = data['phone'] as String? ?? '';
       // Delete from users by same docId
       final userDoc = await _usersCollection.doc(clientId).get();
@@ -148,6 +180,14 @@ class ClientService {
       }
     }
     await _clientsCollection.doc(clientId).delete();
+    // Sync delete to backend
+    if (sqliteId != null) {
+      try {
+        await DispatchApiService.deleteUser(sqliteId);
+      } catch (e) {
+        debugPrint('[ClientService] Backend delete sync failed: $e');
+      }
+    }
   }
 
   /// Sync status change to the 'users' collection

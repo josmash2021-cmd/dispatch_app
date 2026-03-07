@@ -105,12 +105,48 @@ workflows:
       - name: Disable code signing
         script: |
           cd ios
-          sed -i '' 's/CODE_SIGN_IDENTITY = .*;/CODE_SIGN_IDENTITY = "";/g' Runner.xcodeproj/project.pbxproj
-          sed -i '' 's/DEVELOPMENT_TEAM = [^;]*;/DEVELOPMENT_TEAM = "";/g' Runner.xcodeproj/project.pbxproj
-          sed -i '' 's/CODE_SIGN_STYLE = Automatic;/CODE_SIGN_STYLE = Manual;/g' Runner.xcodeproj/project.pbxproj
-          sed -i '' 's/"CODE_SIGN_IDENTITY\[sdk=iphoneos\*\]" = .*;/"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "";/g' Runner.xcodeproj/project.pbxproj
-          sed -i '' 's/PRODUCT_BUNDLE_IDENTIFIER/CODE_SIGNING_ALLOWED = NO;\n\t\t\t\tCODE_SIGNING_REQUIRED = NO;\n\t\t\t\tPRODUCT_BUNDLE_IDENTIFIER/g' Runner.xcodeproj/project.pbxproj
-          echo "Code signing disabled."
+          python3 << 'PYEOF'
+          import re
+
+          pbx = 'Runner.xcodeproj/project.pbxproj'
+          with open(pbx, 'r') as f:
+              content = f.read()
+
+          # Clear CODE_SIGN_IDENTITY (both variants)
+          content = re.sub(
+              r'"CODE_SIGN_IDENTITY\[sdk=iphoneos\*\]"\s*=\s*"[^"]*";',
+              '"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "";',
+              content
+          )
+          content = re.sub(
+              r'CODE_SIGN_IDENTITY\s*=\s*"[^"]*";',
+              'CODE_SIGN_IDENTITY = "";',
+              content
+          )
+
+          # Clear DEVELOPMENT_TEAM
+          content = re.sub(
+              r'DEVELOPMENT_TEAM\s*=\s*[^;]*;',
+              'DEVELOPMENT_TEAM = "";',
+              content
+          )
+
+          # Change Automatic to Manual
+          content = content.replace('CODE_SIGN_STYLE = Automatic;', 'CODE_SIGN_STYLE = Manual;')
+
+          # Add CODE_SIGNING_ALLOWED = NO and CODE_SIGNING_REQUIRED = NO before each PRODUCT_BUNDLE_IDENTIFIER
+          # but only if not already present
+          if 'CODE_SIGNING_ALLOWED' not in content:
+              content = content.replace(
+                  'PRODUCT_BUNDLE_IDENTIFIER',
+                  'CODE_SIGNING_ALLOWED = NO;\n\t\t\t\tCODE_SIGNING_REQUIRED = NO;\n\t\t\t\tPRODUCT_BUNDLE_IDENTIFIER'
+              )
+
+          with open(pbx, 'w') as f:
+              f.write(content)
+
+          print('Code signing disabled successfully.')
+          PYEOF
 
       - name: Flutter build iOS no codesign
         script: |

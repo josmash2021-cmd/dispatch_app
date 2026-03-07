@@ -287,6 +287,46 @@ class DispatchApiService {
       return false;
     }
   }
+
+  // ═══════════════════════════════════════════════════════
+  //  ADMIN — User Detail / Edit / Delete / Documents
+  // ═══════════════════════════════════════════════════════
+
+  /// Get full user detail with documents and photo URL.
+  static Future<Map<String, dynamic>> getUserDetail(int userId) async {
+    final result = await _get('/admin/users/$userId');
+    return result as Map<String, dynamic>;
+  }
+
+  /// Update user fields (first_name, last_name, email, phone, status, password).
+  static Future<Map<String, dynamic>> updateUser(
+    int userId,
+    Map<String, dynamic> changes,
+  ) async {
+    final result = await _patch('/admin/users/$userId', body: changes);
+    return result as Map<String, dynamic>;
+  }
+
+  /// Permanently delete a user and their documents.
+  static Future<void> deleteUser(int userId) async {
+    await _delete('/admin/users/$userId');
+  }
+
+  /// Get all documents for a specific user.
+  static Future<List<Map<String, dynamic>>> getUserDocuments(int userId) async {
+    final result = await _get('/admin/users/$userId/documents');
+    return (result as List).cast<Map<String, dynamic>>();
+  }
+
+  /// Build full URL for a document file path from the backend.
+  static String documentUrl(String filePath) {
+    return '$_activeUrl$filePath';
+  }
+
+  /// Build full URL for a user's photo from the backend.
+  static String photoUrl(int userId) {
+    return '$_activeUrl/photos/user_$userId.jpg';
+  }
 }
 
 class ApiException implements Exception {

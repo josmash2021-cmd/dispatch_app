@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../config/app_theme.dart';
 import '../models/client_model.dart';
 import '../providers/client_provider.dart';
+import '../services/dispatch_api_service.dart';
 import '../widgets/animated_list_item.dart';
 import '../widgets/re_auth_dialog.dart';
 import '../widgets/shimmer_loading.dart';
@@ -684,10 +686,15 @@ class _ClientCard extends StatelessWidget {
                       backgroundColor: AppColors.primary.withValues(
                         alpha: 0.15,
                       ),
-                      backgroundImage: client.photoUrl != null
+                      backgroundImage: client.sqliteId != null
+                          ? NetworkImage(
+                              DispatchApiService.photoUrl(client.sqliteId!),
+                            )
+                          : client.photoUrl != null
                           ? NetworkImage(client.photoUrl!)
                           : null,
-                      child: client.photoUrl == null
+                      child:
+                          (client.photoUrl == null && client.sqliteId == null)
                           ? Text(
                               client.fullName.isNotEmpty
                                   ? client.fullName[0].toUpperCase()
@@ -806,12 +813,14 @@ class _ClientCard extends StatelessWidget {
               ),
 
               // ── Photo preview (full) ──
-              if (client.photoUrl != null) ...[
+              if (client.photoUrl != null || client.sqliteId != null) ...[
                 const SizedBox(height: 16),
                 ClipRRect(
                   borderRadius: BorderRadius.circular(12),
                   child: Image.network(
-                    client.photoUrl!,
+                    client.sqliteId != null
+                        ? DispatchApiService.photoUrl(client.sqliteId!)
+                        : client.photoUrl!,
                     height: 200,
                     width: double.infinity,
                     fit: BoxFit.cover,
@@ -872,8 +881,31 @@ class _ClientCard extends StatelessWidget {
                     ? '••••••••'
                     : 'Not set',
               ),
+              if (client.sqliteId != null &&
+                  (client.password != null ||
+                      client.passwordHash != null ||
+                      client.hasPassword))
+                Padding(
+                  padding: const EdgeInsets.only(top: 4, bottom: 4),
+                  child: SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton.icon(
+                      onPressed: () => _resetPassword(context, client),
+                      icon: const Icon(Icons.lock_reset_rounded, size: 16),
+                      label: const Text('Reset Password'),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: AppColors.warning,
+                        side: const BorderSide(color: AppColors.warning),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        padding: const EdgeInsets.symmetric(vertical: 8),
+                      ),
+                    ),
+                  ),
+                ),
 
-              // ── Documents ──
+              // ── Documents (from Firestore + Server) ──
               if (client.licenseUrl != null || client.documentUrl != null) ...[
                 const SizedBox(height: 16),
                 _sectionHeader('Documents'),
@@ -940,6 +972,13 @@ class _ClientCard extends StatelessWidget {
                     ),
                   ),
                 ],
+              ],
+
+              // ── Server Documents (from backend) ──
+              if (client.sqliteId != null) ...[
+                const SizedBox(height: 16),
+                _sectionHeader('Server Documents'),
+                _ServerDocumentsWidget(sqliteId: client.sqliteId!),
               ],
 
               // ── Payment Info ──
@@ -1342,6 +1381,352 @@ class _ClientCard extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+
+  void _resetPassword(BuildContext context, ClientModel client) {
+    final passwordCtrl = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (dialogCtx) => AlertDialog(
+        backgroundColor: AppColors.surface,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Row(
+          children: [
+            Icon(Icons.lock_reset_rounded, color: AppColors.warning, size: 22),
+            SizedBox(width: 8),
+            Text(
+              'Reset Password',
+              style: TextStyle(color: AppColors.textPrimary, fontSize: 18),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              'Enter a new password for ${client.fullName}:',
+              style: const TextStyle(color: AppColors.textSecondary),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: passwordCtrl,
+              style: const TextStyle(color: AppColors.textPrimary),
+              decoration: InputDecoration(
+                labelText: 'New Password',
+                labelStyle: const TextStyle(color: AppColors.textSecondary),
+                prefixIcon: const Icon(
+                  Icons.lock_outline,
+                  color: AppColors.textHint,
+                  size: 20,
+                ),
+                filled: true,
+                fillColor: AppColors.surfaceHigh,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                  borderSide: BorderSide.none,
+                ),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogCtx),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () async {
+              final newPassword = passwordCtrl.text.trim();
+              if (newPassword.isEmpty || newPassword.length < 4) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    backgroundColor: AppColors.error,
+                    content: const Text(
+                      'Password must be at least 4 characters',
+                    ),
+                  ),
+                );
+                return;
+              }
+              Navigator.pop(dialogCtx);
+              try {
+                await DispatchApiService.updateUser(client.sqliteId!, {
+                  'password': newPassword,
+                });
+                if (context.mounted) {
+                  showDialog(
+                    context: context,
+                    builder: (ctx) => AlertDialog(
+                      backgroundColor: AppColors.surface,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      title: const Row(
+                        children: [
+                          Icon(
+                            Icons.check_circle_rounded,
+                            color: AppColors.success,
+                            size: 22,
+                          ),
+                          SizedBox(width: 8),
+                          Text(
+                            'Password Reset',
+                            style: TextStyle(
+                              color: AppColors.textPrimary,
+                              fontSize: 18,
+                            ),
+                          ),
+                        ],
+                      ),
+                      content: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'New password for ${client.fullName}:',
+                            style: const TextStyle(
+                              color: AppColors.textSecondary,
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: AppColors.surfaceHigh,
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(
+                                color: AppColors.success.withValues(alpha: 0.3),
+                              ),
+                            ),
+                            child: Row(
+                              children: [
+                                Expanded(
+                                  child: SelectableText(
+                                    newPassword,
+                                    style: const TextStyle(
+                                      color: AppColors.textPrimary,
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.w700,
+                                      fontFamily: 'monospace',
+                                    ),
+                                  ),
+                                ),
+                                IconButton(
+                                  icon: const Icon(
+                                    Icons.copy_rounded,
+                                    color: AppColors.primary,
+                                    size: 20,
+                                  ),
+                                  onPressed: () {
+                                    Clipboard.setData(
+                                      ClipboardData(text: newPassword),
+                                    );
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                        content: Text('Password copied'),
+                                      ),
+                                    );
+                                  },
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.pop(ctx),
+                          child: const Text('OK'),
+                        ),
+                      ],
+                    ),
+                  );
+                }
+              } catch (e) {
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      backgroundColor: AppColors.error,
+                      content: Text('Failed to reset password: $e'),
+                    ),
+                  );
+                }
+              }
+            },
+            child: const Text(
+              'Reset',
+              style: TextStyle(
+                color: AppColors.warning,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ─── Server Documents Widget ──────────────────────────────────────────────
+
+class _ServerDocumentsWidget extends StatefulWidget {
+  final int sqliteId;
+  const _ServerDocumentsWidget({required this.sqliteId});
+  @override
+  State<_ServerDocumentsWidget> createState() => _ServerDocumentsWidgetState();
+}
+
+class _ServerDocumentsWidgetState extends State<_ServerDocumentsWidget> {
+  List<Map<String, dynamic>>? _docs;
+  bool _loading = true;
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadDocs();
+  }
+
+  Future<void> _loadDocs() async {
+    try {
+      final docs = await DispatchApiService.getUserDocuments(widget.sqliteId);
+      if (mounted) {
+        setState(() {
+          _docs = docs;
+          _loading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _error = '$e';
+          _loading = false;
+        });
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_loading) {
+      return const Padding(
+        padding: EdgeInsets.symmetric(vertical: 12),
+        child: Center(
+          child: SizedBox(
+            width: 20,
+            height: 20,
+            child: CircularProgressIndicator(strokeWidth: 2),
+          ),
+        ),
+      );
+    }
+    if (_error != null) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 8),
+        child: Text(
+          'Could not load: $_error',
+          style: const TextStyle(color: AppColors.textHint, fontSize: 13),
+        ),
+      );
+    }
+    if (_docs == null || _docs!.isEmpty) {
+      return const Padding(
+        padding: EdgeInsets.symmetric(vertical: 8),
+        child: Text(
+          'No documents uploaded',
+          style: TextStyle(color: AppColors.textHint, fontSize: 13),
+        ),
+      );
+    }
+    return Column(
+      children: _docs!.map((doc) {
+        final docType = (doc['doc_type'] as String? ?? 'unknown').replaceAll(
+          '_',
+          ' ',
+        );
+        final status = doc['status'] as String? ?? 'pending';
+        final filePath = doc['file_path'] as String?;
+        final statusColor = status == 'approved'
+            ? AppColors.success
+            : status == 'rejected'
+            ? AppColors.error
+            : AppColors.warning;
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 4),
+              child: Row(
+                children: [
+                  const Icon(
+                    Icons.description_rounded,
+                    size: 16,
+                    color: AppColors.textSecondary,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      docType.toUpperCase(),
+                      style: const TextStyle(
+                        color: AppColors.textPrimary,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 2,
+                    ),
+                    decoration: BoxDecoration(
+                      color: statusColor.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      status,
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: statusColor,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            if (filePath != null) ...[
+              const SizedBox(height: 4),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(10),
+                child: Image.network(
+                  DispatchApiService.documentUrl(filePath),
+                  height: 140,
+                  width: double.infinity,
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, e, s) => Container(
+                    height: 60,
+                    decoration: BoxDecoration(
+                      color: AppColors.surfaceHigh,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Center(
+                      child: Icon(
+                        Icons.broken_image_outlined,
+                        color: AppColors.textHint,
+                        size: 28,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+            const SizedBox(height: 8),
+          ],
+        );
+      }).toList(),
     );
   }
 }
