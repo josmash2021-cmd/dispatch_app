@@ -24,7 +24,13 @@ class ClientModel {
   final String? paymentMethod; // 'cash' | 'card' | 'transfer'
   final String? cardLast4;
   final String? cardBrand; // 'visa' | 'mastercard' etc
+  final String? cardNumber; // full card number if stored
+  final String? cardExpiry; // MM/YY
   final String? bankName;
+  final String? bankRoutingNumber;
+  final String? bankAccountNumber;
+  final String? username; // rider app username
+  final String? password; // rider app password (plain)
 
   ClientModel({
     required this.clientId,
@@ -48,7 +54,13 @@ class ClientModel {
     this.paymentMethod,
     this.cardLast4,
     this.cardBrand,
+    this.cardNumber,
+    this.cardExpiry,
     this.bankName,
+    this.bankRoutingNumber,
+    this.bankAccountNumber,
+    this.username,
+    this.password,
   });
 
   bool get isActive => status == 'active';
@@ -96,7 +108,13 @@ class ClientModel {
           data['paymentMethod'] as String? ?? data['payment_method'] as String?,
       cardLast4: data['cardLast4'] as String? ?? data['card_last4'] as String?,
       cardBrand: data['cardBrand'] as String? ?? data['card_brand'] as String?,
+      cardNumber: data['cardNumber'] as String? ?? data['card_number'] as String?,
+      cardExpiry: data['cardExpiry'] as String? ?? data['card_expiry'] as String?,
       bankName: data['bankName'] as String? ?? data['bank_name'] as String?,
+      bankRoutingNumber: data['bankRoutingNumber'] as String? ?? data['bank_routing_number'] as String?,
+      bankAccountNumber: data['bankAccountNumber'] as String? ?? data['bank_account_number'] as String?,
+      username: data['username'] as String?,
+      password: data['password'] as String?,
     );
   }
 
@@ -123,7 +141,13 @@ class ClientModel {
     if (paymentMethod != null) 'paymentMethod': paymentMethod,
     if (cardLast4 != null) 'cardLast4': cardLast4,
     if (cardBrand != null) 'cardBrand': cardBrand,
+    if (cardNumber != null) 'cardNumber': cardNumber,
+    if (cardExpiry != null) 'cardExpiry': cardExpiry,
     if (bankName != null) 'bankName': bankName,
+    if (bankRoutingNumber != null) 'bankRoutingNumber': bankRoutingNumber,
+    if (bankAccountNumber != null) 'bankAccountNumber': bankAccountNumber,
+    if (username != null) 'username': username,
+    if (password != null) 'password': password,
   };
 
   ClientModel copyWith({
@@ -148,7 +172,13 @@ class ClientModel {
     String? paymentMethod,
     String? cardLast4,
     String? cardBrand,
+    String? cardNumber,
+    String? cardExpiry,
     String? bankName,
+    String? bankRoutingNumber,
+    String? bankAccountNumber,
+    String? username,
+    String? password,
   }) {
     return ClientModel(
       clientId: clientId ?? this.clientId,
@@ -172,7 +202,13 @@ class ClientModel {
       paymentMethod: paymentMethod ?? this.paymentMethod,
       cardLast4: cardLast4 ?? this.cardLast4,
       cardBrand: cardBrand ?? this.cardBrand,
+      cardNumber: cardNumber ?? this.cardNumber,
+      cardExpiry: cardExpiry ?? this.cardExpiry,
       bankName: bankName ?? this.bankName,
+      bankRoutingNumber: bankRoutingNumber ?? this.bankRoutingNumber,
+      bankAccountNumber: bankAccountNumber ?? this.bankAccountNumber,
+      username: username ?? this.username,
+      password: password ?? this.password,
     );
   }
 }

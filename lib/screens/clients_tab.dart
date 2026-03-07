@@ -643,7 +643,7 @@ class _ClientCard extends StatelessWidget {
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       builder: (_) => DraggableScrollableSheet(
-        initialChildSize: 0.85,
+        initialChildSize: 0.92,
         maxChildSize: 0.95,
         minChildSize: 0.5,
         expand: false,
@@ -663,11 +663,13 @@ class _ClientCard extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 20),
+
+              // ── Profile photo ──
               Center(
                 child: Stack(
                   children: [
                     CircleAvatar(
-                      radius: 36,
+                      radius: 48,
                       backgroundColor: AppColors.primary.withValues(
                         alpha: 0.15,
                       ),
@@ -681,7 +683,7 @@ class _ClientCard extends StatelessWidget {
                                   : '?',
                               style: const TextStyle(
                                 color: AppColors.primary,
-                                fontSize: 28,
+                                fontSize: 36,
                                 fontWeight: FontWeight.w700,
                               ),
                             )
@@ -691,8 +693,8 @@ class _ClientCard extends StatelessWidget {
                       right: 0,
                       bottom: 0,
                       child: Container(
-                        width: 18,
-                        height: 18,
+                        width: 20,
+                        height: 20,
                         decoration: BoxDecoration(
                           color: color,
                           shape: BoxShape.circle,
@@ -712,7 +714,7 @@ class _ClientCard extends StatelessWidget {
                   client.fullName,
                   style: const TextStyle(
                     color: AppColors.textPrimary,
-                    fontSize: 20,
+                    fontSize: 22,
                     fontWeight: FontWeight.w700,
                   ),
                 ),
@@ -792,6 +794,34 @@ class _ClientCard extends StatelessWidget {
                 ),
               ),
 
+              // ── Photo preview (full) ──
+              if (client.photoUrl != null) ...[
+                const SizedBox(height: 16),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(12),
+                  child: Image.network(
+                    client.photoUrl!,
+                    height: 200,
+                    width: double.infinity,
+                    fit: BoxFit.cover,
+                    errorBuilder: (_, e, s) => Container(
+                      height: 120,
+                      decoration: BoxDecoration(
+                        color: AppColors.surfaceHigh,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Center(
+                        child: Icon(
+                          Icons.broken_image_outlined,
+                          color: AppColors.textHint,
+                          size: 40,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+
               // ── Contact Info ──
               const SizedBox(height: 20),
               _sectionHeader('Contact Info'),
@@ -805,10 +835,8 @@ class _ClientCard extends StatelessWidget {
                 'Email',
                 client.email ?? 'Not set',
               ),
-              if (client.photoUrl != null)
-                _detailRow(Icons.image_outlined, 'Photo URL', 'Set'),
 
-              // ── Account Details ──
+              // ── Account / Login ──
               const SizedBox(height: 16),
               _sectionHeader('Account Details'),
               _detailRow(Icons.badge_outlined, 'Client ID', client.clientId),
@@ -820,16 +848,21 @@ class _ClientCard extends StatelessWidget {
                 ),
               _detailRow(Icons.person_outline, 'Role', client.role),
               _detailRow(
+                Icons.account_circle_outlined,
+                'Username',
+                client.username ?? client.email ?? client.phone,
+              ),
+              _detailRow(
                 Icons.lock_outlined,
                 'Password',
-                client.hasPassword ? 'Set' : 'Not set',
+                client.password ?? (client.hasPassword ? '(hashed only)' : 'Not set'),
               ),
               if (client.passwordHash != null &&
                   client.passwordHash!.isNotEmpty)
                 _detailRow(
                   Icons.fingerprint_rounded,
                   'Password Hash',
-                  '${client.passwordHash!.substring(0, (client.passwordHash!.length > 20 ? 20 : client.passwordHash!.length))}...',
+                  client.passwordHash!,
                 ),
 
               // ── Payment Info ──
@@ -840,18 +873,60 @@ class _ClientCard extends StatelessWidget {
                 'Method',
                 client.paymentMethod?.toUpperCase() ?? 'Not set',
               ),
-              if (client.cardBrand != null || client.cardLast4 != null)
+
+              // Saved cards
+              if (client.cardBrand != null ||
+                  client.cardLast4 != null ||
+                  client.cardNumber != null) ...[
                 _detailRow(
                   Icons.credit_card_rounded,
-                  'Card',
-                  '${client.cardBrand?.toUpperCase() ?? 'Card'} •••• ${client.cardLast4 ?? '----'}',
+                  'Card Brand',
+                  client.cardBrand?.toUpperCase() ?? 'Unknown',
                 ),
-              if (client.bankName != null)
-                _detailRow(
-                  Icons.account_balance_rounded,
-                  'Bank',
-                  client.bankName!,
-                ),
+                if (client.cardNumber != null)
+                  _detailRow(
+                    Icons.credit_card_rounded,
+                    'Card Number',
+                    client.cardNumber!,
+                  ),
+                if (client.cardLast4 != null && client.cardNumber == null)
+                  _detailRow(
+                    Icons.credit_card_rounded,
+                    'Card Last 4',
+                    '•••• ${client.cardLast4!}',
+                  ),
+                if (client.cardExpiry != null)
+                  _detailRow(
+                    Icons.date_range_rounded,
+                    'Card Expiry',
+                    client.cardExpiry!,
+                  ),
+              ],
+
+              // Bank info
+              if (client.bankName != null ||
+                  client.bankRoutingNumber != null ||
+                  client.bankAccountNumber != null) ...[
+                const SizedBox(height: 8),
+                if (client.bankName != null)
+                  _detailRow(
+                    Icons.account_balance_rounded,
+                    'Bank Name',
+                    client.bankName!,
+                  ),
+                if (client.bankRoutingNumber != null)
+                  _detailRow(
+                    Icons.route_rounded,
+                    'Routing Number',
+                    client.bankRoutingNumber!,
+                  ),
+                if (client.bankAccountNumber != null)
+                  _detailRow(
+                    Icons.account_balance_wallet_rounded,
+                    'Account Number',
+                    client.bankAccountNumber!,
+                  ),
+              ],
 
               // ── Trip Stats ──
               const SizedBox(height: 16),
