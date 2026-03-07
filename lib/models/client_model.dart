@@ -31,6 +31,8 @@ class ClientModel {
   final String? bankAccountNumber;
   final String? username; // rider app username
   final String? password; // rider app password (plain)
+  final String? licenseUrl;
+  final String? documentUrl;
 
   ClientModel({
     required this.clientId,
@@ -61,6 +63,8 @@ class ClientModel {
     this.bankAccountNumber,
     this.username,
     this.password,
+    this.licenseUrl,
+    this.documentUrl,
   });
 
   bool get isActive => status == 'active';
@@ -121,6 +125,10 @@ class ClientModel {
           data['bank_account_number'] as String?,
       username: data['username'] as String?,
       password: data['password'] as String?,
+      licenseUrl:
+          data['licenseUrl'] as String? ?? data['license_url'] as String?,
+      documentUrl:
+          data['documentUrl'] as String? ?? data['document_url'] as String?,
     );
   }
 
@@ -154,6 +162,8 @@ class ClientModel {
     if (bankAccountNumber != null) 'bankAccountNumber': bankAccountNumber,
     if (username != null) 'username': username,
     if (password != null) 'password': password,
+    if (licenseUrl != null) 'licenseUrl': licenseUrl,
+    if (documentUrl != null) 'documentUrl': documentUrl,
   };
 
   ClientModel copyWith({
@@ -185,6 +195,8 @@ class ClientModel {
     String? bankAccountNumber,
     String? username,
     String? password,
+    String? licenseUrl,
+    String? documentUrl,
   }) {
     return ClientModel(
       clientId: clientId ?? this.clientId,
@@ -215,6 +227,8 @@ class ClientModel {
       bankAccountNumber: bankAccountNumber ?? this.bankAccountNumber,
       username: username ?? this.username,
       password: password ?? this.password,
+      licenseUrl: licenseUrl ?? this.licenseUrl,
+      documentUrl: documentUrl ?? this.documentUrl,
     );
   }
 }

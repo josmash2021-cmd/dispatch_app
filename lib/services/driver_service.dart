@@ -79,8 +79,14 @@ class DriverService {
   }
 
   /// Update driver status (active / inactive / blocked)
+  /// Also syncs to the 'users' collection so the Cruise app sees the change.
   Future<void> updateStatus(String driverId, String status) async {
-    await _driversCollection.doc(driverId).update({'status': status});
+    await _driversCollection.doc(driverId).update({
+      'status': status,
+      'lastUpdated': FieldValue.serverTimestamp(),
+    });
+    // Sync to users collection
+    await _syncStatusToUsers(driverId, status);
   }
 
   /// Update driver fields
@@ -88,9 +94,53 @@ class DriverService {
     await _driversCollection.doc(driverId).update(data);
   }
 
-  /// Delete a driver
+  /// Delete a driver — also removes from 'users' collection
   Future<void> deleteDriver(String driverId) async {
+    final driverDoc = await _driversCollection.doc(driverId).get();
+    if (driverDoc.exists) {
+      final data = driverDoc.data() as Map<String, dynamic>? ?? {};
+      final phone = data['phone'] as String? ?? '';
+      final userDoc = await _usersCollection.doc(driverId).get();
+      if (userDoc.exists) {
+        await _usersCollection.doc(driverId).delete();
+      } else if (phone.isNotEmpty) {
+        final snap = await _usersCollection
+            .where('phone', isEqualTo: phone)
+            .limit(1)
+            .get();
+        for (final doc in snap.docs) {
+          await _usersCollection.doc(doc.id).delete();
+        }
+      }
+    }
     await _driversCollection.doc(driverId).delete();
+  }
+
+  /// Sync status change to the 'users' collection
+  Future<void> _syncStatusToUsers(String driverId, String status) async {
+    final userDoc = await _usersCollection.doc(driverId).get();
+    if (userDoc.exists) {
+      await _usersCollection.doc(driverId).update({
+        'status': status,
+        'lastUpdated': FieldValue.serverTimestamp(),
+      });
+      return;
+    }
+    final driverDoc = await _driversCollection.doc(driverId).get();
+    if (!driverDoc.exists) return;
+    final data = driverDoc.data() as Map<String, dynamic>? ?? {};
+    final phone = data['phone'] as String? ?? '';
+    if (phone.isEmpty) return;
+    final snap = await _usersCollection
+        .where('phone', isEqualTo: phone)
+        .limit(1)
+        .get();
+    for (final doc in snap.docs) {
+      await _usersCollection.doc(doc.id).update({
+        'status': status,
+        'lastUpdated': FieldValue.serverTimestamp(),
+      });
+    }
   }
 
   /// Get driver by ID

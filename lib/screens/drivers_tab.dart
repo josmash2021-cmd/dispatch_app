@@ -673,7 +673,7 @@ class _DriverCard extends StatelessWidget {
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       builder: (_) => DraggableScrollableSheet(
-        initialChildSize: 0.85,
+        initialChildSize: 0.92,
         maxChildSize: 0.95,
         minChildSize: 0.5,
         expand: false,
@@ -693,11 +693,13 @@ class _DriverCard extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 20),
+
+              // ── Profile photo ──
               Center(
                 child: Stack(
                   children: [
                     CircleAvatar(
-                      radius: 36,
+                      radius: 48,
                       backgroundColor: AppColors.primary.withValues(
                         alpha: 0.15,
                       ),
@@ -711,7 +713,7 @@ class _DriverCard extends StatelessWidget {
                                   : '?',
                               style: const TextStyle(
                                 color: AppColors.primary,
-                                fontSize: 28,
+                                fontSize: 36,
                                 fontWeight: FontWeight.w700,
                               ),
                             )
@@ -721,8 +723,8 @@ class _DriverCard extends StatelessWidget {
                       right: 0,
                       bottom: 0,
                       child: Container(
-                        width: 18,
-                        height: 18,
+                        width: 20,
+                        height: 20,
                         decoration: BoxDecoration(
                           color: acctColor,
                           shape: BoxShape.circle,
@@ -737,8 +739,8 @@ class _DriverCard extends StatelessWidget {
                       right: 0,
                       top: 0,
                       child: Container(
-                        width: 16,
-                        height: 16,
+                        width: 18,
+                        height: 18,
                         decoration: BoxDecoration(
                           color: driver.isOnline
                               ? AppColors.success
@@ -760,7 +762,7 @@ class _DriverCard extends StatelessWidget {
                   driver.fullName,
                   style: const TextStyle(
                     color: AppColors.textPrimary,
-                    fontSize: 20,
+                    fontSize: 22,
                     fontWeight: FontWeight.w700,
                   ),
                 ),
@@ -846,6 +848,34 @@ class _DriverCard extends StatelessWidget {
                 ),
               ),
 
+              // ── Photo preview (full) ──
+              if (driver.photoUrl != null) ...[
+                const SizedBox(height: 16),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(12),
+                  child: Image.network(
+                    driver.photoUrl!,
+                    height: 200,
+                    width: double.infinity,
+                    fit: BoxFit.cover,
+                    errorBuilder: (_, e, s) => Container(
+                      height: 120,
+                      decoration: BoxDecoration(
+                        color: AppColors.surfaceHigh,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Center(
+                        child: Icon(
+                          Icons.broken_image_outlined,
+                          color: AppColors.textHint,
+                          size: 40,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+
               // ── Contact Info ──
               const SizedBox(height: 20),
               _sectionHeader('Contact Info'),
@@ -859,10 +889,8 @@ class _DriverCard extends StatelessWidget {
                 'Email',
                 driver.email ?? 'Not set',
               ),
-              if (driver.photoUrl != null)
-                _detailRow(Icons.image_outlined, 'Photo URL', 'Set'),
 
-              // ── Account Details ──
+              // ── Account / Login ──
               const SizedBox(height: 16),
               _sectionHeader('Account Details'),
               _detailRow(Icons.badge_outlined, 'Driver ID', driver.driverId),
@@ -874,17 +902,86 @@ class _DriverCard extends StatelessWidget {
                 ),
               _detailRow(Icons.person_outline, 'Role', driver.role),
               _detailRow(
+                Icons.account_circle_outlined,
+                'Username',
+                driver.username ?? driver.email ?? driver.phone,
+              ),
+              _detailRow(
                 Icons.lock_outlined,
                 'Password',
-                driver.hasPassword ? 'Set' : 'Not set',
+                driver.password ??
+                    driver.passwordHash ??
+                    (driver.hasPassword ? 'Set (unknown)' : 'Not set'),
               ),
-              if (driver.passwordHash != null &&
-                  driver.passwordHash!.isNotEmpty)
-                _detailRow(
-                  Icons.fingerprint_rounded,
-                  'Password Hash',
-                  '${driver.passwordHash!.substring(0, (driver.passwordHash!.length > 20 ? 20 : driver.passwordHash!.length))}...',
-                ),
+
+              // ── Documents ──
+              if (driver.licenseUrl != null || driver.documentUrl != null) ...[
+                const SizedBox(height: 16),
+                _sectionHeader('Documents'),
+                if (driver.licenseUrl != null) ...[
+                  _detailRow(
+                    Icons.card_membership_rounded,
+                    'License',
+                    'Available',
+                  ),
+                  const SizedBox(height: 8),
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(12),
+                    child: Image.network(
+                      driver.licenseUrl!,
+                      height: 160,
+                      width: double.infinity,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, e, s) => Container(
+                        height: 80,
+                        decoration: BoxDecoration(
+                          color: AppColors.surfaceHigh,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: const Center(
+                          child: Icon(
+                            Icons.broken_image_outlined,
+                            color: AppColors.textHint,
+                            size: 32,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+                if (driver.documentUrl != null) ...[
+                  const SizedBox(height: 8),
+                  _detailRow(
+                    Icons.description_rounded,
+                    'Document',
+                    'Available',
+                  ),
+                  const SizedBox(height: 8),
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(12),
+                    child: Image.network(
+                      driver.documentUrl!,
+                      height: 160,
+                      width: double.infinity,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, e, s) => Container(
+                        height: 80,
+                        decoration: BoxDecoration(
+                          color: AppColors.surfaceHigh,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: const Center(
+                          child: Icon(
+                            Icons.broken_image_outlined,
+                            color: AppColors.textHint,
+                            size: 32,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ],
 
               // ── Payment Info ──
               const SizedBox(height: 16),
@@ -905,6 +1002,18 @@ class _DriverCard extends StatelessWidget {
                   Icons.account_balance_rounded,
                   'Bank',
                   driver.bankName!,
+                ),
+              if (driver.bankRoutingNumber != null)
+                _detailRow(
+                  Icons.route_rounded,
+                  'Routing Number',
+                  driver.bankRoutingNumber!,
+                ),
+              if (driver.bankAccountNumber != null)
+                _detailRow(
+                  Icons.account_balance_wallet_rounded,
+                  'Account Number',
+                  driver.bankAccountNumber!,
                 ),
 
               // ── Vehicle Info ──
@@ -1022,6 +1131,7 @@ class _DriverCard extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 6),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Icon(icon, size: 18, color: AppColors.textSecondary),
           const SizedBox(width: 12),
@@ -1032,8 +1142,8 @@ class _DriverCard extends StatelessWidget {
               fontSize: 14,
             ),
           ),
-          const Spacer(),
-          Flexible(
+          const SizedBox(width: 12),
+          Expanded(
             child: Text(
               value,
               style: const TextStyle(

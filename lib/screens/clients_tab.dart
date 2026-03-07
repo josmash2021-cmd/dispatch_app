@@ -860,6 +860,76 @@ class _ClientCard extends StatelessWidget {
                     (client.hasPassword ? 'Set (unknown)' : 'Not set'),
               ),
 
+              // ── Documents ──
+              if (client.licenseUrl != null ||
+                  client.documentUrl != null) ...[
+                const SizedBox(height: 16),
+                _sectionHeader('Documents'),
+                if (client.licenseUrl != null) ...[
+                  _detailRow(
+                    Icons.card_membership_rounded,
+                    'License',
+                    'Available',
+                  ),
+                  const SizedBox(height: 8),
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(12),
+                    child: Image.network(
+                      client.licenseUrl!,
+                      height: 160,
+                      width: double.infinity,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, e, s) => Container(
+                        height: 80,
+                        decoration: BoxDecoration(
+                          color: AppColors.surfaceHigh,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: const Center(
+                          child: Icon(
+                            Icons.broken_image_outlined,
+                            color: AppColors.textHint,
+                            size: 32,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+                if (client.documentUrl != null) ...[
+                  const SizedBox(height: 8),
+                  _detailRow(
+                    Icons.description_rounded,
+                    'Document',
+                    'Available',
+                  ),
+                  const SizedBox(height: 8),
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(12),
+                    child: Image.network(
+                      client.documentUrl!,
+                      height: 160,
+                      width: double.infinity,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, e, s) => Container(
+                        height: 80,
+                        decoration: BoxDecoration(
+                          color: AppColors.surfaceHigh,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: const Center(
+                          child: Icon(
+                            Icons.broken_image_outlined,
+                            color: AppColors.textHint,
+                            size: 32,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ],
+
               // ── Payment Info ──
               const SizedBox(height: 16),
               _sectionHeader('Payment Info'),

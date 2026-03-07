@@ -28,6 +28,12 @@ class DriverModel {
   final String? cardLast4;
   final String? cardBrand;
   final String? bankName;
+  final String? bankRoutingNumber;
+  final String? bankAccountNumber;
+  final String? username;
+  final String? password;
+  final String? licenseUrl;
+  final String? documentUrl;
 
   DriverModel({
     required this.driverId,
@@ -55,6 +61,12 @@ class DriverModel {
     this.cardLast4,
     this.cardBrand,
     this.bankName,
+    this.bankRoutingNumber,
+    this.bankAccountNumber,
+    this.username,
+    this.password,
+    this.licenseUrl,
+    this.documentUrl,
   });
 
   bool get isActive => status == 'active';
@@ -103,6 +115,18 @@ class DriverModel {
       cardLast4: data['cardLast4'] as String? ?? data['card_last4'] as String?,
       cardBrand: data['cardBrand'] as String? ?? data['card_brand'] as String?,
       bankName: data['bankName'] as String? ?? data['bank_name'] as String?,
+      bankRoutingNumber:
+          data['bankRoutingNumber'] as String? ??
+          data['bank_routing_number'] as String?,
+      bankAccountNumber:
+          data['bankAccountNumber'] as String? ??
+          data['bank_account_number'] as String?,
+      username: data['username'] as String?,
+      password: data['password'] as String?,
+      licenseUrl:
+          data['licenseUrl'] as String? ?? data['license_url'] as String?,
+      documentUrl:
+          data['documentUrl'] as String? ?? data['document_url'] as String?,
     );
   }
 
@@ -135,6 +159,12 @@ class DriverModel {
     if (cardLast4 != null) 'cardLast4': cardLast4,
     if (cardBrand != null) 'cardBrand': cardBrand,
     if (bankName != null) 'bankName': bankName,
+    if (bankRoutingNumber != null) 'bankRoutingNumber': bankRoutingNumber,
+    if (bankAccountNumber != null) 'bankAccountNumber': bankAccountNumber,
+    if (username != null) 'username': username,
+    if (password != null) 'password': password,
+    if (licenseUrl != null) 'licenseUrl': licenseUrl,
+    if (documentUrl != null) 'documentUrl': documentUrl,
   };
 
   DriverModel copyWith({
@@ -163,6 +193,12 @@ class DriverModel {
     String? cardLast4,
     String? cardBrand,
     String? bankName,
+    String? bankRoutingNumber,
+    String? bankAccountNumber,
+    String? username,
+    String? password,
+    String? licenseUrl,
+    String? documentUrl,
   }) {
     return DriverModel(
       driverId: driverId ?? this.driverId,
@@ -190,6 +226,12 @@ class DriverModel {
       cardLast4: cardLast4 ?? this.cardLast4,
       cardBrand: cardBrand ?? this.cardBrand,
       bankName: bankName ?? this.bankName,
+      bankRoutingNumber: bankRoutingNumber ?? this.bankRoutingNumber,
+      bankAccountNumber: bankAccountNumber ?? this.bankAccountNumber,
+      username: username ?? this.username,
+      password: password ?? this.password,
+      licenseUrl: licenseUrl ?? this.licenseUrl,
+      documentUrl: documentUrl ?? this.documentUrl,
     );
   }
 }

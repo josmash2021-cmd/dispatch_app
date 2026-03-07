@@ -69,13 +69,68 @@ class ClientService {
   }
 
   /// Update client status (active / inactive / blocked)
+  /// Also syncs to the 'users' collection so the Cruise app sees the change.
   Future<void> updateStatus(String clientId, String status) async {
-    await _clientsCollection.doc(clientId).update({'status': status});
+    await _clientsCollection.doc(clientId).update({
+      'status': status,
+      'lastUpdated': FieldValue.serverTimestamp(),
+    });
+    // Sync to users collection (same docId or matched by phone)
+    await _syncStatusToUsers(clientId, status);
   }
 
-  /// Delete a client
+  /// Delete a client — also removes from 'users' collection
   Future<void> deleteClient(String clientId) async {
+    // Try to find matching user doc
+    final clientDoc = await _clientsCollection.doc(clientId).get();
+    if (clientDoc.exists) {
+      final data = clientDoc.data() as Map<String, dynamic>? ?? {};
+      final phone = data['phone'] as String? ?? '';
+      // Delete from users by same docId
+      final userDoc = await _usersCollection.doc(clientId).get();
+      if (userDoc.exists) {
+        await _usersCollection.doc(clientId).delete();
+      } else if (phone.isNotEmpty) {
+        // Find by phone
+        final snap = await _usersCollection
+            .where('phone', isEqualTo: phone)
+            .limit(1)
+            .get();
+        for (final doc in snap.docs) {
+          await _usersCollection.doc(doc.id).delete();
+        }
+      }
+    }
     await _clientsCollection.doc(clientId).delete();
+  }
+
+  /// Sync status change to the 'users' collection
+  Future<void> _syncStatusToUsers(String clientId, String status) async {
+    // Try same docId first
+    final userDoc = await _usersCollection.doc(clientId).get();
+    if (userDoc.exists) {
+      await _usersCollection.doc(clientId).update({
+        'status': status,
+        'lastUpdated': FieldValue.serverTimestamp(),
+      });
+      return;
+    }
+    // Find by phone
+    final clientDoc = await _clientsCollection.doc(clientId).get();
+    if (!clientDoc.exists) return;
+    final data = clientDoc.data() as Map<String, dynamic>? ?? {};
+    final phone = data['phone'] as String? ?? '';
+    if (phone.isEmpty) return;
+    final snap = await _usersCollection
+        .where('phone', isEqualTo: phone)
+        .limit(1)
+        .get();
+    for (final doc in snap.docs) {
+      await _usersCollection.doc(doc.id).update({
+        'status': status,
+        'lastUpdated': FieldValue.serverTimestamp(),
+      });
+    }
   }
 
   /// Get client by ID
