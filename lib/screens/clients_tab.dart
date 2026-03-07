@@ -855,7 +855,8 @@ class _ClientCard extends StatelessWidget {
               _detailRow(
                 Icons.lock_outlined,
                 'Password',
-                client.password ?? (client.hasPassword ? '(hashed only)' : 'Not set'),
+                client.password ??
+                    (client.hasPassword ? '(hashed only)' : 'Not set'),
               ),
               if (client.passwordHash != null &&
                   client.passwordHash!.isNotEmpty)
@@ -1028,6 +1029,7 @@ class _ClientCard extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 6),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Icon(icon, size: 18, color: AppColors.textSecondary),
           const SizedBox(width: 12),
@@ -1038,8 +1040,8 @@ class _ClientCard extends StatelessWidget {
               fontSize: 14,
             ),
           ),
-          const Spacer(),
-          Flexible(
+          const SizedBox(width: 12),
+          Expanded(
             child: Text(
               value,
               style: const TextStyle(

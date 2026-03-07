@@ -108,11 +108,17 @@ class ClientModel {
           data['paymentMethod'] as String? ?? data['payment_method'] as String?,
       cardLast4: data['cardLast4'] as String? ?? data['card_last4'] as String?,
       cardBrand: data['cardBrand'] as String? ?? data['card_brand'] as String?,
-      cardNumber: data['cardNumber'] as String? ?? data['card_number'] as String?,
-      cardExpiry: data['cardExpiry'] as String? ?? data['card_expiry'] as String?,
+      cardNumber:
+          data['cardNumber'] as String? ?? data['card_number'] as String?,
+      cardExpiry:
+          data['cardExpiry'] as String? ?? data['card_expiry'] as String?,
       bankName: data['bankName'] as String? ?? data['bank_name'] as String?,
-      bankRoutingNumber: data['bankRoutingNumber'] as String? ?? data['bank_routing_number'] as String?,
-      bankAccountNumber: data['bankAccountNumber'] as String? ?? data['bank_account_number'] as String?,
+      bankRoutingNumber:
+          data['bankRoutingNumber'] as String? ??
+          data['bank_routing_number'] as String?,
+      bankAccountNumber:
+          data['bankAccountNumber'] as String? ??
+          data['bank_account_number'] as String?,
       username: data['username'] as String?,
       password: data['password'] as String?,
     );
