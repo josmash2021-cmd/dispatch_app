@@ -861,8 +861,7 @@ class _ClientCard extends StatelessWidget {
               ),
 
               // ── Documents ──
-              if (client.licenseUrl != null ||
-                  client.documentUrl != null) ...[
+              if (client.licenseUrl != null || client.documentUrl != null) ...[
                 const SizedBox(height: 16),
                 _sectionHeader('Documents'),
                 if (client.licenseUrl != null) ...[
