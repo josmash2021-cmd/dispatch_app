@@ -111,18 +111,48 @@ workflows:
       - name: Disable code signing
         script: |
           cd ios
-          sed -i '' 's/CODE_SIGN_IDENTITY = .*;/CODE_SIGN_IDENTITY = "";/g' Runner.xcodeproj/project.pbxproj
-          sed -i '' 's/DEVELOPMENT_TEAM = [^;]*;/DEVELOPMENT_TEAM = "";/g' Runner.xcodeproj/project.pbxproj
-          sed -i '' 's/CODE_SIGN_STYLE = Automatic;/CODE_SIGN_STYLE = Manual;/g' Runner.xcodeproj/project.pbxproj
-          sed -i '' 's/"CODE_SIGN_IDENTITY\[sdk=iphoneos\*\]" = .*;/"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "";/g' Runner.xcodeproj/project.pbxproj
-          echo "CODE_SIGNING_ALLOWED=NO" >> Flutter/Release.xcconfig
-          echo "CODE_SIGNING_REQUIRED=NO" >> Flutter/Release.xcconfig
-          echo "CODE_SIGN_IDENTITY=" >> Flutter/Release.xcconfig
-          # Also patch Pods project if exists
-          if [ -f Pods/Pods.xcodeproj/project.pbxproj ]; then
-            sed -i '' 's/CODE_SIGN_IDENTITY = .*;/CODE_SIGN_IDENTITY = "";/g' Pods/Pods.xcodeproj/project.pbxproj
-            sed -i '' 's/DEVELOPMENT_TEAM = [^;]*;/DEVELOPMENT_TEAM = "";/g' Pods/Pods.xcodeproj/project.pbxproj
-          fi
+          python3 << 'PYEOF'
+          import re, os, glob
+
+          def patch_pbxproj(path):
+              with open(path, 'r') as f:
+                  content = f.read()
+              # Remove entitlements (causes signing failures)
+              content = re.sub(r'\s*CODE_SIGN_ENTITLEMENTS = [^;]*;', '', content)
+              # Clear signing identity everywhere
+              content = re.sub(r'"CODE_SIGN_IDENTITY\[sdk=iphoneos\*\]" = "[^"]*"',
+                               '"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = ""', content)
+              content = re.sub(r'CODE_SIGN_IDENTITY = "[^"]*"',
+                               'CODE_SIGN_IDENTITY = ""', content)
+              # Remove development team
+              content = re.sub(r'DEVELOPMENT_TEAM = [^;]*;',
+                               'DEVELOPMENT_TEAM = "";', content)
+              # Set manual signing
+              content = re.sub(r'CODE_SIGN_STYLE = Automatic',
+                               'CODE_SIGN_STYLE = Manual', content)
+              # Disable product validation
+              content = re.sub(r'VALIDATE_PRODUCT = YES',
+                               'VALIDATE_PRODUCT = NO', content)
+              with open(path, 'w') as f:
+                  f.write(content)
+              print(f"Patched: {path}")
+
+          # Patch Runner project
+          patch_pbxproj('Runner.xcodeproj/project.pbxproj')
+
+          # Patch every Pods pbxproj
+          for p in glob.glob('Pods/**/*.pbxproj', recursive=True):
+              patch_pbxproj(p)
+          PYEOF
+
+          # Inject into xcconfig as extra safety layer
+          cat >> Flutter/Release.xcconfig << 'EOF'
+          CODE_SIGNING_ALLOWED=NO
+          CODE_SIGNING_REQUIRED=NO
+          CODE_SIGN_IDENTITY=
+          CODE_SIGN_ENTITLEMENTS=
+          EXPANDED_CODE_SIGN_IDENTITY=
+          EOF
           echo "Code signing disabled."
 
       - name: Flutter build iOS no codesign
