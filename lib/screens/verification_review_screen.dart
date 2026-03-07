@@ -292,16 +292,31 @@ class _VerificationCard extends StatelessWidget {
                 CircleAvatar(
                   radius: 24,
                   backgroundColor: AppColors.primary.withValues(alpha: 0.15),
-                  child: Text(
-                    request.fullName.isNotEmpty
-                        ? request.fullName[0].toUpperCase()
-                        : '?',
-                    style: const TextStyle(
-                      color: AppColors.primary,
-                      fontSize: 20,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
+                  backgroundImage: request.profilePhotoUrl != null
+                      ? NetworkImage(
+                          DispatchApiService.fullUrl(request.profilePhotoUrl!),
+                        )
+                      : request.userId > 0
+                      ? NetworkImage(
+                          DispatchApiService.photoUrl(request.userId),
+                        )
+                      : null,
+                  onBackgroundImageError:
+                      request.profilePhotoUrl != null || request.userId > 0
+                      ? (_, _) {}
+                      : null,
+                  child: request.profilePhotoUrl == null && request.userId <= 0
+                      ? Text(
+                          request.fullName.isNotEmpty
+                              ? request.fullName[0].toUpperCase()
+                              : '?',
+                          style: const TextStyle(
+                            color: AppColors.primary,
+                            fontSize: 20,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        )
+                      : null,
                 ),
                 const SizedBox(width: 14),
                 Expanded(
@@ -625,51 +640,56 @@ class _VerificationCard extends StatelessWidget {
               ],
 
               // ── Verification Photos ──
-              if (request.idPhotoUrl != null ||
-                  request.selfieUrl != null ||
-                  request.profilePhotoUrl != null) ...[
-                const SizedBox(height: 20),
-                _sectionHeader('Verification Photos'),
-                if (request.profilePhotoUrl != null) ...[
-                  const SizedBox(height: 8),
-                  _photoCard(
-                    context,
-                    'Profile Photo',
-                    DispatchApiService.fullUrl(request.profilePhotoUrl!),
-                  ),
-                ] else if (request.userId > 0) ...[
-                  const SizedBox(height: 8),
-                  _photoCard(
-                    context,
-                    'Profile Photo',
-                    DispatchApiService.photoUrl(request.userId),
-                  ),
-                ],
-                if (request.idPhotoUrl != null) ...[
-                  const SizedBox(height: 8),
-                  _photoCard(
-                    context,
-                    'ID Document',
-                    DispatchApiService.fullUrl(request.idPhotoUrl!),
-                  ),
-                ],
-                if (request.selfieUrl != null) ...[
-                  const SizedBox(height: 8),
-                  _photoCard(
-                    context,
-                    'Verification Selfie',
-                    DispatchApiService.fullUrl(request.selfieUrl!),
-                  ),
-                ],
+              const SizedBox(height: 20),
+              _sectionHeader('Verification Photos'),
+              if (request.profilePhotoUrl != null) ...[
+                const SizedBox(height: 8),
+                _photoCard(
+                  context,
+                  'Profile Photo',
+                  DispatchApiService.fullUrl(request.profilePhotoUrl!),
+                ),
               ] else if (request.userId > 0) ...[
-                const SizedBox(height: 20),
-                _sectionHeader('Photos'),
                 const SizedBox(height: 8),
                 _photoCard(
                   context,
                   'Profile Photo',
                   DispatchApiService.photoUrl(request.userId),
                 ),
+              ],
+              if (request.idPhotoUrl != null) ...[
+                const SizedBox(height: 8),
+                _photoCard(
+                  context,
+                  'ID Document (${_docTypeLabel(request.idDocumentType)})',
+                  DispatchApiService.fullUrl(request.idPhotoUrl!),
+                ),
+              ],
+              if (request.selfieUrl != null) ...[
+                const SizedBox(height: 8),
+                _photoCard(
+                  context,
+                  'Verification Selfie',
+                  DispatchApiService.fullUrl(request.selfieUrl!),
+                ),
+              ],
+              if (request.idPhotoUrl == null &&
+                  request.selfieUrl == null &&
+                  request.profilePhotoUrl == null &&
+                  request.userId <= 0)
+                const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 12),
+                  child: Text(
+                    'No photos available yet',
+                    style: TextStyle(color: AppColors.textHint, fontSize: 13),
+                  ),
+                ),
+
+              // ── Backend Documents ──
+              if (request.userId > 0) ...[
+                const SizedBox(height: 20),
+                _sectionHeader('Server Documents'),
+                _BackendDocumentsWidget(userId: request.userId),
               ],
 
               // Action buttons
@@ -1002,6 +1022,233 @@ class _VerificationCard extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+
+  void _showFullPhoto(BuildContext context, String label, String url) {
+    showDialog(
+      context: context,
+      builder: (ctx) => Dialog(
+        backgroundColor: Colors.black,
+        insetPadding: const EdgeInsets.all(16),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Padding(
+              padding: const EdgeInsets.all(12),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      label,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close_rounded, color: Colors.white),
+                    onPressed: () => Navigator.pop(ctx),
+                  ),
+                ],
+              ),
+            ),
+            InteractiveViewer(
+              child: Image.network(
+                url,
+                fit: BoxFit.contain,
+                errorBuilder: (_, _, _) => const SizedBox(
+                  height: 200,
+                  child: Center(
+                    child: Icon(
+                      Icons.broken_image_rounded,
+                      color: Colors.white54,
+                      size: 48,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ─── Backend Documents Widget ───────────────────────────────────────────────
+
+class _BackendDocumentsWidget extends StatefulWidget {
+  final int userId;
+  const _BackendDocumentsWidget({required this.userId});
+  @override
+  State<_BackendDocumentsWidget> createState() =>
+      _BackendDocumentsWidgetState();
+}
+
+class _BackendDocumentsWidgetState extends State<_BackendDocumentsWidget> {
+  List<Map<String, dynamic>>? _docs;
+  bool _loading = true;
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadDocs();
+  }
+
+  Future<void> _loadDocs() async {
+    try {
+      final docs = await DispatchApiService.getUserDocuments(widget.userId);
+      if (mounted)
+        setState(() {
+          _docs = docs;
+          _loading = false;
+        });
+    } catch (e) {
+      if (mounted)
+        setState(() {
+          _error = '$e';
+          _loading = false;
+        });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_loading) {
+      return const Padding(
+        padding: EdgeInsets.symmetric(vertical: 12),
+        child: Center(
+          child: SizedBox(
+            width: 20,
+            height: 20,
+            child: CircularProgressIndicator(
+              strokeWidth: 2,
+              color: AppColors.primary,
+            ),
+          ),
+        ),
+      );
+    }
+    if (_error != null) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 8),
+        child: Text(
+          'Could not load documents',
+          style: const TextStyle(color: AppColors.textHint, fontSize: 13),
+        ),
+      );
+    }
+    if (_docs == null || _docs!.isEmpty) {
+      return const Padding(
+        padding: EdgeInsets.symmetric(vertical: 8),
+        child: Text(
+          'No documents on server',
+          style: TextStyle(color: AppColors.textHint, fontSize: 13),
+        ),
+      );
+    }
+    return Column(
+      children: _docs!.map((doc) {
+        final docType = (doc['doc_type'] as String? ?? 'unknown').replaceAll(
+          '_',
+          ' ',
+        );
+        final status = doc['status'] as String? ?? 'pending';
+        final filePath = doc['file_path'] as String?;
+        final statusColor = status == 'approved'
+            ? AppColors.success
+            : status == 'rejected'
+            ? AppColors.error
+            : AppColors.warning;
+        return Container(
+          margin: const EdgeInsets.only(bottom: 8),
+          padding: const EdgeInsets.all(10),
+          decoration: BoxDecoration(
+            color: AppColors.surfaceHigh,
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  const Icon(
+                    Icons.description_rounded,
+                    size: 16,
+                    color: AppColors.textSecondary,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      docType.toUpperCase(),
+                      style: const TextStyle(
+                        color: AppColors.textPrimary,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 2,
+                    ),
+                    decoration: BoxDecoration(
+                      color: statusColor.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      status,
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: statusColor,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              if (filePath != null) ...[
+                const SizedBox(height: 6),
+                GestureDetector(
+                  onTap: () => _showFullPhoto(
+                    context,
+                    docType.toUpperCase(),
+                    DispatchApiService.documentUrl(filePath),
+                  ),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(10),
+                    child: Image.network(
+                      DispatchApiService.documentUrl(filePath),
+                      height: 160,
+                      width: double.infinity,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, _, _) => Container(
+                        height: 60,
+                        decoration: BoxDecoration(
+                          color: AppColors.surfaceHigh,
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: const Center(
+                          child: Icon(
+                            Icons.broken_image_outlined,
+                            color: AppColors.textHint,
+                            size: 28,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ],
+          ),
+        );
+      }).toList(),
     );
   }
 
