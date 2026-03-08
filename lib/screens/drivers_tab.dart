@@ -1826,11 +1826,12 @@ class _VerifPhotosWidgetState extends State<_VerifPhotosWidget> {
           .collection('verifications')
           .doc('sql_${widget.sqliteId}')
           .get();
-      if (mounted)
+      if (mounted) {
         setState(() {
           _data = doc.exists ? doc.data() : null;
           _loading = false;
         });
+      }
     } catch (e) {
       if (mounted) setState(() => _loading = false);
     }
@@ -1860,7 +1861,7 @@ class _VerifPhotosWidgetState extends State<_VerifPhotosWidget> {
             height: 160,
             width: double.infinity,
             fit: BoxFit.cover,
-            errorBuilder: (_, __, ___) => Container(
+            errorBuilder: (_, _, _) => Container(
               height: 80,
               decoration: BoxDecoration(
                 color: AppColors.surfaceHigh,
@@ -1979,17 +1980,19 @@ class _UserDetailDocsWidgetState extends State<_UserDetailDocsWidget> {
       final detail = await DispatchApiService.getUserDetail(widget.sqliteId);
       final docs = (detail['documents'] as List? ?? [])
           .cast<Map<String, dynamic>>();
-      if (mounted)
+      if (mounted) {
         setState(() {
           _docs = docs;
           _loading = false;
         });
+      }
     } catch (e) {
-      if (mounted)
+      if (mounted) {
         setState(() {
           _error = '$e';
           _loading = false;
         });
+      }
     }
   }
 

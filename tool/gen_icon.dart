@@ -66,7 +66,7 @@ void main() {
 
   // Save main icon
   File('assets/launcher_icon.png').writeAsBytesSync(img.encodePng(icon));
-  print('✓ assets/launcher_icon.png');
+  stdout.writeln('✔ assets/launcher_icon.png');
 
   // --- Foreground (for adaptive icon, same but on transparent bg) ---
   // Adaptive icons need ~66% safe zone in center of 108dp canvas
@@ -90,7 +90,7 @@ void main() {
   File(
     'assets/launcher_icon_foreground.png',
   ).writeAsBytesSync(img.encodePng(fg));
-  print('✓ assets/launcher_icon_foreground.png');
+  stdout.writeln('✔ assets/launcher_icon_foreground.png');
 }
 
 bool _inRoundedRect(int x, int y, int left, int top, int w, int h, int radius) {

@@ -23,8 +23,28 @@ service cloud.firestore {
       return field is string && field.size() > 0;
     }
 
-    // ═══════════════════════════════════════════════════════════════════
-    // ADMINS COLLECTION — owner read only, no new admins ever
+    // ═══════════════════════════════════════════════════════════════════    // CONFIG COLLECTION — admin-controlled (pricing, service zones, etc.)
+    // Owner: full read/write
+    // All authenticated users: read-only (Cruise app reads serviceZones)
+    // ══════════════════════════════════════════════════════════════════════
+    match /config/{docId} {
+      allow read: if isAuthenticated();
+      allow write: if isOwner();
+    }
+
+    // ══════════════════════════════════════════════════════════════════════
+    // VERIFICATIONS COLLECTION — identity verification docs
+    // ══════════════════════════════════════════════════════════════════════
+    match /verifications/{docId} {
+      allow read: if isOwner()
+        || (isAuthenticated() && resource.data.userId == request.auth.uid);
+      allow create: if isAuthenticated();
+      allow update: if isOwner()
+        || (isAuthenticated() && resource.data.userId == request.auth.uid);
+      allow delete: if isOwner();
+    }
+
+    // ══════════════════════════════════════════════════════════════════════    // ADMINS COLLECTION — owner read only, no new admins ever
     // ═══════════════════════════════════════════════════════════════════
     match /admins/{adminId} {
       allow read: if isOwner();

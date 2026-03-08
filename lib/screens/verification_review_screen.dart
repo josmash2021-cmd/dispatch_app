@@ -1101,17 +1101,19 @@ class _UserDetailWidgetState extends State<_UserDetailWidget> {
   Future<void> _loadUser() async {
     try {
       final data = await DispatchApiService.getUserDetail(widget.userId);
-      if (mounted)
+      if (mounted) {
         setState(() {
           _user = data;
           _loading = false;
         });
+      }
     } catch (e) {
-      if (mounted)
+      if (mounted) {
         setState(() {
           _error = '$e';
           _loading = false;
         });
+      }
     }
   }
 
