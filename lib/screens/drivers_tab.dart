@@ -1702,9 +1702,48 @@ class _UserPasswordWidgetState extends State<_UserPasswordWidget> {
       );
     }
     final hasPass = _password != null && _password!.isNotEmpty;
-    final display = hasPass
-        ? (_visible ? _password! : '••••••••')
-        : '(no plain text stored)';
+    final display = hasPass ? (_visible ? _password! : '••••••••') : '';
+
+    // No plain text stored — show warning badge
+    if (!hasPass) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 6),
+        child: Row(
+          children: [
+            const Icon(
+              Icons.lock_open_outlined,
+              size: 18,
+              color: AppColors.warning,
+            ),
+            const SizedBox(width: 12),
+            const Expanded(
+              child: Text(
+                'Password',
+                style: TextStyle(color: AppColors.textSecondary, fontSize: 14),
+              ),
+            ),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+              decoration: BoxDecoration(
+                color: AppColors.warning.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(7),
+                border: Border.all(
+                  color: AppColors.warning.withValues(alpha: 0.3),
+                ),
+              ),
+              child: const Text(
+                'Usa Reset ↓',
+                style: TextStyle(
+                  color: AppColors.warning,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 6),
       child: Row(
