@@ -1225,13 +1225,73 @@ class _VerificationCard extends StatelessWidget {
 
 // ─── Pending Verification Detail Page ────────────────────────────────────────
 
-class _PendingVerificationDetailPage extends StatelessWidget {
+class _PendingVerificationDetailPage extends StatefulWidget {
   final VerificationRequest request;
   const _PendingVerificationDetailPage({required this.request});
 
   @override
+  State<_PendingVerificationDetailPage> createState() =>
+      _PendingVerificationDetailPageState();
+}
+
+class _PendingVerificationDetailPageState
+    extends State<_PendingVerificationDetailPage> {
+  Map<String, dynamic>? _backendUser;
+
+  VerificationRequest get request => widget.request;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadBackendUser();
+  }
+
+  Future<void> _loadBackendUser() async {
+    if (request.userId <= 0) return;
+    try {
+      final data = await DispatchApiService.getUserDetail(request.userId);
+      if (mounted) setState(() => _backendUser = data);
+    } catch (_) {}
+  }
+
+  /// Pick first non-null non-empty URL: Firestore first, then backend.
+  String? _pickUrl(String? firestoreUrl, String backendKey) {
+    if (firestoreUrl != null && firestoreUrl.isNotEmpty) return firestoreUrl;
+    final be = _backendUser?[backendKey] as String?;
+    if (be != null && be.isNotEmpty) return be;
+    return null;
+  }
+
+  @override
   Widget build(BuildContext context) {
     final dateFmt = DateFormat('MMM d, yyyy · h:mm a');
+
+    // Merge photo URLs: Firestore → backend fallback
+    final profileUrl = _pickUrl(request.profilePhotoUrl, 'photo_url');
+    final licenseFrontUrl = _pickUrl(
+      request.licenseFrontUrl,
+      'license_front_url',
+    );
+    final licenseBackUrl = _pickUrl(request.licenseBackUrl, 'license_back_url');
+    final insuranceUrl = _pickUrl(request.insuranceUrl, 'insurance_url');
+    final idPhotoUrl = _pickUrl(request.idPhotoUrl, 'id_photo_url');
+    final selfieUrl = _pickUrl(request.selfieUrl, 'selfie_url');
+
+    // SSN: Firestore → backend fallback
+    final ssnProvided =
+        request.ssnProvided ||
+        (_backendUser?['ssn_provided'] as bool? ?? false);
+    final ssnFull = _backendUser?['ssn_full'] as String?;
+    final ssnMasked =
+        request.ssnMasked ?? _backendUser?['ssn_masked'] as String?;
+    final ssnLast4 = request.ssnLast4 ?? _backendUser?['ssn_last4'] as String?;
+
+    // Vehicle: Firestore → backend fallback
+    final vehicle =
+        request.vehicle ??
+        (_backendUser?['vehicle_type'] != null
+            ? {'type': _backendUser!['vehicle_type']}
+            : null);
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -1418,7 +1478,7 @@ class _PendingVerificationDetailPage extends StatelessWidget {
               color: AppColors.surfaceHigh,
               borderRadius: BorderRadius.circular(12),
               border: Border.all(
-                color: request.ssnProvided
+                color: ssnProvided
                     ? AppColors.success.withValues(alpha: 0.35)
                     : AppColors.warning.withValues(alpha: 0.35),
               ),
@@ -1428,9 +1488,7 @@ class _PendingVerificationDetailPage extends StatelessWidget {
                 Icon(
                   Icons.security_rounded,
                   size: 20,
-                  color: request.ssnProvided
-                      ? AppColors.success
-                      : AppColors.warning,
+                  color: ssnProvided ? AppColors.success : AppColors.warning,
                 ),
                 const SizedBox(width: 12),
                 Expanded(
@@ -1438,22 +1496,23 @@ class _PendingVerificationDetailPage extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        request.ssnProvided
+                        ssnProvided
                             ? 'SSN Proporcionado'
                             : 'SSN No Proporcionado',
                         style: TextStyle(
-                          color: request.ssnProvided
+                          color: ssnProvided
                               ? AppColors.success
                               : AppColors.warning,
                           fontSize: 12,
                           fontWeight: FontWeight.w700,
                         ),
                       ),
-                      if (request.ssnProvided) ...[
+                      if (ssnProvided) ...[
                         const SizedBox(height: 2),
                         Text(
-                          request.ssnMasked ??
-                              '***-**-${request.ssnLast4 ?? "????"}',
+                          ssnFull ??
+                              ssnMasked ??
+                              '***-**-${ssnLast4 ?? "????"}',
                           style: const TextStyle(
                             color: AppColors.textPrimary,
                             fontSize: 16,
@@ -1462,9 +1521,9 @@ class _PendingVerificationDetailPage extends StatelessWidget {
                             letterSpacing: 1.2,
                           ),
                         ),
-                        if (request.ssnLast4 != null)
+                        if (ssnLast4 != null)
                           Text(
-                            'Últimos 4: ${request.ssnLast4}',
+                            'Últimos 4: $ssnLast4',
                             style: const TextStyle(
                               color: AppColors.textSecondary,
                               fontSize: 12,
@@ -1475,12 +1534,10 @@ class _PendingVerificationDetailPage extends StatelessWidget {
                   ),
                 ),
                 Icon(
-                  request.ssnProvided
+                  ssnProvided
                       ? Icons.verified_rounded
                       : Icons.warning_amber_rounded,
-                  color: request.ssnProvided
-                      ? AppColors.success
-                      : AppColors.warning,
+                  color: ssnProvided ? AppColors.success : AppColors.warning,
                   size: 22,
                 ),
               ],
@@ -1492,12 +1549,12 @@ class _PendingVerificationDetailPage extends StatelessWidget {
           _sectionHeader('Fotos de Verificación'),
 
           // Profile photo
-          if (request.profilePhotoUrl != null) ...[
+          if (profileUrl != null) ...[
             const SizedBox(height: 10),
             _photoCard(
               context,
               'Foto de Perfil',
-              DispatchApiService.fullUrl(request.profilePhotoUrl!),
+              DispatchApiService.fullUrl(profileUrl),
             ),
           ] else if (request.userId > 0) ...[
             const SizedBox(height: 10),
@@ -1509,87 +1566,82 @@ class _PendingVerificationDetailPage extends StatelessWidget {
           ],
 
           // Driver license front
-          if (request.licenseFrontUrl != null) ...[
+          if (licenseFrontUrl != null) ...[
             const SizedBox(height: 10),
             _photoCard(
               context,
               'Licencia de Conducir — Frente',
-              DispatchApiService.fullUrl(request.licenseFrontUrl!),
+              DispatchApiService.fullUrl(licenseFrontUrl),
             ),
           ],
 
           // Driver license back
-          if (request.licenseBackUrl != null) ...[
+          if (licenseBackUrl != null) ...[
             const SizedBox(height: 10),
             _photoCard(
               context,
               'Licencia de Conducir — Dorso',
-              DispatchApiService.fullUrl(request.licenseBackUrl!),
+              DispatchApiService.fullUrl(licenseBackUrl),
             ),
           ],
 
           // Insurance
-          if (request.insuranceUrl != null) ...[
+          if (insuranceUrl != null) ...[
             const SizedBox(height: 10),
             _photoCard(
               context,
               'Seguro del Vehículo',
-              DispatchApiService.fullUrl(request.insuranceUrl!),
+              DispatchApiService.fullUrl(insuranceUrl),
             ),
           ],
 
           // Fallback: id_photo (for riders using identity_verification_screen)
-          if (request.idPhotoUrl != null &&
-              request.licenseFrontUrl == null) ...[
+          if (idPhotoUrl != null && licenseFrontUrl == null) ...[
             const SizedBox(height: 10),
             _photoCard(
               context,
               'Documento ID (${_docTypeLabel(request.idDocumentType)})',
-              DispatchApiService.fullUrl(request.idPhotoUrl!),
+              DispatchApiService.fullUrl(idPhotoUrl),
             ),
           ],
 
           // Selfie / biometrics
-          if (request.selfieUrl != null) ...[
+          if (selfieUrl != null) ...[
             const SizedBox(height: 10),
             _photoCard(
               context,
               'Selfie Biométrico',
-              DispatchApiService.fullUrl(request.selfieUrl!),
+              DispatchApiService.fullUrl(selfieUrl),
             ),
           ],
 
           // Vehicle info (drivers)
-          if (request.vehicle != null) ...[
+          if (vehicle != null) ...[
             const SizedBox(height: 20),
             _sectionHeader('Vehículo'),
             _detailRow(
               Icons.directions_car_rounded,
               'Auto',
               [
-                request.vehicle!['year'],
-                request.vehicle!['make'],
-                request.vehicle!['model'],
+                vehicle['year'],
+                vehicle['make'],
+                vehicle['model'],
               ].where((v) => v != null && '$v'.isNotEmpty).join(' '),
             ),
-            if (request.vehicle!['color'] != null)
+            if (vehicle['color'] != null)
               _detailRow(
                 Icons.palette_outlined,
                 'Color',
-                '${request.vehicle!['color']}',
+                '${vehicle['color']}',
               ),
-            if (request.vehicle!['plate'] != null)
-              _detailRow(
-                Icons.pin_outlined,
-                'Placa',
-                '${request.vehicle!['plate']}',
-              ),
+            if (vehicle['plate'] != null)
+              _detailRow(Icons.pin_outlined, 'Placa', '${vehicle['plate']}'),
           ],
 
-          if (request.idPhotoUrl == null &&
-              request.selfieUrl == null &&
-              request.profilePhotoUrl == null &&
-              request.licenseFrontUrl == null &&
+          if (idPhotoUrl == null &&
+              selfieUrl == null &&
+              profileUrl == null &&
+              licenseFrontUrl == null &&
               request.userId <= 0)
             const Padding(
               padding: EdgeInsets.symmetric(vertical: 12),
