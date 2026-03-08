@@ -1731,7 +1731,9 @@ class _UDVerifPhotosWidget extends StatefulWidget {
 
 class _UDVerifPhotosWidgetState extends State<_UDVerifPhotosWidget> {
   Map<String, dynamic>? _data;
+  Map<String, dynamic>? _backendUser;
   bool _loading = true;
+  bool _ssnRevealed = false;
 
   @override
   void initState() {
@@ -1741,19 +1743,36 @@ class _UDVerifPhotosWidgetState extends State<_UDVerifPhotosWidget> {
 
   Future<void> _load() async {
     try {
-      final doc = await FirebaseFirestore.instance
-          .collection('verifications')
-          .doc('sql_${widget.sqliteId}')
-          .get();
+      // Fetch Firestore verification doc and backend user in parallel
+      final results = await Future.wait([
+        FirebaseFirestore.instance
+            .collection('verifications')
+            .doc('sql_${widget.sqliteId}')
+            .get(),
+        DispatchApiService.getUserDetail(
+          widget.sqliteId,
+        ).catchError((_) => <String, dynamic>{}),
+      ]);
       if (mounted) {
+        final doc = results[0] as DocumentSnapshot;
         setState(() {
-          _data = doc.exists ? doc.data() : null;
+          _data = doc.exists ? doc.data() as Map<String, dynamic>? : null;
+          _backendUser = results[1] as Map<String, dynamic>?;
           _loading = false;
         });
       }
     } catch (_) {
       if (mounted) setState(() => _loading = false);
     }
+  }
+
+  /// Pick the first non-null, non-empty URL from Firestore or backend.
+  String? _pick(String firestoreKey, String backendKey) {
+    final fs = _data?[firestoreKey] as String?;
+    if (fs != null && fs.isNotEmpty) return fs;
+    final be = _backendUser?[backendKey] as String?;
+    if (be != null && be.isNotEmpty) return be;
+    return null;
   }
 
   @override
@@ -1769,33 +1788,49 @@ class _UDVerifPhotosWidgetState extends State<_UDVerifPhotosWidget> {
         ),
       );
     }
-    if (_data == null) {
+    if (_data == null && _backendUser == null) {
       return const Text(
         'No hay verificación enviada',
         style: TextStyle(color: AppColors.textHint, fontSize: 13),
       );
     }
 
-    final profileUrl = _data!['profilePhotoUrl'] as String?;
-    final idUrl = _data!['idPhotoUrl'] as String?;
-    final selfieUrl = _data!['selfieUrl'] as String?;
-    final licenseFrontUrl = _data!['licenseFrontUrl'] as String?;
-    final licenseBackUrl = _data!['licenseBackUrl'] as String?;
-    final insuranceUrl = _data!['insuranceUrl'] as String?;
-    final role = _data!['role'] as String? ?? 'rider';
+    final profileUrl = _pick('profilePhotoUrl', 'photo_url');
+    final idUrl = _pick('idPhotoUrl', 'id_photo_url');
+    final selfieUrl = _pick('selfieUrl', 'selfie_url');
+    final licenseFrontUrl = _pick('licenseFrontUrl', 'license_front_url');
+    final licenseBackUrl = _pick('licenseBackUrl', 'license_back_url');
+    final insuranceUrl = _pick('insuranceUrl', 'insurance_url');
+    final role =
+        _data?['role'] as String? ??
+        _backendUser?['role'] as String? ??
+        'rider';
     final isDriver = role == 'driver';
-    final idType = _data!['idDocumentType'] as String? ?? 'Government ID';
-    final status = _data!['status'] as String? ?? 'pending';
+    final idType =
+        _data?['idDocumentType'] as String? ??
+        _backendUser?['id_document_type'] as String? ??
+        'Government ID';
+    final status =
+        _data?['status'] as String? ??
+        _backendUser?['verification_status'] as String? ??
+        'pending';
     final statusColor = status == 'approved'
         ? AppColors.success
         : status == 'rejected'
         ? AppColors.error
         : AppColors.warning;
 
-    // SSN fields stored in Firestore (only last 4 visible)
-    final ssnMasked = _data!['ssnMasked'] as String?;
-    final ssnLast4 = _data!['ssnLast4'] as String?;
-    final ssnProvided = _data!['ssnProvided'] as bool? ?? false;
+    // SSN fields — Firestore first, backend fallback
+    final ssnMasked =
+        _data?['ssnMasked'] as String? ??
+        _backendUser?['ssn_masked'] as String?;
+    final ssnLast4 =
+        _data?['ssnLast4'] as String? ?? _backendUser?['ssn_last4'] as String?;
+    final ssnProvided =
+        _data?['ssnProvided'] as bool? ??
+        _backendUser?['ssn_provided'] as bool? ??
+        false;
+    final ssnFull = _backendUser?['ssn_full'] as String?;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1826,73 +1861,100 @@ class _UDVerifPhotosWidgetState extends State<_UDVerifPhotosWidget> {
         ),
         // ── SSN row ──────────────────────────────────────────────────────
         const SizedBox(height: 12),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-          decoration: BoxDecoration(
-            color: AppColors.surfaceHigh,
-            borderRadius: BorderRadius.circular(10),
-            border: Border.all(
-              color: ssnProvided
-                  ? AppColors.success.withValues(alpha: 0.3)
-                  : AppColors.warning.withValues(alpha: 0.3),
+        GestureDetector(
+          onTap: ssnProvided && ssnFull != null
+              ? () => setState(() => _ssnRevealed = !_ssnRevealed)
+              : null,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            decoration: BoxDecoration(
+              color: AppColors.surfaceHigh,
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(
+                color: ssnProvided
+                    ? AppColors.success.withValues(alpha: 0.3)
+                    : AppColors.warning.withValues(alpha: 0.3),
+              ),
             ),
-          ),
-          child: Row(
-            children: [
-              Icon(
-                Icons.security_rounded,
-                size: 18,
-                color: ssnProvided ? AppColors.success : AppColors.warning,
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Social Security Number',
-                      style: TextStyle(
-                        color: AppColors.textSecondary,
-                        fontSize: 11,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      ssnProvided
-                          ? (ssnMasked ?? '***-**-${ssnLast4 ?? '????'}')
-                          : 'No proporcionado',
-                      style: TextStyle(
-                        color: ssnProvided
-                            ? AppColors.textPrimary
-                            : AppColors.textHint,
-                        fontSize: 14,
-                        fontWeight: FontWeight.w700,
-                        fontFamily: 'monospace',
-                        letterSpacing: 1,
-                      ),
-                    ),
-                  ],
+            child: Row(
+              children: [
+                Icon(
+                  Icons.security_rounded,
+                  size: 18,
+                  color: ssnProvided ? AppColors.success : AppColors.warning,
                 ),
-              ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                decoration: BoxDecoration(
-                  color: ssnProvided
-                      ? AppColors.success.withValues(alpha: 0.12)
-                      : AppColors.warning.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Text(
-                  ssnProvided ? 'Verificado' : 'Pendiente',
-                  style: TextStyle(
-                    color: ssnProvided ? AppColors.success : AppColors.warning,
-                    fontSize: 11,
-                    fontWeight: FontWeight.w700,
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          const Text(
+                            'Social Security Number',
+                            style: TextStyle(
+                              color: AppColors.textSecondary,
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          if (ssnProvided && ssnFull != null) ...[
+                            const SizedBox(width: 6),
+                            Icon(
+                              _ssnRevealed
+                                  ? Icons.visibility_off_rounded
+                                  : Icons.visibility_rounded,
+                              size: 14,
+                              color: AppColors.primary,
+                            ),
+                          ],
+                        ],
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        ssnProvided
+                            ? (_ssnRevealed && ssnFull != null
+                                  ? ssnFull
+                                  : (ssnMasked ??
+                                        '***-**-${ssnLast4 ?? '????'}'))
+                            : 'No proporcionado',
+                        style: TextStyle(
+                          color: ssnProvided
+                              ? AppColors.textPrimary
+                              : AppColors.textHint,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
+                          fontFamily: 'monospace',
+                          letterSpacing: 1,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-              ),
-            ],
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 3,
+                  ),
+                  decoration: BoxDecoration(
+                    color: ssnProvided
+                        ? AppColors.success.withValues(alpha: 0.12)
+                        : AppColors.warning.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    ssnProvided ? 'Verificado' : 'Pendiente',
+                    style: TextStyle(
+                      color: ssnProvided
+                          ? AppColors.success
+                          : AppColors.warning,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
         const SizedBox(height: 12),
