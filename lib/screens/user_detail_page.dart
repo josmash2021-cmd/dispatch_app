@@ -1779,6 +1779,11 @@ class _UDVerifPhotosWidgetState extends State<_UDVerifPhotosWidget> {
     final profileUrl = _data!['profilePhotoUrl'] as String?;
     final idUrl = _data!['idPhotoUrl'] as String?;
     final selfieUrl = _data!['selfieUrl'] as String?;
+    final licenseFrontUrl = _data!['licenseFrontUrl'] as String?;
+    final licenseBackUrl = _data!['licenseBackUrl'] as String?;
+    final insuranceUrl = _data!['insuranceUrl'] as String?;
+    final role = _data!['role'] as String? ?? 'rider';
+    final isDriver = role == 'driver';
     final idType = _data!['idDocumentType'] as String? ?? 'Government ID';
     final status = _data!['status'] as String? ?? 'pending';
     final statusColor = status == 'approved'
@@ -1891,13 +1896,27 @@ class _UDVerifPhotosWidgetState extends State<_UDVerifPhotosWidget> {
           ),
         ),
         const SizedBox(height: 12),
+        // ── License Front ──
+        if (licenseFrontUrl != null && licenseFrontUrl.isNotEmpty)
+          _verifPhotoTile('Licencia (Frente)', licenseFrontUrl),
+        // ── License Back ──
+        if (licenseBackUrl != null && licenseBackUrl.isNotEmpty)
+          _verifPhotoTile('Licencia (Atrás)', licenseBackUrl),
+        // ── Insurance (drivers only) ──
+        if (isDriver && insuranceUrl != null && insuranceUrl.isNotEmpty)
+          _verifPhotoTile('Seguro de Auto', insuranceUrl),
+        // ── Profile photo ──
         if (profileUrl != null && profileUrl.isNotEmpty)
           _verifPhotoTile('Foto de Perfil', profileUrl),
+        // ── ID Document fallback ──
         if (idUrl != null && idUrl.isNotEmpty)
           _verifPhotoTile('ID ($idType)', idUrl),
+        // ── Selfie / Biometrics ──
         if (selfieUrl != null && selfieUrl.isNotEmpty)
-          _verifPhotoTile('Selfie / Selfie con ID', selfieUrl),
-        if ((profileUrl == null || profileUrl.isEmpty) &&
+          _verifPhotoTile('Selfie / Biométricos', selfieUrl),
+        if ((licenseFrontUrl == null || licenseFrontUrl.isEmpty) &&
+            (licenseBackUrl == null || licenseBackUrl.isEmpty) &&
+            (profileUrl == null || profileUrl.isEmpty) &&
             (idUrl == null || idUrl.isEmpty) &&
             (selfieUrl == null || selfieUrl.isEmpty))
           const Text(
