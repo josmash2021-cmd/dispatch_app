@@ -39,8 +39,10 @@ class _AdminConfigScreenState extends State<AdminConfigScreen> {
   double _noShowFee = 10.00;
   int _maxWaitMinutes = 10;
 
-  // Service zones
-  List<_ZoneConfig> _zones = [];
+  // Service zones — active US states
+  Set<String> _activeStates = {};
+  final _stateSearchCtrl = TextEditingController();
+  String _stateFilter = '';
 
   @override
   void initState() {
@@ -57,40 +59,43 @@ class _AdminConfigScreenState extends State<AdminConfigScreen> {
           _baseFare = (d['base_fare'] as num?)?.toDouble() ?? _baseFare;
           _perMile = (d['per_mile'] as num?)?.toDouble() ?? _perMile;
           _perMinute = (d['per_minute'] as num?)?.toDouble() ?? _perMinute;
-          _minimumFare = (d['minimum_fare'] as num?)?.toDouble() ?? _minimumFare;
-          _fusionMultiplier = (d['fusion_multiplier'] as num?)?.toDouble() ?? _fusionMultiplier;
-          _camryMultiplier = (d['camry_multiplier'] as num?)?.toDouble() ?? _camryMultiplier;
-          _suburbanMultiplier = (d['suburban_multiplier'] as num?)?.toDouble() ?? _suburbanMultiplier;
-          _nightMultiplier = (d['night_multiplier'] as num?)?.toDouble() ?? _nightMultiplier;
-          _holidayMultiplier = (d['holiday_multiplier'] as num?)?.toDouble() ?? _holidayMultiplier;
-          _nightStartHour = (d['night_start_hour'] as num?)?.toInt() ?? _nightStartHour;
-          _nightEndHour = (d['night_end_hour'] as num?)?.toInt() ?? _nightEndHour;
-          _freeCancelMinutes = (d['free_cancel_minutes'] as num?)?.toInt() ?? _freeCancelMinutes;
+          _minimumFare =
+              (d['minimum_fare'] as num?)?.toDouble() ?? _minimumFare;
+          _fusionMultiplier =
+              (d['fusion_multiplier'] as num?)?.toDouble() ?? _fusionMultiplier;
+          _camryMultiplier =
+              (d['camry_multiplier'] as num?)?.toDouble() ?? _camryMultiplier;
+          _suburbanMultiplier =
+              (d['suburban_multiplier'] as num?)?.toDouble() ??
+              _suburbanMultiplier;
+          _nightMultiplier =
+              (d['night_multiplier'] as num?)?.toDouble() ?? _nightMultiplier;
+          _holidayMultiplier =
+              (d['holiday_multiplier'] as num?)?.toDouble() ??
+              _holidayMultiplier;
+          _nightStartHour =
+              (d['night_start_hour'] as num?)?.toInt() ?? _nightStartHour;
+          _nightEndHour =
+              (d['night_end_hour'] as num?)?.toInt() ?? _nightEndHour;
+          _freeCancelMinutes =
+              (d['free_cancel_minutes'] as num?)?.toInt() ?? _freeCancelMinutes;
           _cancelFee = (d['cancel_fee'] as num?)?.toDouble() ?? _cancelFee;
           _noShowFee = (d['no_show_fee'] as num?)?.toDouble() ?? _noShowFee;
-          _maxWaitMinutes = (d['max_wait_minutes'] as num?)?.toInt() ?? _maxWaitMinutes;
+          _maxWaitMinutes =
+              (d['max_wait_minutes'] as num?)?.toInt() ?? _maxWaitMinutes;
         });
       }
 
-      final zonesSnap = await _db.collection('config').doc('zones').get();
+      final zonesSnap = await _db
+          .collection('config')
+          .doc('serviceZones')
+          .get();
       if (zonesSnap.exists) {
-        final zonesList = zonesSnap.data()?['zones'] as List<dynamic>? ?? [];
-        setState(() {
-          _zones = zonesList.map((z) => _ZoneConfig(
-            name: z['name'] ?? '',
-            lat: (z['lat'] as num?)?.toDouble() ?? 0,
-            lng: (z['lng'] as num?)?.toDouble() ?? 0,
-            radiusKm: (z['radius_km'] as num?)?.toDouble() ?? 30,
-          )).toList();
-        });
-      }
-
-      if (_zones.isEmpty) {
-        _zones = [
-          _ZoneConfig(name: 'Miami-Dade', lat: 25.7617, lng: -80.1918, radiusKm: 50),
-          _ZoneConfig(name: 'Broward', lat: 26.1224, lng: -80.1373, radiusKm: 40),
-          _ZoneConfig(name: 'Palm Beach', lat: 26.7153, lng: -80.0534, radiusKm: 35),
-        ];
+        final states =
+            (zonesSnap.data()?['activeStates'] as List<dynamic>? ?? [])
+                .map((s) => s.toString())
+                .toSet();
+        setState(() => _activeStates = states);
       }
     } catch (e) {
       debugPrint('Error loading config: $e');
@@ -119,14 +124,9 @@ class _AdminConfigScreenState extends State<AdminConfigScreen> {
         'updated_at': FieldValue.serverTimestamp(),
       });
 
-      await _db.collection('config').doc('zones').set({
-        'zones': _zones.map((z) => {
-          'name': z.name,
-          'lat': z.lat,
-          'lng': z.lng,
-          'radius_km': z.radiusKm,
-        }).toList(),
-        'updated_at': FieldValue.serverTimestamp(),
+      await _db.collection('config').doc('serviceZones').set({
+        'activeStates': _activeStates.toList(),
+        'updatedAt': FieldValue.serverTimestamp(),
       });
 
       if (mounted) {
@@ -167,7 +167,9 @@ class _AdminConfigScreenState extends State<AdminConfigScreen> {
         ],
       ),
       body: _loading
-          ? const Center(child: CircularProgressIndicator(color: AppColors.primary))
+          ? const Center(
+              child: CircularProgressIndicator(color: AppColors.primary),
+            )
           : SingleChildScrollView(
               padding: const EdgeInsets.all(16),
               child: Column(
@@ -175,96 +177,173 @@ class _AdminConfigScreenState extends State<AdminConfigScreen> {
                 children: [
                   _sectionHeader('Base Tariff', Icons.attach_money),
                   _configCard([
-                    _sliderRow('Base fare', _baseFare, 0, 10, (v) => setState(() => _baseFare = v), prefix: '\$'),
-                    _sliderRow('Per mile', _perMile, 0, 5, (v) => setState(() => _perMile = v), prefix: '\$'),
-                    _sliderRow('Per minute', _perMinute, 0, 2, (v) => setState(() => _perMinute = v), prefix: '\$'),
-                    _sliderRow('Minimum fare', _minimumFare, 0, 20, (v) => setState(() => _minimumFare = v), prefix: '\$'),
+                    _sliderRow(
+                      'Base fare',
+                      _baseFare,
+                      0,
+                      10,
+                      (v) => setState(() => _baseFare = v),
+                      prefix: '\$',
+                    ),
+                    _sliderRow(
+                      'Per mile',
+                      _perMile,
+                      0,
+                      5,
+                      (v) => setState(() => _perMile = v),
+                      prefix: '\$',
+                    ),
+                    _sliderRow(
+                      'Per minute',
+                      _perMinute,
+                      0,
+                      2,
+                      (v) => setState(() => _perMinute = v),
+                      prefix: '\$',
+                    ),
+                    _sliderRow(
+                      'Minimum fare',
+                      _minimumFare,
+                      0,
+                      20,
+                      (v) => setState(() => _minimumFare = v),
+                      prefix: '\$',
+                    ),
                   ]),
 
                   const SizedBox(height: 20),
                   _sectionHeader('Vehicle Multipliers', Icons.directions_car),
                   _configCard([
-                    _sliderRow('Fusion', _fusionMultiplier, 0.5, 3, (v) => setState(() => _fusionMultiplier = v), suffix: 'x'),
-                    _sliderRow('Camry', _camryMultiplier, 0.5, 3, (v) => setState(() => _camryMultiplier = v), suffix: 'x'),
-                    _sliderRow('Suburban', _suburbanMultiplier, 0.5, 5, (v) => setState(() => _suburbanMultiplier = v), suffix: 'x'),
+                    _sliderRow(
+                      'Fusion',
+                      _fusionMultiplier,
+                      0.5,
+                      3,
+                      (v) => setState(() => _fusionMultiplier = v),
+                      suffix: 'x',
+                    ),
+                    _sliderRow(
+                      'Camry',
+                      _camryMultiplier,
+                      0.5,
+                      3,
+                      (v) => setState(() => _camryMultiplier = v),
+                      suffix: 'x',
+                    ),
+                    _sliderRow(
+                      'Suburban',
+                      _suburbanMultiplier,
+                      0.5,
+                      5,
+                      (v) => setState(() => _suburbanMultiplier = v),
+                      suffix: 'x',
+                    ),
                   ]),
 
                   const SizedBox(height: 20),
                   _sectionHeader('Surge Pricing', Icons.trending_up),
                   _configCard([
-                    _sliderRow('Night multiplier', _nightMultiplier, 1, 3, (v) => setState(() => _nightMultiplier = v), suffix: 'x'),
-                    _sliderRow('Holiday multiplier', _holidayMultiplier, 1, 3, (v) => setState(() => _holidayMultiplier = v), suffix: 'x'),
-                    _intSliderRow('Night starts at', _nightStartHour, 18, 23, (v) => setState(() => _nightStartHour = v), suffix: ':00'),
-                    _intSliderRow('Night ends at', _nightEndHour, 4, 8, (v) => setState(() => _nightEndHour = v), suffix: ':00'),
+                    _sliderRow(
+                      'Night multiplier',
+                      _nightMultiplier,
+                      1,
+                      3,
+                      (v) => setState(() => _nightMultiplier = v),
+                      suffix: 'x',
+                    ),
+                    _sliderRow(
+                      'Holiday multiplier',
+                      _holidayMultiplier,
+                      1,
+                      3,
+                      (v) => setState(() => _holidayMultiplier = v),
+                      suffix: 'x',
+                    ),
+                    _intSliderRow(
+                      'Night starts at',
+                      _nightStartHour,
+                      18,
+                      23,
+                      (v) => setState(() => _nightStartHour = v),
+                      suffix: ':00',
+                    ),
+                    _intSliderRow(
+                      'Night ends at',
+                      _nightEndHour,
+                      4,
+                      8,
+                      (v) => setState(() => _nightEndHour = v),
+                      suffix: ':00',
+                    ),
                   ]),
 
                   const SizedBox(height: 20),
                   _sectionHeader('Cancellation Policy', Icons.cancel_outlined),
                   _configCard([
-                    _intSliderRow('Free cancel window', _freeCancelMinutes, 1, 10, (v) => setState(() => _freeCancelMinutes = v), suffix: ' min'),
-                    _sliderRow('Cancel fee', _cancelFee, 0, 25, (v) => setState(() => _cancelFee = v), prefix: '\$'),
-                    _sliderRow('No-show fee', _noShowFee, 0, 50, (v) => setState(() => _noShowFee = v), prefix: '\$'),
-                    _intSliderRow('Max driver wait', _maxWaitMinutes, 5, 20, (v) => setState(() => _maxWaitMinutes = v), suffix: ' min'),
+                    _intSliderRow(
+                      'Free cancel window',
+                      _freeCancelMinutes,
+                      1,
+                      10,
+                      (v) => setState(() => _freeCancelMinutes = v),
+                      suffix: ' min',
+                    ),
+                    _sliderRow(
+                      'Cancel fee',
+                      _cancelFee,
+                      0,
+                      25,
+                      (v) => setState(() => _cancelFee = v),
+                      prefix: '\$',
+                    ),
+                    _sliderRow(
+                      'No-show fee',
+                      _noShowFee,
+                      0,
+                      50,
+                      (v) => setState(() => _noShowFee = v),
+                      prefix: '\$',
+                    ),
+                    _intSliderRow(
+                      'Max driver wait',
+                      _maxWaitMinutes,
+                      5,
+                      20,
+                      (v) => setState(() => _maxWaitMinutes = v),
+                      suffix: ' min',
+                    ),
                   ]),
 
                   const SizedBox(height: 20),
-                  _sectionHeader('Service Zones', Icons.location_on),
-                  ..._zones.asMap().entries.map((e) {
-                    final i = e.key;
-                    final z = e.value;
-                    return Container(
-                      margin: const EdgeInsets.only(bottom: 8),
-                      padding: const EdgeInsets.all(14),
-                      decoration: BoxDecoration(
-                        color: AppColors.surface,
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: AppColors.cardBorder),
-                      ),
-                      child: Column(
-                        children: [
-                          Row(
-                            children: [
-                              const Icon(Icons.circle, color: AppColors.primary, size: 10),
-                              const SizedBox(width: 10),
-                              Expanded(
-                                child: Text(z.name, style: const TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600)),
-                              ),
-                              Text('${z.radiusKm.toStringAsFixed(0)} km',
-                                style: const TextStyle(color: AppColors.primary, fontWeight: FontWeight.w600)),
-                              const SizedBox(width: 8),
-                              GestureDetector(
-                                onTap: () => setState(() => _zones.removeAt(i)),
-                                child: const Icon(Icons.close, color: AppColors.error, size: 18),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 8),
-                          _sliderRow('Radius', z.radiusKm, 5, 100, (v) {
-                            setState(() => _zones[i] = z.copyWith(radiusKm: v));
-                          }, suffix: ' km'),
-                        ],
-                      ),
-                    );
-                  }),
-                  TextButton.icon(
-                    onPressed: () {
-                      setState(() {
-                        _zones.add(_ZoneConfig(name: 'New Zone', lat: 25.76, lng: -80.19, radiusKm: 30));
-                      });
-                    },
-                    icon: const Icon(Icons.add_circle_outline, size: 18),
-                    label: const Text('Add Zone'),
-                    style: TextButton.styleFrom(foregroundColor: AppColors.primary),
+                  _sectionHeader(
+                    'Service Zones — Active States',
+                    Icons.map_outlined,
                   ),
+                  _buildServiceZonesSection(),
 
                   const SizedBox(height: 40),
 
                   // Fare preview
-                  _sectionHeader('Fare Preview (10 mi, 20 min)', Icons.calculate),
+                  _sectionHeader(
+                    'Fare Preview (10 mi, 20 min)',
+                    Icons.calculate,
+                  ),
                   _configCard([
-                    _farePreview('Fusion', _baseFare + (10 * _perMile) + (20 * _perMinute), _fusionMultiplier),
-                    _farePreview('Camry', _baseFare + (10 * _perMile) + (20 * _perMinute), _camryMultiplier),
-                    _farePreview('Suburban', _baseFare + (10 * _perMile) + (20 * _perMinute), _suburbanMultiplier),
+                    _farePreview(
+                      'Fusion',
+                      _baseFare + (10 * _perMile) + (20 * _perMinute),
+                      _fusionMultiplier,
+                    ),
+                    _farePreview(
+                      'Camry',
+                      _baseFare + (10 * _perMile) + (20 * _perMinute),
+                      _camryMultiplier,
+                    ),
+                    _farePreview(
+                      'Suburban',
+                      _baseFare + (10 * _perMile) + (20 * _perMinute),
+                      _suburbanMultiplier,
+                    ),
                   ]),
 
                   const SizedBox(height: 40),
@@ -281,11 +360,14 @@ class _AdminConfigScreenState extends State<AdminConfigScreen> {
         children: [
           Icon(icon, color: AppColors.primary, size: 20),
           const SizedBox(width: 8),
-          Text(title, style: const TextStyle(
-            color: AppColors.textPrimary,
-            fontSize: 16,
-            fontWeight: FontWeight.w700,
-          )),
+          Text(
+            title,
+            style: const TextStyle(
+              color: AppColors.textPrimary,
+              fontSize: 16,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
         ],
       ),
     );
@@ -303,12 +385,29 @@ class _AdminConfigScreenState extends State<AdminConfigScreen> {
     );
   }
 
-  Widget _sliderRow(String label, double value, double min, double max, ValueChanged<double> onChanged, {String prefix = '', String suffix = ''}) {
+  Widget _sliderRow(
+    String label,
+    double value,
+    double min,
+    double max,
+    ValueChanged<double> onChanged, {
+    String prefix = '',
+    String suffix = '',
+  }) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
         children: [
-          SizedBox(width: 120, child: Text(label, style: const TextStyle(color: AppColors.textSecondary, fontSize: 13))),
+          SizedBox(
+            width: 120,
+            child: Text(
+              label,
+              style: const TextStyle(
+                color: AppColors.textSecondary,
+                fontSize: 13,
+              ),
+            ),
+          ),
           Expanded(
             child: Slider(
               value: value.clamp(min, max),
@@ -324,7 +423,11 @@ class _AdminConfigScreenState extends State<AdminConfigScreen> {
             width: 60,
             child: Text(
               '$prefix${value.toStringAsFixed(2)}$suffix',
-              style: const TextStyle(color: AppColors.primary, fontWeight: FontWeight.w600, fontSize: 13),
+              style: const TextStyle(
+                color: AppColors.primary,
+                fontWeight: FontWeight.w600,
+                fontSize: 13,
+              ),
               textAlign: TextAlign.right,
             ),
           ),
@@ -333,12 +436,28 @@ class _AdminConfigScreenState extends State<AdminConfigScreen> {
     );
   }
 
-  Widget _intSliderRow(String label, int value, int min, int max, ValueChanged<int> onChanged, {String suffix = ''}) {
+  Widget _intSliderRow(
+    String label,
+    int value,
+    int min,
+    int max,
+    ValueChanged<int> onChanged, {
+    String suffix = '',
+  }) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
         children: [
-          SizedBox(width: 120, child: Text(label, style: const TextStyle(color: AppColors.textSecondary, fontSize: 13))),
+          SizedBox(
+            width: 120,
+            child: Text(
+              label,
+              style: const TextStyle(
+                color: AppColors.textSecondary,
+                fontSize: 13,
+              ),
+            ),
+          ),
           Expanded(
             child: Slider(
               value: value.toDouble().clamp(min.toDouble(), max.toDouble()),
@@ -354,7 +473,11 @@ class _AdminConfigScreenState extends State<AdminConfigScreen> {
             width: 60,
             child: Text(
               '$value$suffix',
-              style: const TextStyle(color: AppColors.primary, fontWeight: FontWeight.w600, fontSize: 13),
+              style: const TextStyle(
+                color: AppColors.primary,
+                fontWeight: FontWeight.w600,
+                fontSize: 13,
+              ),
               textAlign: TextAlign.right,
             ),
           ),
@@ -370,37 +493,216 @@ class _AdminConfigScreenState extends State<AdminConfigScreen> {
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
         children: [
-          SizedBox(width: 80, child: Text(name, style: const TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w500))),
+          SizedBox(
+            width: 80,
+            child: Text(
+              name,
+              style: const TextStyle(
+                color: AppColors.textPrimary,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ),
           const Spacer(),
-          Text('\$${fare.toStringAsFixed(2)}', style: const TextStyle(color: AppColors.textPrimary, fontSize: 14)),
+          Text(
+            '\$${fare.toStringAsFixed(2)}',
+            style: const TextStyle(color: AppColors.textPrimary, fontSize: 14),
+          ),
           const SizedBox(width: 16),
-          Text('Night: \$${withNight.toStringAsFixed(2)}',
-            style: TextStyle(color: AppColors.primary.withValues(alpha: 0.7), fontSize: 12)),
+          Text(
+            'Night: \$${withNight.toStringAsFixed(2)}',
+            style: TextStyle(
+              color: AppColors.primary.withValues(alpha: 0.7),
+              fontSize: 12,
+            ),
+          ),
         ],
       ),
     );
   }
-}
 
-class _ZoneConfig {
-  final String name;
-  final double lat;
-  final double lng;
-  final double radiusKm;
-
-  const _ZoneConfig({
-    required this.name,
-    required this.lat,
-    required this.lng,
-    required this.radiusKm,
-  });
-
-  _ZoneConfig copyWith({String? name, double? lat, double? lng, double? radiusKm}) {
-    return _ZoneConfig(
-      name: name ?? this.name,
-      lat: lat ?? this.lat,
-      lng: lng ?? this.lng,
-      radiusKm: radiusKm ?? this.radiusKm,
+  Widget _buildServiceZonesSection() {
+    final filtered = _stateFilter.isEmpty
+        ? _kUsStates
+        : _kUsStates
+              .where(
+                (s) => s.toLowerCase().contains(_stateFilter.toLowerCase()),
+              )
+              .toList();
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.cardBorder),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Active count badge + clear button
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 4,
+                ),
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Text(
+                  '${_activeStates.length} state${_activeStates.length == 1 ? '' : 's'} active',
+                  style: const TextStyle(
+                    color: AppColors.primary,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+              const Spacer(),
+              if (_activeStates.isNotEmpty)
+                TextButton(
+                  onPressed: () => setState(() => _activeStates = {}),
+                  style: TextButton.styleFrom(
+                    foregroundColor: AppColors.error,
+                    padding: EdgeInsets.zero,
+                  ),
+                  child: const Text(
+                    'Clear all',
+                    style: TextStyle(fontSize: 12),
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          // Search field
+          TextField(
+            controller: _stateSearchCtrl,
+            onChanged: (v) => setState(() => _stateFilter = v),
+            style: const TextStyle(color: AppColors.textPrimary, fontSize: 13),
+            decoration: InputDecoration(
+              hintText: 'Search state...',
+              hintStyle: TextStyle(
+                color: AppColors.textSecondary.withValues(alpha: 0.5),
+                fontSize: 13,
+              ),
+              prefixIcon: const Icon(
+                Icons.search,
+                color: AppColors.textSecondary,
+                size: 18,
+              ),
+              filled: true,
+              fillColor: AppColors.surfaceHigh,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(10),
+                borderSide: BorderSide.none,
+              ),
+              contentPadding: const EdgeInsets.symmetric(vertical: 8),
+              isDense: true,
+            ),
+          ),
+          const SizedBox(height: 12),
+          // State chips
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: filtered.map((state) {
+              final active = _activeStates.contains(state);
+              return GestureDetector(
+                onTap: () => setState(() {
+                  if (active) {
+                    _activeStates = {..._activeStates}..remove(state);
+                  } else {
+                    _activeStates = {..._activeStates, state};
+                  }
+                }),
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 180),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 6,
+                  ),
+                  decoration: BoxDecoration(
+                    color: active ? AppColors.primary : AppColors.surfaceHigh,
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(
+                      color: active ? AppColors.primary : AppColors.cardBorder,
+                    ),
+                  ),
+                  child: Text(
+                    state,
+                    style: TextStyle(
+                      color: active ? Colors.black : AppColors.textSecondary,
+                      fontSize: 12,
+                      fontWeight: active ? FontWeight.w700 : FontWeight.w400,
+                    ),
+                  ),
+                ),
+              );
+            }).toList(),
+          ),
+        ],
+      ),
     );
   }
+
+  @override
+  void dispose() {
+    _stateSearchCtrl.dispose();
+    super.dispose();
+  }
 }
+
+const _kUsStates = [
+  'Alabama',
+  'Alaska',
+  'Arizona',
+  'Arkansas',
+  'California',
+  'Colorado',
+  'Connecticut',
+  'Delaware',
+  'Florida',
+  'Georgia',
+  'Hawaii',
+  'Idaho',
+  'Illinois',
+  'Indiana',
+  'Iowa',
+  'Kansas',
+  'Kentucky',
+  'Louisiana',
+  'Maine',
+  'Maryland',
+  'Massachusetts',
+  'Michigan',
+  'Minnesota',
+  'Mississippi',
+  'Missouri',
+  'Montana',
+  'Nebraska',
+  'Nevada',
+  'New Hampshire',
+  'New Jersey',
+  'New Mexico',
+  'New York',
+  'North Carolina',
+  'North Dakota',
+  'Ohio',
+  'Oklahoma',
+  'Oregon',
+  'Pennsylvania',
+  'Rhode Island',
+  'South Carolina',
+  'South Dakota',
+  'Tennessee',
+  'Texas',
+  'Utah',
+  'Vermont',
+  'Virginia',
+  'Washington',
+  'West Virginia',
+  'Wisconsin',
+  'Wyoming',
+];
