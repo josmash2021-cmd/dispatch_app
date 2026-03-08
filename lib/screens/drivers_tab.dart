@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
@@ -926,19 +927,15 @@ class _DriverCard extends StatelessWidget {
                 'Username',
                 driver.username ?? driver.email ?? driver.phone,
               ),
-              _detailRow(
-                Icons.lock_outlined,
-                'Password',
-                (driver.password != null ||
-                        driver.passwordHash != null ||
-                        driver.hasPassword)
-                    ? '••••••••'
-                    : 'Not set',
-              ),
-              if (driver.sqliteId != null &&
-                  (driver.password != null ||
-                      driver.passwordHash != null ||
-                      driver.hasPassword))
+              if (driver.sqliteId != null)
+                _UserPasswordWidget(sqliteId: driver.sqliteId!)
+              else
+                _detailRow(
+                  Icons.lock_outlined,
+                  'Password',
+                  'Not available (no server ID)',
+                ),
+              if (driver.sqliteId != null)
                 Padding(
                   padding: const EdgeInsets.only(top: 4, bottom: 4),
                   child: SizedBox(
@@ -1028,11 +1025,18 @@ class _DriverCard extends StatelessWidget {
                 ],
               ],
 
+              // ── Verification Photos ──
+              if (driver.sqliteId != null) ...[
+                const SizedBox(height: 16),
+                _sectionHeader('Verification Photos'),
+                _VerifPhotosWidget(sqliteId: driver.sqliteId!),
+              ],
+
               // ── Server Documents (from backend) ──
               if (driver.sqliteId != null) ...[
                 const SizedBox(height: 16),
                 _sectionHeader('Server Documents'),
-                _DriverServerDocumentsWidget(sqliteId: driver.sqliteId!),
+                _UserDetailDocsWidget(sqliteId: driver.sqliteId!),
               ],
 
               // ── Payment Info ──
@@ -1637,18 +1641,290 @@ class _DriverCard extends StatelessWidget {
   }
 }
 
-// ─── Server Documents Widget for Drivers ──────────────────────────────────
+// ─── Password Widget (fetches real password from backend) ────────────────────
 
-class _DriverServerDocumentsWidget extends StatefulWidget {
+class _UserPasswordWidget extends StatefulWidget {
   final int sqliteId;
-  const _DriverServerDocumentsWidget({required this.sqliteId});
+  const _UserPasswordWidget({required this.sqliteId});
   @override
-  State<_DriverServerDocumentsWidget> createState() =>
-      _DriverServerDocumentsWidgetState();
+  State<_UserPasswordWidget> createState() => _UserPasswordWidgetState();
 }
 
-class _DriverServerDocumentsWidgetState
-    extends State<_DriverServerDocumentsWidget> {
+class _UserPasswordWidgetState extends State<_UserPasswordWidget> {
+  String? _password;
+  bool _loading = true;
+  bool _visible = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    try {
+      final detail = await DispatchApiService.getUserDetail(widget.sqliteId);
+      if (mounted) {
+        setState(() {
+          _password = detail['password_plain'] as String?;
+          _loading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_loading) {
+      return const Padding(
+        padding: EdgeInsets.symmetric(vertical: 6),
+        child: Row(
+          children: [
+            Icon(Icons.lock_outlined, size: 18, color: AppColors.textSecondary),
+            SizedBox(width: 12),
+            Text(
+              'Password',
+              style: TextStyle(color: AppColors.textSecondary, fontSize: 14),
+            ),
+            Spacer(),
+            SizedBox(
+              width: 14,
+              height: 14,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                color: AppColors.primary,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+    final hasPass = _password != null && _password!.isNotEmpty;
+    final display = hasPass
+        ? (_visible ? _password! : '••••••••')
+        : '(no plain text stored)';
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          const Icon(
+            Icons.lock_outlined,
+            size: 18,
+            color: AppColors.textSecondary,
+          ),
+          const SizedBox(width: 12),
+          const Text(
+            'Password',
+            style: TextStyle(color: AppColors.textSecondary, fontSize: 14),
+          ),
+          const Spacer(),
+          if (hasPass) ...[
+            GestureDetector(
+              onTap: () => setState(() => _visible = !_visible),
+              child: Text(
+                display,
+                style: TextStyle(
+                  color: _visible ? AppColors.primary : AppColors.textPrimary,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  fontFamily: 'monospace',
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+            GestureDetector(
+              onTap: () {
+                Clipboard.setData(ClipboardData(text: _password!));
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Password copied'),
+                    duration: Duration(seconds: 1),
+                  ),
+                );
+              },
+              child: const Icon(
+                Icons.copy_rounded,
+                size: 16,
+                color: AppColors.primary,
+              ),
+            ),
+          ] else
+            Text(
+              display,
+              style: const TextStyle(color: AppColors.textHint, fontSize: 13),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+// ─── Verification Photos Widget (from Firestore verifications) ────────────────
+
+class _VerifPhotosWidget extends StatefulWidget {
+  final int sqliteId;
+  const _VerifPhotosWidget({required this.sqliteId});
+  @override
+  State<_VerifPhotosWidget> createState() => _VerifPhotosWidgetState();
+}
+
+class _VerifPhotosWidgetState extends State<_VerifPhotosWidget> {
+  Map<String, dynamic>? _data;
+  bool _loading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    try {
+      final doc = await FirebaseFirestore.instance
+          .collection('verifications')
+          .doc('sql_${widget.sqliteId}')
+          .get();
+      if (mounted)
+        setState(() {
+          _data = doc.exists ? doc.data() : null;
+          _loading = false;
+        });
+    } catch (e) {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  Widget _photoTile(String label, String? url) {
+    if (url == null || url.isEmpty) return const SizedBox.shrink();
+    final resolvedUrl = url.startsWith('http')
+        ? url
+        : DispatchApiService.fullUrl(url);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: const TextStyle(
+            color: AppColors.textSecondary,
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        const SizedBox(height: 4),
+        ClipRRect(
+          borderRadius: BorderRadius.circular(10),
+          child: Image.network(
+            resolvedUrl,
+            height: 160,
+            width: double.infinity,
+            fit: BoxFit.cover,
+            errorBuilder: (_, __, ___) => Container(
+              height: 80,
+              decoration: BoxDecoration(
+                color: AppColors.surfaceHigh,
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: const Center(
+                child: Icon(
+                  Icons.broken_image_outlined,
+                  color: AppColors.textHint,
+                ),
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(height: 10),
+      ],
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_loading) {
+      return const Padding(
+        padding: EdgeInsets.symmetric(vertical: 12),
+        child: Center(
+          child: SizedBox(
+            width: 20,
+            height: 20,
+            child: CircularProgressIndicator(
+              strokeWidth: 2,
+              color: AppColors.primary,
+            ),
+          ),
+        ),
+      );
+    }
+    if (_data == null) {
+      return const Padding(
+        padding: EdgeInsets.symmetric(vertical: 8),
+        child: Text(
+          'No verification submitted',
+          style: TextStyle(color: AppColors.textHint, fontSize: 13),
+        ),
+      );
+    }
+    final profileUrl = _data!['profilePhotoUrl'] as String?;
+    final idUrl = _data!['idPhotoUrl'] as String?;
+    final selfieUrl = _data!['selfieUrl'] as String?;
+    final idType = _data!['idDocumentType'] as String? ?? 'Government ID';
+    final status = _data!['status'] as String? ?? 'pending';
+    final statusColor = status == 'approved'
+        ? AppColors.success
+        : status == 'rejected'
+        ? AppColors.error
+        : AppColors.warning;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(bottom: 10),
+          child: Row(
+            children: [
+              const Text(
+                'Status:',
+                style: TextStyle(color: AppColors.textSecondary, fontSize: 12),
+              ),
+              const SizedBox(width: 6),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                decoration: BoxDecoration(
+                  color: statusColor.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  status.toUpperCase(),
+                  style: TextStyle(
+                    color: statusColor,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        _photoTile('Profile Photo', profileUrl),
+        _photoTile('ID Document ($idType)', idUrl),
+        _photoTile('Selfie / Selfie with ID', selfieUrl),
+      ],
+    );
+  }
+}
+
+// ─── Server Documents Widget (uses getUserDetail) ─────────────────────────────
+
+class _UserDetailDocsWidget extends StatefulWidget {
+  final int sqliteId;
+  const _UserDetailDocsWidget({required this.sqliteId});
+  @override
+  State<_UserDetailDocsWidget> createState() => _UserDetailDocsWidgetState();
+}
+
+class _UserDetailDocsWidgetState extends State<_UserDetailDocsWidget> {
   List<Map<String, dynamic>>? _docs;
   bool _loading = true;
   String? _error;
@@ -1656,25 +1932,25 @@ class _DriverServerDocumentsWidgetState
   @override
   void initState() {
     super.initState();
-    _loadDocs();
+    _load();
   }
 
-  Future<void> _loadDocs() async {
+  Future<void> _load() async {
     try {
-      final docs = await DispatchApiService.getUserDocuments(widget.sqliteId);
-      if (mounted) {
+      final detail = await DispatchApiService.getUserDetail(widget.sqliteId);
+      final docs = (detail['documents'] as List? ?? [])
+          .cast<Map<String, dynamic>>();
+      if (mounted)
         setState(() {
           _docs = docs;
           _loading = false;
         });
-      }
     } catch (e) {
-      if (mounted) {
+      if (mounted)
         setState(() {
           _error = '$e';
           _loading = false;
         });
-      }
     }
   }
 
