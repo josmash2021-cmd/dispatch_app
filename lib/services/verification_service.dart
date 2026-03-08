@@ -16,6 +16,10 @@ class VerificationRequest {
   final String? idPhotoUrl;
   final String? selfieUrl;
   final String? profilePhotoUrl;
+  // SSN (masked — only last 4 visible)
+  final bool ssnProvided;
+  final String? ssnMasked;
+  final String? ssnLast4;
 
   VerificationRequest({
     required this.docId,
@@ -33,6 +37,9 @@ class VerificationRequest {
     this.idPhotoUrl,
     this.selfieUrl,
     this.profilePhotoUrl,
+    this.ssnProvided = false,
+    this.ssnMasked,
+    this.ssnLast4,
   });
 
   String get fullName => '$firstName $lastName'.trim();
@@ -59,6 +66,9 @@ class VerificationRequest {
       idPhotoUrl: data['idPhotoUrl'] as String?,
       selfieUrl: data['selfieUrl'] as String?,
       profilePhotoUrl: data['profilePhotoUrl'] as String?,
+      ssnProvided: data['ssnProvided'] as bool? ?? false,
+      ssnMasked: data['ssnMasked'] as String?,
+      ssnLast4: data['ssnLast4'] as String?,
     );
   }
 }

@@ -225,6 +225,50 @@ class _DriverCard extends StatelessWidget {
   final DriverModel driver;
   const _DriverCard({required this.driver});
 
+  Widget _buildAvatar() {
+    final String? photoUrl;
+    if (driver.sqliteId != null) {
+      photoUrl = DispatchApiService.photoUrl(driver.sqliteId!);
+    } else if (driver.photoUrl != null && driver.photoUrl!.startsWith('http')) {
+      photoUrl = driver.photoUrl;
+    } else {
+      photoUrl = null;
+    }
+    if (photoUrl != null) {
+      return ClipOval(
+        child: Image.network(
+          photoUrl,
+          width: 48,
+          height: 48,
+          fit: BoxFit.cover,
+          errorBuilder: (_, __, ___) => _initialAvatar(),
+        ),
+      );
+    }
+    return _initialAvatar();
+  }
+
+  Widget _initialAvatar() {
+    return Container(
+      width: 48,
+      height: 48,
+      decoration: BoxDecoration(
+        color: AppColors.primary.withValues(alpha: 0.15),
+        shape: BoxShape.circle,
+      ),
+      child: Center(
+        child: Text(
+          driver.fullName.isNotEmpty ? driver.fullName[0].toUpperCase() : '?',
+          style: const TextStyle(
+            color: AppColors.primary,
+            fontSize: 20,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final acctColor = _statusColor(driver.status);
@@ -264,27 +308,7 @@ class _DriverCard extends StatelessWidget {
                           : driver.isInactive
                           ? 0.6
                           : 1.0,
-                      child: CircleAvatar(
-                        radius: 24,
-                        backgroundColor: AppColors.primary.withValues(
-                          alpha: 0.15,
-                        ),
-                        backgroundImage: driver.photoUrl != null
-                            ? NetworkImage(driver.photoUrl!)
-                            : null,
-                        child: driver.photoUrl == null
-                            ? Text(
-                                driver.fullName.isNotEmpty
-                                    ? driver.fullName[0].toUpperCase()
-                                    : '?',
-                                style: const TextStyle(
-                                  color: AppColors.primary,
-                                  fontSize: 20,
-                                  fontWeight: FontWeight.w700,
-                                ),
-                              )
-                            : null,
-                      ),
+                      child: _buildAvatar(),
                     ),
                     // Online dot (top-right)
                     Positioned(
@@ -446,121 +470,156 @@ class _DriverCard extends StatelessWidget {
     showModalBottomSheet(
       context: context,
       backgroundColor: AppColors.surface,
+      isScrollControlled: true,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       builder: (ctx) => SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: AppColors.cardBorder,
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-              const SizedBox(height: 16),
-              Row(
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+            maxHeight: MediaQuery.of(ctx).size.height * 0.80,
+          ),
+          child: SingleChildScrollView(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(
-                    _statusIcon(driver.status),
-                    color: _statusColor(driver.status),
-                    size: 20,
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      driver.fullName,
-                      style: const TextStyle(
-                        color: AppColors.textPrimary,
-                        fontSize: 17,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ),
                   Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 10,
-                      vertical: 4,
-                    ),
+                    width: 40,
+                    height: 4,
                     decoration: BoxDecoration(
-                      color: _statusColor(
-                        driver.status,
-                      ).withValues(alpha: 0.12),
-                      borderRadius: BorderRadius.circular(12),
+                      color: AppColors.cardBorder,
+                      borderRadius: BorderRadius.circular(2),
                     ),
-                    child: Text(
-                      _statusLabel(driver.status),
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: _statusColor(driver.status),
-                        fontWeight: FontWeight.w600,
+                  ),
+                  const SizedBox(height: 16),
+                  Row(
+                    children: [
+                      if (driver.sqliteId != null)
+                        ClipOval(
+                          child: Image.network(
+                            DispatchApiService.photoUrl(driver.sqliteId!),
+                            width: 44,
+                            height: 44,
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, __, ___) => Container(
+                              width: 44,
+                              height: 44,
+                              decoration: BoxDecoration(
+                                color: _statusColor(
+                                  driver.status,
+                                ).withValues(alpha: 0.15),
+                                shape: BoxShape.circle,
+                              ),
+                              child: Icon(
+                                _statusIcon(driver.status),
+                                color: _statusColor(driver.status),
+                                size: 22,
+                              ),
+                            ),
+                          ),
+                        )
+                      else
+                        Icon(
+                          _statusIcon(driver.status),
+                          color: _statusColor(driver.status),
+                          size: 20,
+                        ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          driver.fullName,
+                          style: const TextStyle(
+                            color: AppColors.textPrimary,
+                            fontSize: 17,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
                       ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          color: _statusColor(
+                            driver.status,
+                          ).withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Text(
+                          _statusLabel(driver.status),
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: _statusColor(driver.status),
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  if (driver.sqliteId != null)
+                    _DriverPhotosStrip(driver: driver),
+                  const SizedBox(height: 12),
+                  _actionTile(
+                    icon: Icons.edit_rounded,
+                    label: 'Edit Driver',
+                    subtitle: 'Update profile information',
+                    color: AppColors.primary,
+                    onTap: () {
+                      Navigator.pop(ctx);
+                      _showEditDriver(context, driver);
+                    },
+                  ),
+                  const Divider(color: AppColors.cardBorder, height: 16),
+                  if (!driver.isActive)
+                    _actionTile(
+                      icon: Icons.check_circle_outline_rounded,
+                      label: 'Activate',
+                      subtitle: 'Restore full access',
+                      color: AppColors.success,
+                      onTap: () {
+                        Navigator.pop(ctx);
+                        _changeStatus(context, driver, 'active');
+                      },
                     ),
+                  if (!driver.isInactive)
+                    _actionTile(
+                      icon: Icons.pause_circle_outline_rounded,
+                      label: 'Deactivate',
+                      subtitle: 'Temporarily suspend',
+                      color: AppColors.warning,
+                      onTap: () {
+                        Navigator.pop(ctx);
+                        _changeStatus(context, driver, 'deactivated');
+                      },
+                    ),
+                  if (!driver.isBlocked)
+                    _actionTile(
+                      icon: Icons.block_rounded,
+                      label: 'Block',
+                      subtitle: 'Permanently deny access',
+                      color: AppColors.error,
+                      onTap: () {
+                        Navigator.pop(ctx);
+                        _changeStatus(context, driver, 'blocked');
+                      },
+                    ),
+                  const Divider(color: AppColors.cardBorder, height: 24),
+                  _actionTile(
+                    icon: Icons.delete_forever_rounded,
+                    label: 'Delete permanently',
+                    subtitle: 'Remove from database',
+                    color: AppColors.error,
+                    onTap: () {
+                      Navigator.pop(ctx);
+                      _confirmDelete(context, driver);
+                    },
                   ),
                 ],
               ),
-              const SizedBox(height: 20),
-              _actionTile(
-                icon: Icons.edit_rounded,
-                label: 'Edit Driver',
-                subtitle: 'Update profile information',
-                color: AppColors.primary,
-                onTap: () {
-                  Navigator.pop(ctx);
-                  _showEditDriver(context, driver);
-                },
-              ),
-              const Divider(color: AppColors.cardBorder, height: 16),
-              if (!driver.isActive)
-                _actionTile(
-                  icon: Icons.check_circle_outline_rounded,
-                  label: 'Activate',
-                  subtitle: 'Restore full access',
-                  color: AppColors.success,
-                  onTap: () {
-                    Navigator.pop(ctx);
-                    _changeStatus(context, driver, 'active');
-                  },
-                ),
-              if (!driver.isInactive)
-                _actionTile(
-                  icon: Icons.pause_circle_outline_rounded,
-                  label: 'Deactivate',
-                  subtitle: 'Temporarily suspend',
-                  color: AppColors.warning,
-                  onTap: () {
-                    Navigator.pop(ctx);
-                    _changeStatus(context, driver, 'deactivated');
-                  },
-                ),
-              if (!driver.isBlocked)
-                _actionTile(
-                  icon: Icons.block_rounded,
-                  label: 'Block',
-                  subtitle: 'Permanently deny access',
-                  color: AppColors.error,
-                  onTap: () {
-                    Navigator.pop(ctx);
-                    _changeStatus(context, driver, 'blocked');
-                  },
-                ),
-              const Divider(color: AppColors.cardBorder, height: 24),
-              _actionTile(
-                icon: Icons.delete_forever_rounded,
-                label: 'Delete permanently',
-                subtitle: 'Remove from database',
-                color: AppColors.error,
-                onTap: () {
-                  Navigator.pop(ctx);
-                  _confirmDelete(context, driver);
-                },
-              ),
-            ],
+            ),
           ),
         ),
       ),
@@ -1392,6 +1451,139 @@ class _UserDetailDocsWidgetState extends State<_UserDetailDocsWidget> {
           ],
         );
       }).toList(),
+    );
+  }
+}
+
+// ─── Driver Photos Strip (profile + ID + selfie thumbnails) ─────────────────
+
+class _DriverPhotosStrip extends StatefulWidget {
+  final DriverModel driver;
+  const _DriverPhotosStrip({required this.driver});
+  @override
+  State<_DriverPhotosStrip> createState() => _DriverPhotosStripState();
+}
+
+class _DriverPhotosStripState extends State<_DriverPhotosStrip> {
+  Map<String, dynamic>? _data;
+  bool _loading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    try {
+      final doc = await FirebaseFirestore.instance
+          .collection('verifications')
+          .doc('sql_${widget.driver.sqliteId}')
+          .get();
+      if (mounted) {
+        setState(() {
+          _data = doc.exists ? doc.data() : null;
+          _loading = false;
+        });
+      }
+    } catch (_) {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  Widget _thumb(String label, String rawUrl) {
+    final url = rawUrl.startsWith('http')
+        ? rawUrl
+        : DispatchApiService.fullUrl(rawUrl);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: const TextStyle(
+            color: AppColors.textSecondary,
+            fontSize: 11,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        const SizedBox(height: 4),
+        ClipRRect(
+          borderRadius: BorderRadius.circular(8),
+          child: Image.network(
+            url,
+            height: 90,
+            width: double.infinity,
+            fit: BoxFit.cover,
+            errorBuilder: (_, __, ___) => Container(
+              height: 90,
+              decoration: BoxDecoration(
+                color: AppColors.surfaceHigh,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: const Center(
+                child: Icon(
+                  Icons.broken_image_outlined,
+                  color: AppColors.textHint,
+                  size: 22,
+                ),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_loading) {
+      return const Padding(
+        padding: EdgeInsets.symmetric(vertical: 10),
+        child: Center(
+          child: SizedBox(
+            width: 18,
+            height: 18,
+            child: CircularProgressIndicator(
+              strokeWidth: 2,
+              color: AppColors.primary,
+            ),
+          ),
+        ),
+      );
+    }
+    final idUrl = _data?['idPhotoUrl'] as String?;
+    final selfieUrl = _data?['selfieUrl'] as String?;
+    if (idUrl == null && selfieUrl == null) return const SizedBox.shrink();
+
+    return Padding(
+      padding: const EdgeInsets.only(top: 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Divider(color: AppColors.cardBorder, height: 1),
+          const SizedBox(height: 10),
+          const Text(
+            'Documentos',
+            style: TextStyle(
+              color: AppColors.textHint,
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+              letterSpacing: 0.5,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (idUrl != null)
+                Expanded(child: _thumb('ID / Licencia', idUrl)),
+              if (idUrl != null && selfieUrl != null) const SizedBox(width: 8),
+              if (selfieUrl != null)
+                Expanded(child: _thumb('Selfie', selfieUrl)),
+            ],
+          ),
+        ],
+      ),
     );
   }
 }

@@ -434,6 +434,17 @@ class _VerificationCard extends StatelessWidget {
   }
 
   void _showDetail(BuildContext context) {
+    // Pending requests open a full-screen page for better document review
+    if (request.isPending) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => _PendingVerificationDetailPage(request: request),
+        ),
+      );
+      return;
+    }
+
     final dateFmt = DateFormat('MMM d, yyyy · h:mm a');
     final statusColor = _statusColor(request.status);
 
@@ -638,6 +649,89 @@ class _VerificationCard extends StatelessWidget {
                   ),
                 ),
               ],
+
+              // ── SSN ──
+              const SizedBox(height: 20),
+              _sectionHeader('Social Security Number'),
+              const SizedBox(height: 8),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 12,
+                ),
+                decoration: BoxDecoration(
+                  color: AppColors.surfaceHigh,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: request.ssnProvided
+                        ? AppColors.success.withValues(alpha: 0.35)
+                        : AppColors.warning.withValues(alpha: 0.35),
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.security_rounded,
+                      size: 20,
+                      color: request.ssnProvided
+                          ? AppColors.success
+                          : AppColors.warning,
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            request.ssnProvided
+                                ? 'SSN Provided'
+                                : 'SSN Not Provided',
+                            style: TextStyle(
+                              color: request.ssnProvided
+                                  ? AppColors.success
+                                  : AppColors.warning,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                          if (request.ssnProvided) ...[
+                            const SizedBox(height: 2),
+                            Text(
+                              request.ssnMasked ??
+                                  '***-**-${request.ssnLast4 ?? "????"}',
+                              style: const TextStyle(
+                                color: AppColors.textPrimary,
+                                fontSize: 16,
+                                fontWeight: FontWeight.w700,
+                                fontFamily: 'monospace',
+                                letterSpacing: 1.2,
+                              ),
+                            ),
+                            if (request.ssnLast4 != null)
+                              Text(
+                                'Last 4: ${request.ssnLast4}',
+                                style: const TextStyle(
+                                  color: AppColors.textSecondary,
+                                  fontSize: 12,
+                                ),
+                              ),
+                          ],
+                        ],
+                      ),
+                    ),
+                    Icon(
+                      request.ssnProvided
+                          ? Icons.verified_rounded
+                          : Icons.warning_amber_rounded,
+                      color: request.ssnProvided
+                          ? AppColors.success
+                          : AppColors.warning,
+                      size: 22,
+                    ),
+                  ],
+                ),
+              ),
 
               // ── Verification Photos ──
               const SizedBox(height: 20),
@@ -1078,6 +1172,721 @@ class _VerificationCard extends StatelessWidget {
   }
 }
 
+// ─── Pending Verification Detail Page ────────────────────────────────────────
+
+class _PendingVerificationDetailPage extends StatelessWidget {
+  final VerificationRequest request;
+  const _PendingVerificationDetailPage({required this.request});
+
+  @override
+  Widget build(BuildContext context) {
+    final dateFmt = DateFormat('MMM d, yyyy · h:mm a');
+
+    return Scaffold(
+      backgroundColor: AppColors.background,
+      appBar: AppBar(
+        backgroundColor: AppColors.surface,
+        surfaceTintColor: Colors.transparent,
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(
+            Icons.arrow_back_rounded,
+            color: AppColors.textPrimary,
+          ),
+          onPressed: () => Navigator.pop(context),
+        ),
+        title: const Text(
+          'Solicitud de Verificación',
+          style: TextStyle(
+            color: AppColors.textPrimary,
+            fontSize: 17,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        actions: [
+          Container(
+            margin: const EdgeInsets.only(right: 16),
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+            decoration: BoxDecoration(
+              color: AppColors.warning.withValues(alpha: 0.15),
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: const Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  Icons.schedule_rounded,
+                  color: AppColors.warning,
+                  size: 13,
+                ),
+                SizedBox(width: 4),
+                Text(
+                  'PENDIENTE',
+                  style: TextStyle(
+                    color: AppColors.warning,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+      body: ListView(
+        padding: const EdgeInsets.fromLTRB(20, 20, 20, 20),
+        children: [
+          // ── Profile header ──
+          Center(
+            child: CircleAvatar(
+              radius: 52,
+              backgroundColor: AppColors.primary.withValues(alpha: 0.15),
+              backgroundImage: request.profilePhotoUrl != null
+                  ? NetworkImage(
+                      DispatchApiService.fullUrl(request.profilePhotoUrl!),
+                    )
+                  : request.userId > 0
+                  ? NetworkImage(DispatchApiService.photoUrl(request.userId))
+                  : null,
+              onBackgroundImageError:
+                  request.profilePhotoUrl != null || request.userId > 0
+                  ? (_, _) {}
+                  : null,
+              child: request.profilePhotoUrl == null && request.userId <= 0
+                  ? Text(
+                      request.fullName.isNotEmpty
+                          ? request.fullName[0].toUpperCase()
+                          : '?',
+                      style: const TextStyle(
+                        color: AppColors.primary,
+                        fontSize: 40,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    )
+                  : null,
+            ),
+          ),
+          const SizedBox(height: 14),
+          Center(
+            child: Text(
+              request.fullName,
+              style: const TextStyle(
+                color: AppColors.textPrimary,
+                fontSize: 24,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Center(
+            child: Wrap(
+              spacing: 8,
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 4,
+                  ),
+                  decoration: BoxDecoration(
+                    color: AppColors.textHint.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text(
+                    request.role.toUpperCase(),
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: AppColors.textSecondary,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 4,
+                  ),
+                  decoration: BoxDecoration(
+                    color: AppColors.primary.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text(
+                    _docTypeLabel(request.idDocumentType),
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: AppColors.primary,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          // ── Contact ──
+          const SizedBox(height: 28),
+          _sectionHeader('Contacto'),
+          _detailRow(
+            Icons.phone_outlined,
+            'Teléfono',
+            request.phone.isNotEmpty ? request.phone : 'No registrado',
+          ),
+          _detailRow(
+            Icons.email_outlined,
+            'Email',
+            request.email ?? 'No registrado',
+          ),
+
+          // ── Verification info ──
+          const SizedBox(height: 20),
+          _sectionHeader('Información de Verificación'),
+          _detailRow(
+            Icons.badge_outlined,
+            'Tipo de Documento',
+            _docTypeLabel(request.idDocumentType),
+          ),
+          _detailRow(
+            Icons.perm_identity_rounded,
+            'User ID',
+            'sql_${request.userId}',
+          ),
+          if (request.submittedAt != null)
+            _detailRow(
+              Icons.calendar_today_rounded,
+              'Enviado',
+              dateFmt.format(request.submittedAt!),
+            ),
+
+          // ── SSN ──
+          const SizedBox(height: 20),
+          _sectionHeader('Número de Seguro Social'),
+          const SizedBox(height: 8),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            decoration: BoxDecoration(
+              color: AppColors.surfaceHigh,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: request.ssnProvided
+                    ? AppColors.success.withValues(alpha: 0.35)
+                    : AppColors.warning.withValues(alpha: 0.35),
+              ),
+            ),
+            child: Row(
+              children: [
+                Icon(
+                  Icons.security_rounded,
+                  size: 20,
+                  color: request.ssnProvided
+                      ? AppColors.success
+                      : AppColors.warning,
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        request.ssnProvided
+                            ? 'SSN Proporcionado'
+                            : 'SSN No Proporcionado',
+                        style: TextStyle(
+                          color: request.ssnProvided
+                              ? AppColors.success
+                              : AppColors.warning,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      if (request.ssnProvided) ...[
+                        const SizedBox(height: 2),
+                        Text(
+                          request.ssnMasked ??
+                              '***-**-${request.ssnLast4 ?? "????"}',
+                          style: const TextStyle(
+                            color: AppColors.textPrimary,
+                            fontSize: 16,
+                            fontWeight: FontWeight.w700,
+                            fontFamily: 'monospace',
+                            letterSpacing: 1.2,
+                          ),
+                        ),
+                        if (request.ssnLast4 != null)
+                          Text(
+                            'Últimos 4: ${request.ssnLast4}',
+                            style: const TextStyle(
+                              color: AppColors.textSecondary,
+                              fontSize: 12,
+                            ),
+                          ),
+                      ],
+                    ],
+                  ),
+                ),
+                Icon(
+                  request.ssnProvided
+                      ? Icons.verified_rounded
+                      : Icons.warning_amber_rounded,
+                  color: request.ssnProvided
+                      ? AppColors.success
+                      : AppColors.warning,
+                  size: 22,
+                ),
+              ],
+            ),
+          ),
+
+          // ── Verification Photos ──
+          const SizedBox(height: 28),
+          _sectionHeader('Fotos de Verificación'),
+          if (request.profilePhotoUrl != null) ...[
+            const SizedBox(height: 10),
+            _photoCard(
+              context,
+              'Foto de Perfil',
+              DispatchApiService.fullUrl(request.profilePhotoUrl!),
+            ),
+          ] else if (request.userId > 0) ...[
+            const SizedBox(height: 10),
+            _photoCard(
+              context,
+              'Foto de Perfil',
+              DispatchApiService.photoUrl(request.userId),
+            ),
+          ],
+          if (request.idPhotoUrl != null) ...[
+            const SizedBox(height: 10),
+            _photoCard(
+              context,
+              'Documento ID (${_docTypeLabel(request.idDocumentType)})',
+              DispatchApiService.fullUrl(request.idPhotoUrl!),
+            ),
+          ],
+          if (request.selfieUrl != null) ...[
+            const SizedBox(height: 10),
+            _photoCard(
+              context,
+              'Selfie de Verificación',
+              DispatchApiService.fullUrl(request.selfieUrl!),
+            ),
+          ],
+          if (request.idPhotoUrl == null &&
+              request.selfieUrl == null &&
+              request.profilePhotoUrl == null &&
+              request.userId <= 0)
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 12),
+              child: Text(
+                'No hay fotos disponibles todavía',
+                style: TextStyle(color: AppColors.textHint, fontSize: 13),
+              ),
+            ),
+
+          // ── Account Details from Backend ──
+          if (request.userId > 0) ...[
+            const SizedBox(height: 28),
+            _sectionHeader('Detalles de la Cuenta'),
+            _UserDetailWidget(userId: request.userId),
+          ],
+          const SizedBox(height: 16),
+        ],
+      ),
+      bottomNavigationBar: SafeArea(
+        child: Container(
+          padding: const EdgeInsets.fromLTRB(20, 12, 20, 16),
+          decoration: const BoxDecoration(
+            color: AppColors.surface,
+            border: Border(
+              top: BorderSide(color: AppColors.cardBorder, width: 1),
+            ),
+          ),
+          child: Row(
+            children: [
+              Expanded(
+                child: ElevatedButton.icon(
+                  onPressed: () => _rejectDialog(context),
+                  icon: const Icon(Icons.close_rounded, size: 18),
+                  label: const Text(
+                    'Rechazar',
+                    style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.error,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: ElevatedButton.icon(
+                  onPressed: () => _approveConfirm(context),
+                  icon: const Icon(Icons.check_rounded, size: 18),
+                  label: const Text(
+                    'Aprobar',
+                    style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.success,
+                    foregroundColor: Colors.black,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _sectionHeader(String title) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Row(
+        children: [
+          Container(
+            width: 3,
+            height: 16,
+            decoration: BoxDecoration(
+              color: AppColors.primary,
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+          const SizedBox(width: 8),
+          Text(
+            title,
+            style: const TextStyle(
+              color: AppColors.textPrimary,
+              fontSize: 15,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _detailRow(IconData icon, String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, size: 18, color: AppColors.textSecondary),
+          const SizedBox(width: 12),
+          Text(
+            label,
+            style: const TextStyle(
+              color: AppColors.textSecondary,
+              fontSize: 14,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              value,
+              style: const TextStyle(
+                color: AppColors.textPrimary,
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+              ),
+              textAlign: TextAlign.end,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _photoCard(BuildContext context, String label, String url) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: const TextStyle(
+            color: AppColors.textSecondary,
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        const SizedBox(height: 6),
+        GestureDetector(
+          onTap: () => _showFullPhoto(context, label, url),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(12),
+            child: Image.network(
+              url,
+              height: 200,
+              width: double.infinity,
+              fit: BoxFit.cover,
+              errorBuilder: (_, _, _) => Container(
+                height: 200,
+                width: double.infinity,
+                decoration: BoxDecoration(
+                  color: AppColors.surfaceHigh,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.broken_image_rounded,
+                      color: AppColors.textHint,
+                      size: 36,
+                    ),
+                    SizedBox(height: 6),
+                    Text(
+                      'Foto no disponible',
+                      style: TextStyle(color: AppColors.textHint, fontSize: 12),
+                    ),
+                  ],
+                ),
+              ),
+              loadingBuilder: (_, child, progress) {
+                if (progress == null) return child;
+                return Container(
+                  height: 200,
+                  width: double.infinity,
+                  color: AppColors.surfaceHigh,
+                  child: const Center(
+                    child: CircularProgressIndicator(
+                      color: AppColors.primary,
+                      strokeWidth: 2,
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  void _showFullPhoto(BuildContext context, String label, String url) {
+    showDialog(
+      context: context,
+      builder: (ctx) => Dialog(
+        backgroundColor: Colors.black,
+        insetPadding: const EdgeInsets.all(16),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Padding(
+              padding: const EdgeInsets.all(12),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      label,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close_rounded, color: Colors.white),
+                    onPressed: () => Navigator.pop(ctx),
+                  ),
+                ],
+              ),
+            ),
+            InteractiveViewer(
+              child: Image.network(
+                url,
+                fit: BoxFit.contain,
+                errorBuilder: (_, _, _) => const SizedBox(
+                  height: 200,
+                  child: Center(
+                    child: Icon(
+                      Icons.broken_image_rounded,
+                      color: Colors.white54,
+                      size: 48,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _approveConfirm(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (dialogCtx) => AlertDialog(
+        backgroundColor: AppColors.surface,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Row(
+          children: [
+            Icon(Icons.verified_rounded, color: AppColors.success, size: 22),
+            SizedBox(width: 8),
+            Text(
+              'Aprobar Verificación',
+              style: TextStyle(color: AppColors.textPrimary, fontSize: 18),
+            ),
+          ],
+        ),
+        content: Text(
+          '¿Aprobar la verificación de identidad de ${request.fullName}?',
+          style: const TextStyle(color: AppColors.textSecondary),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogCtx),
+            child: const Text('Cancelar'),
+          ),
+          TextButton(
+            onPressed: () {
+              final prov = context.read<VerificationProvider>();
+              final messenger = ScaffoldMessenger.of(context);
+              Navigator.pop(dialogCtx);
+              Navigator.pop(context);
+              prov.approve(request.docId);
+              messenger.showSnackBar(
+                SnackBar(
+                  backgroundColor: AppColors.surfaceHigh,
+                  behavior: SnackBarBehavior.floating,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  content: Row(
+                    children: [
+                      const Icon(
+                        Icons.check_circle_rounded,
+                        color: AppColors.success,
+                        size: 18,
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        '${request.fullName} aprobado',
+                        style: const TextStyle(color: AppColors.textPrimary),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            },
+            child: const Text(
+              'Aprobar',
+              style: TextStyle(
+                color: AppColors.success,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _rejectDialog(BuildContext context) {
+    final reasonCtrl = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (dialogCtx) => AlertDialog(
+        backgroundColor: AppColors.surface,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Row(
+          children: [
+            Icon(Icons.block_rounded, color: AppColors.error, size: 22),
+            SizedBox(width: 8),
+            Text(
+              'Rechazar Verificación',
+              style: TextStyle(color: AppColors.textPrimary, fontSize: 18),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              '¿Rechazar la verificación de ${request.fullName}?',
+              style: const TextStyle(color: AppColors.textSecondary),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: reasonCtrl,
+              maxLines: 3,
+              style: const TextStyle(color: AppColors.textPrimary),
+              decoration: InputDecoration(
+                hintText: 'Motivo del rechazo...',
+                hintStyle: const TextStyle(color: AppColors.textHint),
+                filled: true,
+                fillColor: AppColors.surfaceHigh,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                  borderSide: BorderSide.none,
+                ),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogCtx),
+            child: const Text('Cancelar'),
+          ),
+          TextButton(
+            onPressed: () {
+              final reason = reasonCtrl.text.trim();
+              if (reason.isEmpty) return;
+              final prov = context.read<VerificationProvider>();
+              final messenger = ScaffoldMessenger.of(context);
+              Navigator.pop(dialogCtx);
+              Navigator.pop(context);
+              prov.reject(request.docId, reason);
+              messenger.showSnackBar(
+                SnackBar(
+                  backgroundColor: AppColors.surfaceHigh,
+                  behavior: SnackBarBehavior.floating,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  content: Row(
+                    children: [
+                      const Icon(
+                        Icons.block_rounded,
+                        color: AppColors.error,
+                        size: 18,
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        '${request.fullName} rechazado',
+                        style: const TextStyle(color: AppColors.textPrimary),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            },
+            child: const Text(
+              'Rechazar',
+              style: TextStyle(
+                color: AppColors.error,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 // ─── User Detail Widget (fetches from backend API) ──────────────────────────
 
 class _UserDetailWidget extends StatefulWidget {
@@ -1151,11 +1960,20 @@ class _UserDetailWidgetState extends State<_UserDetailWidget> {
     final verStatus = _user!['verification_status'] as String? ?? 'none';
     final docs =
         (_user!['documents'] as List?)?.cast<Map<String, dynamic>>() ?? [];
+    // SSN from backend
+    final ssnProvided = _user!['ssn_provided'] as bool? ?? false;
+    final ssnMasked = _user!['ssn_masked'] as String?;
+    final ssnLast4 = _user!['ssn_last4'] as String?;
+    // Fallback photos from backend user model
+    final backendIdPhoto = _user!['id_photo_url'] as String?;
+    final backendSelfie = _user!['selfie_url'] as String?;
+    final vehicleType = _user!['vehicle_type'] as String?;
+    final username = _user!['username'] as String?;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // ── Password ──
+        // ── Account info ──
         _infoRow(
           Icons.lock_open_rounded,
           'Password',
@@ -1165,13 +1983,98 @@ class _UserDetailWidgetState extends State<_UserDetailWidget> {
               ? '(set but not stored in plaintext)'
               : 'No password',
         ),
+        if (username != null && username.isNotEmpty)
+          _infoRow(Icons.account_circle_outlined, 'Username', username),
         _infoRow(Icons.verified_user_outlined, 'Verification', verStatus),
+        if (vehicleType != null && vehicleType.isNotEmpty)
+          _infoRow(Icons.directions_car_outlined, 'Vehicle Type', vehicleType),
         if (createdAt != null)
           _infoRow(
             Icons.calendar_today_rounded,
             'Registered',
             _formatDate(createdAt),
           ),
+
+        // ── SSN from backend ──
+        const SizedBox(height: 10),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          decoration: BoxDecoration(
+            color: ssnProvided
+                ? AppColors.success.withValues(alpha: 0.07)
+                : AppColors.warning.withValues(alpha: 0.07),
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(
+              color: ssnProvided
+                  ? AppColors.success.withValues(alpha: 0.3)
+                  : AppColors.warning.withValues(alpha: 0.3),
+            ),
+          ),
+          child: Row(
+            children: [
+              Icon(
+                Icons.security_rounded,
+                size: 17,
+                color: ssnProvided ? AppColors.success : AppColors.warning,
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'SSN',
+                      style: TextStyle(
+                        color: AppColors.textSecondary,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    Text(
+                      ssnProvided
+                          ? (ssnMasked ?? '***-**-${ssnLast4 ?? "????"}')
+                          : 'No proporcionado',
+                      style: TextStyle(
+                        color: ssnProvided
+                            ? AppColors.textPrimary
+                            : AppColors.textHint,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
+                        fontFamily: 'monospace',
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Text(
+                ssnProvided ? 'Verified' : 'Missing',
+                style: TextStyle(
+                  color: ssnProvided ? AppColors.success : AppColors.warning,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ],
+          ),
+        ),
+
+        // ── Backend verification photos (fallback if Firestore photos missing) ──
+        if (backendIdPhoto != null || backendSelfie != null) ...[
+          const SizedBox(height: 12),
+          const Text(
+            'ID Photos (Server)',
+            style: TextStyle(
+              color: AppColors.textPrimary,
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 6),
+          if (backendIdPhoto != null)
+            _buildPhotoCard(context, 'ID Document', backendIdPhoto),
+          if (backendSelfie != null)
+            _buildPhotoCard(context, 'Selfie', backendSelfie),
+        ],
 
         // ── Documents from server ──
         if (docs.isNotEmpty) ...[
@@ -1188,6 +2091,54 @@ class _UserDetailWidgetState extends State<_UserDetailWidget> {
           ...docs.map((doc) => _buildDocCard(context, doc)),
         ],
       ],
+    );
+  }
+
+  Widget _buildPhotoCard(BuildContext context, String label, String rawPath) {
+    final url = rawPath.startsWith('http')
+        ? rawPath
+        : DispatchApiService.fullUrl(rawPath);
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            style: const TextStyle(
+              color: AppColors.textSecondary,
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 4),
+          GestureDetector(
+            onTap: () => _showFullPhoto(context, label, url),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(10),
+              child: Image.network(
+                url,
+                height: 160,
+                width: double.infinity,
+                fit: BoxFit.cover,
+                errorBuilder: (_, _, _) => Container(
+                  height: 80,
+                  decoration: BoxDecoration(
+                    color: AppColors.surfaceHigh,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Center(
+                    child: Icon(
+                      Icons.broken_image_outlined,
+                      color: AppColors.textHint,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
