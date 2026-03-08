@@ -130,10 +130,18 @@ class _LoginScreenState extends State<LoginScreen>
                               AnimatedBuilder(
                                 animation: _glowAnim,
                                 builder: (_, child) => Container(
-                                  width: 72,
+                                  width: 130,
                                   height: 72,
                                   decoration: BoxDecoration(
-                                    color: _gold,
+                                    gradient: LinearGradient(
+                                      colors: [
+                                        const Color(0xFFD4A820),
+                                        const Color(0xFFE8C547),
+                                        const Color(0xFFF5D158),
+                                      ],
+                                      begin: Alignment.topLeft,
+                                      end: Alignment.bottomRight,
+                                    ),
                                     borderRadius: BorderRadius.circular(20),
                                     boxShadow: [
                                       BoxShadow(
@@ -154,17 +162,24 @@ class _LoginScreenState extends State<LoginScreen>
                                   ),
                                   child: child,
                                 ),
-                                child: const Icon(
-                                  Icons.local_taxi_rounded,
-                                  color: Color(0xFF08090C),
-                                  size: 38,
+                                child: const Center(
+                                  child: Text(
+                                    'Cruise',
+                                    style: TextStyle(
+                                      fontSize: 34,
+                                      fontWeight: FontWeight.w900,
+                                      color: Color(0xFF08090C),
+                                      letterSpacing: -1,
+                                      height: 1,
+                                    ),
+                                  ),
                                 ),
                               ),
                               const SizedBox(height: 20),
                               const Text(
                                 'Dispatch',
                                 style: TextStyle(
-                                  fontSize: 34,
+                                  fontSize: 28,
                                   fontWeight: FontWeight.w800,
                                   color: AppColors.textPrimary,
                                   letterSpacing: -0.5,

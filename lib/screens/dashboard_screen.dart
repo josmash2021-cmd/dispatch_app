@@ -10,7 +10,6 @@ import '../providers/dashboard_provider.dart';
 import '../providers/driver_provider.dart';
 import '../providers/trip_provider.dart';
 import '../providers/verification_provider.dart';
-import '../widgets/glass_nav_bar.dart';
 import '../widgets/stat_card.dart';
 import 'trip_list_screen.dart';
 import 'create_trip_screen.dart';
@@ -31,9 +30,8 @@ class _DashboardScreenState extends State<DashboardScreen>
     with TickerProviderStateMixin {
   int _currentIndex = 0;
   int _previousIndex = 0;
-  // Track which tab indexes have been visited so we only build their
-  // widgets on first visit (avoids building GoogleMap before Maps SDK is ready).
   final Set<int> _visitedPages = {0};
+  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
   late AnimationController _fadeCtrl;
   late Animation<double> _fadeAnim;
@@ -48,6 +46,18 @@ class _DashboardScreenState extends State<DashboardScreen>
     _StatsContent(),
     ReportsScreen(),
     AdminConfigScreen(),
+    ScheduledRidesScreen(),
+  ];
+
+  static const _navItems = [
+    _NavItem(Icons.directions_car_outlined, Icons.directions_car, 'Trips'),
+    _NavItem(Icons.map_outlined, Icons.map, 'Fleet Map'),
+    _NavItem(Icons.group_outlined, Icons.group_rounded, 'Database'),
+    _NavItem(Icons.verified_user_outlined, Icons.verified_user, 'Verify'),
+    _NavItem(Icons.bar_chart_outlined, Icons.bar_chart, 'Stats'),
+    _NavItem(Icons.receipt_long_outlined, Icons.receipt_long, 'Reports'),
+    _NavItem(Icons.settings_outlined, Icons.settings_rounded, 'Config'),
+    _NavItem(Icons.event_note_outlined, Icons.event_note_rounded, 'Scheduled'),
   ];
 
   @override
@@ -55,20 +65,20 @@ class _DashboardScreenState extends State<DashboardScreen>
     super.initState();
     _fadeCtrl = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 280),
+      duration: const Duration(milliseconds: 260),
     );
     _fadeAnim = CurvedAnimation(parent: _fadeCtrl, curve: Curves.easeOutCubic);
     _fadeCtrl.value = 1.0;
 
     _fabCtrl = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 250),
+      duration: const Duration(milliseconds: 220),
     );
     _fabScale = Tween<double>(
       begin: 0.0,
       end: 1.0,
     ).animate(CurvedAnimation(parent: _fabCtrl, curve: Curves.easeOutBack));
-    _fabCtrl.value = 1.0; // Trips tab starts showing FAB
+    _fabCtrl.value = 1.0;
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<DashboardProvider>().loadDashboardData();
@@ -92,12 +102,8 @@ class _DashboardScreenState extends State<DashboardScreen>
       _visitedPages.add(i);
       _currentIndex = i;
     });
-
-    // Cross-fade between pages
     _fadeCtrl.value = 0;
     _fadeCtrl.forward();
-
-    // Animate FAB in/out
     if (i == 0) {
       _fabCtrl.forward();
     } else {
@@ -105,18 +111,80 @@ class _DashboardScreenState extends State<DashboardScreen>
     }
   }
 
+  String get _currentTitle => _navItems[_currentIndex].label;
+
   @override
   Widget build(BuildContext context) {
+    final verif = context.watch<VerificationProvider>();
     return Scaffold(
+      key: _scaffoldKey,
+      backgroundColor: AppColors.background,
+      appBar: AppBar(
+        backgroundColor: AppColors.background,
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.menu_rounded, color: AppColors.primary),
+          onPressed: () => _scaffoldKey.currentState?.openDrawer(),
+        ),
+        title: Text(
+          _currentTitle,
+          style: const TextStyle(
+            color: AppColors.textPrimary,
+            fontSize: 17,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        actions: [
+          if (_currentIndex == 0)
+            IconButton(
+              icon: const Icon(Icons.add_rounded, color: AppColors.primary),
+              tooltip: 'New Trip',
+              onPressed: () => Navigator.push(
+                context,
+                scaleExpandRoute(const CreateTripScreen()),
+              ),
+            ),
+          if (_currentIndex == 3 && verif.pendingCount > 0)
+            Padding(
+              padding: const EdgeInsets.only(right: 16),
+              child: Center(
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 3,
+                  ),
+                  decoration: BoxDecoration(
+                    color: AppColors.error,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text(
+                    '${verif.pendingCount} pending',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+        ],
+      ),
+      drawer: _AppDrawer(
+        currentIndex: _currentIndex,
+        pendingVerifications: verif.pendingCount,
+        onSelect: (i) {
+          Navigator.pop(context);
+          _onTabChanged(i);
+        },
+      ),
       body: AnimatedBuilder(
         animation: _fadeAnim,
-        builder: (_, _) => IndexedStack(
+        builder: (context, child) => IndexedStack(
           index: _currentIndex,
           children: List.generate(_pages.length, (i) {
-            // Don't build pages that haven't been visited yet.
-            // This prevents GoogleMap from initializing before Maps SDK is ready.
             if (!_visitedPages.contains(i)) return const SizedBox.shrink();
-            // Only animate the newly selected page
             final isActive = i == _currentIndex;
             final opacity = isActive
                 ? _fadeAnim.value
@@ -135,64 +203,268 @@ class _DashboardScreenState extends State<DashboardScreen>
           }),
         ),
       ),
-      bottomNavigationBar: Consumer<VerificationProvider>(
-        builder: (context, verif, child) => GlassNavBar(
-          currentIndex: _currentIndex,
-          onTap: _onTabChanged,
-          items: [
-            const GlassNavItem(
-              icon: Icons.directions_car_outlined,
-              selectedIcon: Icons.directions_car,
-              label: 'Trips',
-            ),
-            const GlassNavItem(
-              icon: Icons.map_outlined,
-              selectedIcon: Icons.map,
-              label: 'Fleet',
-            ),
-            const GlassNavItem(
-              icon: Icons.group_outlined,
-              selectedIcon: Icons.group_rounded,
-              label: 'Database',
-            ),
-            GlassNavItem(
-              icon: Icons.verified_user_outlined,
-              selectedIcon: Icons.verified_user,
-              label: 'Verify',
-              badge: verif.pendingCount,
-            ),
-            const GlassNavItem(
-              icon: Icons.bar_chart_outlined,
-              selectedIcon: Icons.bar_chart,
-              label: 'Stats',
-            ),
-            const GlassNavItem(
-              icon: Icons.receipt_long_outlined,
-              selectedIcon: Icons.receipt_long,
-              label: 'Reports',
-            ),
-            const GlassNavItem(
-              icon: Icons.settings_outlined,
-              selectedIcon: Icons.settings_rounded,
-              label: 'Config',
-            ),
-          ],
-        ),
-      ),
-      floatingActionButton: ScaleTransition(
-        scale: _fabScale,
-        child: FloatingActionButton.extended(
-          onPressed: _currentIndex == 0
-              ? () => Navigator.push(
+      floatingActionButton: _currentIndex == 0
+          ? ScaleTransition(
+              scale: _fabScale,
+              child: FloatingActionButton.extended(
+                onPressed: () => Navigator.push(
                   context,
                   scaleExpandRoute(const CreateTripScreen()),
-                )
-              : null,
-          icon: const Icon(Icons.add_rounded),
-          label: const Text(
-            'New Trip',
-            style: TextStyle(fontWeight: FontWeight.w700),
-          ),
+                ),
+                icon: const Icon(Icons.add_rounded),
+                label: const Text(
+                  'New Trip',
+                  style: TextStyle(fontWeight: FontWeight.w700),
+                ),
+              ),
+            )
+          : null,
+    );
+  }
+}
+
+// ─── Nav Item model ──────────────────────────────────────────────────────────
+
+class _NavItem {
+  final IconData icon;
+  final IconData selectedIcon;
+  final String label;
+  const _NavItem(this.icon, this.selectedIcon, this.label);
+}
+
+// ─── Drawer ──────────────────────────────────────────────────────────────────
+
+class _AppDrawer extends StatelessWidget {
+  final int currentIndex;
+  final int pendingVerifications;
+  final ValueChanged<int> onSelect;
+
+  const _AppDrawer({
+    required this.currentIndex,
+    required this.pendingVerifications,
+    required this.onSelect,
+  });
+
+  static const _items = [
+    _NavItem(Icons.directions_car_outlined, Icons.directions_car, 'Trips'),
+    _NavItem(Icons.map_outlined, Icons.map, 'Fleet Map'),
+    _NavItem(Icons.group_outlined, Icons.group_rounded, 'Database'),
+    _NavItem(Icons.verified_user_outlined, Icons.verified_user, 'Verify'),
+    _NavItem(Icons.bar_chart_outlined, Icons.bar_chart, 'Stats'),
+    _NavItem(Icons.receipt_long_outlined, Icons.receipt_long, 'Reports'),
+    _NavItem(Icons.settings_outlined, Icons.settings_rounded, 'Config'),
+    _NavItem(Icons.event_note_outlined, Icons.event_note_rounded, 'Scheduled'),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    final auth = context.read<AuthProvider>();
+    return Drawer(
+      backgroundColor: const Color(0xFF0A0B0D),
+      width: 260,
+      child: SafeArea(
+        child: Column(
+          children: [
+            // ── Logo header ───────────────────────────────────────────────
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 24, 20, 20),
+              child: Row(
+                children: [
+                  // Cruise logo tile
+                  Container(
+                    width: 48,
+                    height: 48,
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: [Color(0xFFE8C547), Color(0xFFF5D158)],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      borderRadius: BorderRadius.circular(13),
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color(
+                            0xFFE8C547,
+                          ).withValues(alpha: 0.35),
+                          blurRadius: 18,
+                          offset: const Offset(0, 6),
+                        ),
+                      ],
+                    ),
+                    child: const Center(
+                      child: Text(
+                        'C',
+                        style: TextStyle(
+                          fontSize: 26,
+                          fontWeight: FontWeight.w900,
+                          color: Color(0xFF08090C),
+                          height: 1,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 14),
+                  const Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Cruise',
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.w800,
+                          color: AppColors.textPrimary,
+                          letterSpacing: -0.3,
+                        ),
+                      ),
+                      Text(
+                        'Dispatch',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w400,
+                          color: AppColors.textSecondary,
+                          letterSpacing: 0.5,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+
+            // Divider
+            Container(
+              height: 0.5,
+              margin: const EdgeInsets.symmetric(horizontal: 20),
+              color: AppColors.cardBorder,
+            ),
+            const SizedBox(height: 10),
+
+            // ── Menu items ────────────────────────────────────────────────
+            Expanded(
+              child: ListView.builder(
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                itemCount: _items.length,
+                itemBuilder: (context, i) {
+                  final item = _items[i];
+                  final isSelected = i == currentIndex;
+                  final showBadge = i == 3 && pendingVerifications > 0;
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 2),
+                    child: Material(
+                      color: Colors.transparent,
+                      borderRadius: BorderRadius.circular(12),
+                      child: InkWell(
+                        borderRadius: BorderRadius.circular(12),
+                        onTap: () => onSelect(i),
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 200),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 14,
+                            vertical: 12,
+                          ),
+                          decoration: BoxDecoration(
+                            color: isSelected
+                                ? AppColors.primary.withValues(alpha: 0.12)
+                                : Colors.transparent,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(
+                                isSelected ? item.selectedIcon : item.icon,
+                                size: 20,
+                                color: isSelected
+                                    ? AppColors.primary
+                                    : AppColors.textSecondary,
+                              ),
+                              const SizedBox(width: 14),
+                              Expanded(
+                                child: Text(
+                                  item.label,
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: isSelected
+                                        ? FontWeight.w700
+                                        : FontWeight.w400,
+                                    color: isSelected
+                                        ? AppColors.primary
+                                        : AppColors.textPrimary,
+                                  ),
+                                ),
+                              ),
+                              if (showBadge)
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 7,
+                                    vertical: 2,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: AppColors.error,
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                  child: Text(
+                                    pendingVerifications > 9
+                                        ? '9+'
+                                        : '$pendingVerifications',
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+
+            // ── Sign out ──────────────────────────────────────────────────
+            Container(
+              height: 0.5,
+              margin: const EdgeInsets.symmetric(horizontal: 20),
+              color: AppColors.cardBorder,
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
+              child: Material(
+                color: Colors.transparent,
+                borderRadius: BorderRadius.circular(12),
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(12),
+                  onTap: () => auth.signOut(),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 12,
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(
+                          Icons.logout_rounded,
+                          size: 20,
+                          color: AppColors.error,
+                        ),
+                        const SizedBox(width: 14),
+                        Text(
+                          'Sign Out',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w500,
+                            color: AppColors.error.withValues(alpha: 0.9),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );
