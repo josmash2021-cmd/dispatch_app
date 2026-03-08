@@ -11,6 +11,15 @@ service cloud.firestore {
         && request.auth.token.email == 'royalpurplecorp@gmail.com';
     }
 
+    function isAdmin() {
+      return request.auth != null
+        && exists(/databases/$(database)/documents/admins/$(request.auth.uid));
+    }
+
+    function isOwnerOrAdmin() {
+      return isOwner() || isAdmin();
+    }
+
     function isAuthenticated() {
       return request.auth != null;
     }
@@ -29,25 +38,25 @@ service cloud.firestore {
     // ══════════════════════════════════════════════════════════════════════
     match /config/{docId} {
       allow read: if isAuthenticated();
-      allow write: if isOwner();
+      allow write: if isOwnerOrAdmin();
     }
 
     // ══════════════════════════════════════════════════════════════════════
     // VERIFICATIONS COLLECTION — identity verification docs
     // ══════════════════════════════════════════════════════════════════════
     match /verifications/{docId} {
-      allow read: if isOwner()
+      allow read: if isOwnerOrAdmin()
         || (isAuthenticated() && resource.data.userId == request.auth.uid);
       allow create: if isAuthenticated();
-      allow update: if isOwner()
+      allow update: if isOwnerOrAdmin()
         || (isAuthenticated() && resource.data.userId == request.auth.uid);
-      allow delete: if isOwner();
+      allow delete: if isOwnerOrAdmin();
     }
 
     // ══════════════════════════════════════════════════════════════════════    // ADMINS COLLECTION — owner read only, no new admins ever
     // ═══════════════════════════════════════════════════════════════════
     match /admins/{adminId} {
-      allow read: if isOwner();
+      allow read: if isOwnerOrAdmin();
       allow create: if isOwner() && adminId == request.auth.uid;
       allow update, delete: if false;
     }
@@ -58,18 +67,18 @@ service cloud.firestore {
     // Authenticated users: read own trips, create trips
     // ═══════════════════════════════════════════════════════════════════
     match /trips/{tripId} {
-      allow read: if isOwner()
+      allow read: if isOwnerOrAdmin()
         || (isAuthenticated() && resource.data.passengerId == request.auth.uid)
         || (isAuthenticated() && resource.data.driverId == request.auth.uid);
-      allow create: if isOwner()
+      allow create: if isOwnerOrAdmin()
         || (isAuthenticated()
             && isNonEmptyString(request.resource.data.passengerName)
             && isNonEmptyString(request.resource.data.pickupAddress)
             && isNonEmptyString(request.resource.data.dropoffAddress));
-      allow update: if isOwner()
+      allow update: if isOwnerOrAdmin()
         || (isAuthenticated() && resource.data.driverId == request.auth.uid)
         || (isAuthenticated() && resource.data.passengerId == request.auth.uid);
-      allow delete: if isOwner();
+      allow delete: if isOwnerOrAdmin();
     }
 
     // ═══════════════════════════════════════════════════════════════════
@@ -78,10 +87,10 @@ service cloud.firestore {
     // Owner: full read/write
     // ═══════════════════════════════════════════════════════════════════
     match /users/{userId} {
-      allow read: if isOwner() || isOwnDoc(userId);
-      allow create: if isAuthenticated() && isOwnDoc(userId);
-      allow update: if isOwner() || isOwnDoc(userId);
-      allow delete: if isOwner();
+      allow read: if isOwnerOrAdmin() || isOwnDoc(userId);
+      allow create: if isOwnerOrAdmin() || (isAuthenticated() && isOwnDoc(userId));
+      allow update: if isOwnerOrAdmin() || isOwnDoc(userId);
+      allow delete: if isOwnerOrAdmin();
 
       // Payment methods subcollection
       match /payment_methods/{methodId} {
@@ -97,11 +106,11 @@ service cloud.firestore {
     // Owner: full access
     // ═══════════════════════════════════════════════════════════════════
     match /clients/{clientId} {
-      allow read: if isOwner() || isOwnDoc(clientId);
-      allow create: if isOwner()
+      allow read: if isOwnerOrAdmin() || isOwnDoc(clientId);
+      allow create: if isOwnerOrAdmin()
         || (isAuthenticated() && isOwnDoc(clientId));
-      allow update: if isOwner() || isOwnDoc(clientId);
-      allow delete: if isOwner();
+      allow update: if isOwnerOrAdmin() || isOwnDoc(clientId);
+      allow delete: if isOwnerOrAdmin();
 
       // Payment methods subcollection
       match /payment_methods/{methodId} {
@@ -117,11 +126,11 @@ service cloud.firestore {
     // Owner: full access
     // ═══════════════════════════════════════════════════════════════════
     match /drivers/{driverId} {
-      allow read: if isOwner() || isOwnDoc(driverId);
-      allow create: if isOwner()
+      allow read: if isOwnerOrAdmin() || isOwnDoc(driverId);
+      allow create: if isOwnerOrAdmin()
         || (isAuthenticated() && isOwnDoc(driverId));
-      allow update: if isOwner() || isOwnDoc(driverId);
-      allow delete: if isOwner();
+      allow update: if isOwnerOrAdmin() || isOwnDoc(driverId);
+      allow delete: if isOwnerOrAdmin();
 
       // Payment methods / earnings subcollection
       match /payment_methods/{methodId} {
@@ -135,8 +144,8 @@ service cloud.firestore {
     // AUDIT LOG — owner can create & read, immutable
     // ═══════════════════════════════════════════════════════════════════
     match /audit_log/{logId} {
-      allow read: if isOwner();
-      allow create: if isOwner();
+      allow read: if isOwnerOrAdmin();
+      allow create: if isOwnerOrAdmin();
       allow update, delete: if false;
     }
 
@@ -144,12 +153,12 @@ service cloud.firestore {
     // SCHEDULED RIDES
     // ═══════════════════════════════════════════════════════════════════
     match /scheduled_rides/{rideId} {
-      allow read: if isOwner()
+      allow read: if isOwnerOrAdmin()
         || (isAuthenticated() && resource.data.passengerId == request.auth.uid);
       allow create: if isAuthenticated();
-      allow update: if isOwner()
+      allow update: if isOwnerOrAdmin()
         || (isAuthenticated() && resource.data.passengerId == request.auth.uid);
-      allow delete: if isOwner();
+      allow delete: if isOwnerOrAdmin();
     }
 
     // ═══════════════════════════════════════════════════════════════════
