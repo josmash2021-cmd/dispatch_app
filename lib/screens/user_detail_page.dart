@@ -284,6 +284,17 @@ class _UserDetailPageState extends State<UserDetailPage>
                 ),
               const Divider(color: AppColors.cardBorder, height: 24),
               _actionTile(
+                icon: Icons.lock_reset_rounded,
+                label: 'Resetear Contraseña',
+                subtitle: 'Cambiar contraseña de acceso',
+                color: AppColors.warning,
+                onTap: () {
+                  Navigator.pop(ctx);
+                  _resetPasswordDialog();
+                },
+              ),
+              const Divider(color: AppColors.cardBorder, height: 16),
+              _actionTile(
                 icon: Icons.delete_forever_rounded,
                 label: 'Eliminar permanentemente',
                 subtitle: 'Remover de la base de datos',
