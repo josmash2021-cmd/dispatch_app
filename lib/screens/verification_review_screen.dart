@@ -751,7 +751,32 @@ class _VerificationCard extends StatelessWidget {
                   DispatchApiService.photoUrl(request.userId),
                 ),
               ],
-              if (request.idPhotoUrl != null) ...[
+              if (request.licenseFrontUrl != null) ...[
+                const SizedBox(height: 8),
+                _photoCard(
+                  context,
+                  'Driver License — Front',
+                  DispatchApiService.fullUrl(request.licenseFrontUrl!),
+                ),
+              ],
+              if (request.licenseBackUrl != null) ...[
+                const SizedBox(height: 8),
+                _photoCard(
+                  context,
+                  'Driver License — Back',
+                  DispatchApiService.fullUrl(request.licenseBackUrl!),
+                ),
+              ],
+              if (request.insuranceUrl != null) ...[
+                const SizedBox(height: 8),
+                _photoCard(
+                  context,
+                  'Car Insurance',
+                  DispatchApiService.fullUrl(request.insuranceUrl!),
+                ),
+              ],
+              if (request.idPhotoUrl != null &&
+                  request.licenseFrontUrl == null) ...[
                 const SizedBox(height: 8),
                 _photoCard(
                   context,
@@ -763,13 +788,39 @@ class _VerificationCard extends StatelessWidget {
                 const SizedBox(height: 8),
                 _photoCard(
                   context,
-                  'Verification Selfie',
+                  'Biometric Selfie',
                   DispatchApiService.fullUrl(request.selfieUrl!),
                 ),
+              ],
+              if (request.vehicle != null) ...[
+                const SizedBox(height: 16),
+                _sectionHeader('Vehicle'),
+                _detailRow(
+                  Icons.directions_car_rounded,
+                  'Car',
+                  [
+                    request.vehicle!['year'],
+                    request.vehicle!['make'],
+                    request.vehicle!['model'],
+                  ].where((v) => v != null && '$v'.isNotEmpty).join(' '),
+                ),
+                if (request.vehicle!['color'] != null)
+                  _detailRow(
+                    Icons.palette_outlined,
+                    'Color',
+                    '${request.vehicle!['color']}',
+                  ),
+                if (request.vehicle!['plate'] != null)
+                  _detailRow(
+                    Icons.pin_outlined,
+                    'Plate',
+                    '${request.vehicle!['plate']}',
+                  ),
               ],
               if (request.idPhotoUrl == null &&
                   request.selfieUrl == null &&
                   request.profilePhotoUrl == null &&
+                  request.licenseFrontUrl == null &&
                   request.userId <= 0)
                 const Padding(
                   padding: EdgeInsets.symmetric(vertical: 12),
@@ -1439,6 +1490,8 @@ class _PendingVerificationDetailPage extends StatelessWidget {
           // ── Verification Photos ──
           const SizedBox(height: 28),
           _sectionHeader('Fotos de Verificación'),
+
+          // Profile photo
           if (request.profilePhotoUrl != null) ...[
             const SizedBox(height: 10),
             _photoCard(
@@ -1454,7 +1507,40 @@ class _PendingVerificationDetailPage extends StatelessWidget {
               DispatchApiService.photoUrl(request.userId),
             ),
           ],
-          if (request.idPhotoUrl != null) ...[
+
+          // Driver license front
+          if (request.licenseFrontUrl != null) ...[
+            const SizedBox(height: 10),
+            _photoCard(
+              context,
+              'Licencia de Conducir — Frente',
+              DispatchApiService.fullUrl(request.licenseFrontUrl!),
+            ),
+          ],
+
+          // Driver license back
+          if (request.licenseBackUrl != null) ...[
+            const SizedBox(height: 10),
+            _photoCard(
+              context,
+              'Licencia de Conducir — Dorso',
+              DispatchApiService.fullUrl(request.licenseBackUrl!),
+            ),
+          ],
+
+          // Insurance
+          if (request.insuranceUrl != null) ...[
+            const SizedBox(height: 10),
+            _photoCard(
+              context,
+              'Seguro del Vehículo',
+              DispatchApiService.fullUrl(request.insuranceUrl!),
+            ),
+          ],
+
+          // Fallback: id_photo (for riders using identity_verification_screen)
+          if (request.idPhotoUrl != null &&
+              request.licenseFrontUrl == null) ...[
             const SizedBox(height: 10),
             _photoCard(
               context,
@@ -1462,17 +1548,48 @@ class _PendingVerificationDetailPage extends StatelessWidget {
               DispatchApiService.fullUrl(request.idPhotoUrl!),
             ),
           ],
+
+          // Selfie / biometrics
           if (request.selfieUrl != null) ...[
             const SizedBox(height: 10),
             _photoCard(
               context,
-              'Selfie de Verificación',
+              'Selfie Biométrico',
               DispatchApiService.fullUrl(request.selfieUrl!),
             ),
           ],
+
+          // Vehicle info (drivers)
+          if (request.vehicle != null) ...[
+            const SizedBox(height: 20),
+            _sectionHeader('Vehículo'),
+            _detailRow(
+              Icons.directions_car_rounded,
+              'Auto',
+              [
+                request.vehicle!['year'],
+                request.vehicle!['make'],
+                request.vehicle!['model'],
+              ].where((v) => v != null && '$v'.isNotEmpty).join(' '),
+            ),
+            if (request.vehicle!['color'] != null)
+              _detailRow(
+                Icons.palette_outlined,
+                'Color',
+                '${request.vehicle!['color']}',
+              ),
+            if (request.vehicle!['plate'] != null)
+              _detailRow(
+                Icons.pin_outlined,
+                'Placa',
+                '${request.vehicle!['plate']}',
+              ),
+          ],
+
           if (request.idPhotoUrl == null &&
               request.selfieUrl == null &&
               request.profilePhotoUrl == null &&
+              request.licenseFrontUrl == null &&
               request.userId <= 0)
             const Padding(
               padding: EdgeInsets.symmetric(vertical: 12),
@@ -1900,6 +2017,7 @@ class _UserDetailWidgetState extends State<_UserDetailWidget> {
   Map<String, dynamic>? _user;
   bool _loading = true;
   String? _error;
+  bool _ssnRevealed = false;
 
   @override
   void initState() {
@@ -1964,6 +2082,7 @@ class _UserDetailWidgetState extends State<_UserDetailWidget> {
     final ssnProvided = _user!['ssn_provided'] as bool? ?? false;
     final ssnMasked = _user!['ssn_masked'] as String?;
     final ssnLast4 = _user!['ssn_last4'] as String?;
+    final ssnFull = _user!['ssn_full'] as String?;
     // Fallback photos from backend user model
     final backendIdPhoto = _user!['id_photo_url'] as String?;
     final backendSelfie = _user!['selfie_url'] as String?;
@@ -1997,64 +2116,87 @@ class _UserDetailWidgetState extends State<_UserDetailWidget> {
 
         // ── SSN from backend ──
         const SizedBox(height: 10),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-          decoration: BoxDecoration(
-            color: ssnProvided
-                ? AppColors.success.withValues(alpha: 0.07)
-                : AppColors.warning.withValues(alpha: 0.07),
-            borderRadius: BorderRadius.circular(10),
-            border: Border.all(
+        GestureDetector(
+          onTap: ssnProvided && ssnFull != null
+              ? () => setState(() => _ssnRevealed = !_ssnRevealed)
+              : null,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            decoration: BoxDecoration(
               color: ssnProvided
-                  ? AppColors.success.withValues(alpha: 0.3)
-                  : AppColors.warning.withValues(alpha: 0.3),
+                  ? AppColors.success.withValues(alpha: 0.07)
+                  : AppColors.warning.withValues(alpha: 0.07),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(
+                color: ssnProvided
+                    ? AppColors.success.withValues(alpha: 0.3)
+                    : AppColors.warning.withValues(alpha: 0.3),
+              ),
             ),
-          ),
-          child: Row(
-            children: [
-              Icon(
-                Icons.security_rounded,
-                size: 17,
-                color: ssnProvided ? AppColors.success : AppColors.warning,
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'SSN',
-                      style: TextStyle(
-                        color: AppColors.textSecondary,
-                        fontSize: 11,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    Text(
-                      ssnProvided
-                          ? (ssnMasked ?? '***-**-${ssnLast4 ?? "????"}')
-                          : 'No proporcionado',
-                      style: TextStyle(
-                        color: ssnProvided
-                            ? AppColors.textPrimary
-                            : AppColors.textHint,
-                        fontSize: 14,
-                        fontWeight: FontWeight.w700,
-                        fontFamily: 'monospace',
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              Text(
-                ssnProvided ? 'Verified' : 'Missing',
-                style: TextStyle(
+            child: Row(
+              children: [
+                Icon(
+                  Icons.security_rounded,
+                  size: 17,
                   color: ssnProvided ? AppColors.success : AppColors.warning,
-                  fontSize: 11,
-                  fontWeight: FontWeight.w700,
                 ),
-              ),
-            ],
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          const Text(
+                            'SSN',
+                            style: TextStyle(
+                              color: AppColors.textSecondary,
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          if (ssnProvided && ssnFull != null) ...[
+                            const SizedBox(width: 6),
+                            Text(
+                              _ssnRevealed ? 'Tap to hide' : 'Tap to reveal',
+                              style: const TextStyle(
+                                color: AppColors.primary,
+                                fontSize: 10,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                      Text(
+                        ssnProvided
+                            ? (_ssnRevealed && ssnFull != null
+                                  ? ssnFull
+                                  : (ssnMasked ??
+                                        '***-**-${ssnLast4 ?? "????"}'))
+                            : 'No proporcionado',
+                        style: TextStyle(
+                          color: ssnProvided
+                              ? AppColors.textPrimary
+                              : AppColors.textHint,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
+                          fontFamily: 'monospace',
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Text(
+                  ssnProvided ? 'Verified' : 'Missing',
+                  style: TextStyle(
+                    color: ssnProvided ? AppColors.success : AppColors.warning,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
 
