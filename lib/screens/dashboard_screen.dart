@@ -44,7 +44,10 @@ class _DashboardScreenState extends State<DashboardScreen>
     TripListScreen(),
     FleetMapScreen(),
     DatabaseScreen(),
+    VerificationReviewScreen(),
     _StatsContent(),
+    ReportsScreen(),
+    AdminConfigScreen(),
   ];
 
   @override
@@ -132,31 +135,49 @@ class _DashboardScreenState extends State<DashboardScreen>
           }),
         ),
       ),
-      bottomNavigationBar: GlassNavBar(
-        currentIndex: _currentIndex,
-        onTap: _onTabChanged,
-        items: const [
-          GlassNavItem(
-            icon: Icons.directions_car_outlined,
-            selectedIcon: Icons.directions_car,
-            label: 'Trips',
-          ),
-          GlassNavItem(
-            icon: Icons.map_outlined,
-            selectedIcon: Icons.map,
-            label: 'Fleet',
-          ),
-          GlassNavItem(
-            icon: Icons.storage_outlined,
-            selectedIcon: Icons.storage_rounded,
-            label: 'Database',
-          ),
-          GlassNavItem(
-            icon: Icons.bar_chart_outlined,
-            selectedIcon: Icons.bar_chart,
-            label: 'Stats',
-          ),
-        ],
+      bottomNavigationBar: Consumer<VerificationProvider>(
+        builder: (context, verif, child) => GlassNavBar(
+          currentIndex: _currentIndex,
+          onTap: _onTabChanged,
+          items: [
+            const GlassNavItem(
+              icon: Icons.directions_car_outlined,
+              selectedIcon: Icons.directions_car,
+              label: 'Trips',
+            ),
+            const GlassNavItem(
+              icon: Icons.map_outlined,
+              selectedIcon: Icons.map,
+              label: 'Fleet',
+            ),
+            const GlassNavItem(
+              icon: Icons.group_outlined,
+              selectedIcon: Icons.group_rounded,
+              label: 'Database',
+            ),
+            GlassNavItem(
+              icon: Icons.verified_user_outlined,
+              selectedIcon: Icons.verified_user,
+              label: 'Verify',
+              badge: verif.pendingCount,
+            ),
+            const GlassNavItem(
+              icon: Icons.bar_chart_outlined,
+              selectedIcon: Icons.bar_chart,
+              label: 'Stats',
+            ),
+            const GlassNavItem(
+              icon: Icons.receipt_long_outlined,
+              selectedIcon: Icons.receipt_long,
+              label: 'Reports',
+            ),
+            const GlassNavItem(
+              icon: Icons.settings_outlined,
+              selectedIcon: Icons.settings_rounded,
+              label: 'Config',
+            ),
+          ],
+        ),
       ),
       floatingActionButton: ScaleTransition(
         scale: _fabScale,
@@ -193,7 +214,6 @@ class _StatsContent extends StatelessWidget {
         title: const Text('Stats'),
         backgroundColor: AppColors.background,
         actions: [
-          _VerificationBadgeButton(),
           IconButton(
             icon: const Icon(
               Icons.event_note_rounded,
@@ -203,25 +223,6 @@ class _StatsContent extends StatelessWidget {
             onPressed: () => Navigator.push(
               context,
               slideFromRightRoute(const ScheduledRidesScreen()),
-            ),
-          ),
-          IconButton(
-            icon: const Icon(
-              Icons.assessment_rounded,
-              color: AppColors.primary,
-            ),
-            tooltip: 'Financial Reports',
-            onPressed: () => Navigator.push(
-              context,
-              slideFromRightRoute(const ReportsScreen()),
-            ),
-          ),
-          IconButton(
-            icon: const Icon(Icons.settings_rounded, color: AppColors.primary),
-            tooltip: 'Admin Config',
-            onPressed: () => Navigator.push(
-              context,
-              slideFromRightRoute(const AdminConfigScreen()),
             ),
           ),
           IconButton(
@@ -727,52 +728,5 @@ class _StatsContent extends StatelessWidget {
       if (t > max) max = t;
     }
     return max < 5 ? 5 : max + 2;
-  }
-}
-
-// ─── Verification Badge Button ──────────────────────────────────────────────
-
-class _VerificationBadgeButton extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    final prov = context.watch<VerificationProvider>();
-    final count = prov.pendingCount;
-    return Stack(
-      children: [
-        IconButton(
-          icon: const Icon(
-            Icons.verified_user_outlined,
-            color: AppColors.primary,
-          ),
-          tooltip: 'Verification Review',
-          onPressed: () => Navigator.push(
-            context,
-            slideFromRightRoute(const VerificationReviewScreen()),
-          ),
-        ),
-        if (count > 0)
-          Positioned(
-            right: 4,
-            top: 4,
-            child: Container(
-              padding: const EdgeInsets.all(4),
-              decoration: const BoxDecoration(
-                color: AppColors.error,
-                shape: BoxShape.circle,
-              ),
-              constraints: const BoxConstraints(minWidth: 18, minHeight: 18),
-              child: Text(
-                count > 9 ? '9+' : '$count',
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 10,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-            ),
-          ),
-      ],
-    );
   }
 }
