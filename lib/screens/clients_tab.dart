@@ -227,6 +227,14 @@ class _ClientCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final color = _statusColor(client.status);
+    final String? photoUrl;
+    if (client.sqliteId != null) {
+      photoUrl = DispatchApiService.photoUrl(client.sqliteId!);
+    } else if (client.photoUrl != null && client.photoUrl!.startsWith('http')) {
+      photoUrl = client.photoUrl;
+    } else {
+      photoUrl = null;
+    }
 
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
@@ -267,10 +275,10 @@ class _ClientCard extends StatelessWidget {
                         backgroundColor: AppColors.primary.withValues(
                           alpha: 0.15,
                         ),
-                        backgroundImage: client.photoUrl != null
-                            ? NetworkImage(client.photoUrl!)
+                        backgroundImage: photoUrl != null
+                            ? NetworkImage(photoUrl)
                             : null,
-                        child: client.photoUrl == null
+                        child: photoUrl == null
                             ? Text(
                                 client.fullName.isNotEmpty
                                     ? client.fullName[0].toUpperCase()

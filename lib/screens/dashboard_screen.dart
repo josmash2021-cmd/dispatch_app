@@ -18,6 +18,7 @@ import 'admin_config_screen.dart';
 import 'fleet_map_screen.dart';
 import 'reports_screen.dart';
 import 'scheduled_rides_screen.dart';
+import 'support_chats_screen.dart';
 import 'verification_review_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
@@ -45,6 +46,7 @@ class _DashboardScreenState extends State<DashboardScreen>
     VerificationReviewScreen(),
     _StatsContent(),
     ReportsScreen(),
+    SupportChatsScreen(),
     AdminConfigScreen(),
     ScheduledRidesScreen(),
   ];
@@ -56,6 +58,7 @@ class _DashboardScreenState extends State<DashboardScreen>
     _NavItem(Icons.verified_user_outlined, Icons.verified_user, 'Verify'),
     _NavItem(Icons.bar_chart_outlined, Icons.bar_chart, 'Stats'),
     _NavItem(Icons.receipt_long_outlined, Icons.receipt_long, 'Reports'),
+    _NavItem(Icons.chat_outlined, Icons.chat_rounded, 'Chat'),
     _NavItem(Icons.settings_outlined, Icons.settings_rounded, 'Config'),
     _NavItem(Icons.event_note_outlined, Icons.event_note_rounded, 'Scheduled'),
   ];

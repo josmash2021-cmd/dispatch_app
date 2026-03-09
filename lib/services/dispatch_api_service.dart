@@ -414,6 +414,41 @@ class DispatchApiService {
   static String fullUrl(String relativePath) {
     return '$_activeUrl$relativePath';
   }
+
+  // ═══════════════════════════════════════════════════════
+  //  SUPPORT CHAT (dispatch side)
+  // ═══════════════════════════════════════════════════════
+
+  /// List all support chats.
+  static Future<List<Map<String, dynamic>>> listSupportChats() async {
+    final data = await _get('/support/chats/all');
+    return (data as List).cast<Map<String, dynamic>>();
+  }
+
+  /// Get messages for a support chat.
+  static Future<List<Map<String, dynamic>>> getSupportMessages(
+    int chatId,
+  ) async {
+    final data = await _get('/support/chats/$chatId/messages/dispatch');
+    return (data as List).cast<Map<String, dynamic>>();
+  }
+
+  /// Send a message in a support chat (dispatch side).
+  static Future<Map<String, dynamic>> sendSupportMessage(
+    int chatId,
+    String message,
+  ) async {
+    final data = await _post(
+      '/support/chats/$chatId/messages/dispatch',
+      body: {'message': message},
+    );
+    return data as Map<String, dynamic>;
+  }
+
+  /// Close a support chat.
+  static Future<void> closeSupportChat(int chatId) async {
+    await _patch('/support/chats/$chatId/close');
+  }
 }
 
 class ApiException implements Exception {
