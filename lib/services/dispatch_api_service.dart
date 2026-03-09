@@ -10,7 +10,7 @@ import '../config/env.dart';
 /// Used by the dispatch admin panel to sync operations with the backend.
 class DispatchApiService {
   static const String _defaultTunnelUrl =
-      'https://combines-dramatically-five-cooperative.trycloudflare.com';
+      'https://first-rolls-dec-saw.trycloudflare.com';
   static const String _localNetworkUrl = 'http://172.20.11.24:8000';
   static const String _localUrl = 'http://10.0.2.2:8000';
   static const String _adbUrl = 'http://localhost:8000';
@@ -31,6 +31,16 @@ class DispatchApiService {
       _activeUrl = saved;
     }
     debugPrint('[DispatchApi] active URL: $_activeUrl');
+    // Always probe in background so a stale tunnel URL gets refreshed
+    probeAndSetBestUrl()
+        .then((url) {
+          if (url != null) {
+            debugPrint('[DispatchApi] probe found reachable URL: $url');
+          } else {
+            debugPrint('[DispatchApi] probe: no reachable URL found');
+          }
+        })
+        .catchError((_) {});
   }
 
   /// Persist a new server URL.
