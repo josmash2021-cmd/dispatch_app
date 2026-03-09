@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:timeago/timeago.dart' as timeago;
+import 'package:url_launcher/url_launcher.dart';
 import '../config/app_theme.dart';
 import '../providers/verification_provider.dart';
 import '../services/dispatch_api_service.dart';
@@ -1259,76 +1260,11 @@ class _VerificationCard extends StatelessWidget {
         ),
         const SizedBox(height: 6),
         GestureDetector(
-          onTap: () {
-            // Open video URL in a dialog with an HTML video tag (web)
-            showDialog(
-              context: context,
-              builder: (ctx) => Dialog(
-                backgroundColor: Colors.black,
-                insetPadding: const EdgeInsets.all(16),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.all(12),
-                      child: Row(
-                        children: [
-                          const Icon(
-                            Icons.videocam_rounded,
-                            color: Colors.white,
-                            size: 20,
-                          ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Text(
-                              label,
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 16,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ),
-                          IconButton(
-                            icon: const Icon(
-                              Icons.close_rounded,
-                              color: Colors.white,
-                            ),
-                            onPressed: () => Navigator.pop(ctx),
-                          ),
-                        ],
-                      ),
-                    ),
-                    Container(
-                      height: 300,
-                      width: double.infinity,
-                      color: AppColors.surfaceHigh,
-                      child: Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            const Icon(
-                              Icons.play_circle_outline_rounded,
-                              color: AppColors.primary,
-                              size: 48,
-                            ),
-                            const SizedBox(height: 12),
-                            SelectableText(
-                              url,
-                              style: const TextStyle(
-                                color: AppColors.textSecondary,
-                                fontSize: 11,
-                              ),
-                              textAlign: TextAlign.center,
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            );
+          onTap: () async {
+            final uri = Uri.parse(url);
+            if (await canLaunchUrl(uri)) {
+              await launchUrl(uri, mode: LaunchMode.externalApplication);
+            }
           },
           child: Container(
             height: 120,
@@ -1344,13 +1280,13 @@ class _VerificationCard extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Icon(
-                  Icons.videocam_rounded,
+                  Icons.play_circle_filled_rounded,
                   color: AppColors.primary,
-                  size: 36,
+                  size: 42,
                 ),
                 SizedBox(height: 6),
                 Text(
-                  'Tap to view liveness video',
+                  'Tap to play liveness video',
                   style: TextStyle(
                     color: AppColors.textSecondary,
                     fontSize: 12,
