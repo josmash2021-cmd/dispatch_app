@@ -93,6 +93,9 @@ class _SupportChatsScreenState extends State<SupportChatsScreen> {
     final lastSenderRole = chat['last_sender_role'] ?? '';
     final userId = chat['user_id'] as int?;
     final chatId = chat['id'] as int;
+    final needsEscalation = chat['needs_escalation'] == true;
+    final botPhase = chat['bot_phase'] ?? '';
+    final agentName = chat['agent_name'] ?? '';
 
     final String? photoUrl;
     if (userId != null) {
@@ -107,9 +110,12 @@ class _SupportChatsScreenState extends State<SupportChatsScreen> {
         color: AppColors.surface,
         borderRadius: BorderRadius.circular(14),
         border: Border.all(
-          color: unread > 0
+          color: needsEscalation
+              ? AppColors.error.withValues(alpha: 0.6)
+              : unread > 0
               ? AppColors.primary.withValues(alpha: 0.4)
               : AppColors.cardBorder,
+          width: needsEscalation ? 1.5 : 1,
         ),
       ),
       child: Material(
@@ -204,6 +210,26 @@ class _SupportChatsScreenState extends State<SupportChatsScreen> {
                               overflow: TextOverflow.ellipsis,
                             ),
                           ),
+                          if (needsEscalation)
+                            Container(
+                              margin: const EdgeInsets.only(right: 6),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 7,
+                                vertical: 2,
+                              ),
+                              decoration: BoxDecoration(
+                                color: AppColors.error.withValues(alpha: 0.15),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: const Text(
+                                '⚠️ Escalado',
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  color: AppColors.error,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ),
                           Container(
                             padding: const EdgeInsets.symmetric(
                               horizontal: 7,
@@ -228,6 +254,18 @@ class _SupportChatsScreenState extends State<SupportChatsScreen> {
                           ),
                         ],
                       ),
+                      if (agentName.isNotEmpty)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 2),
+                          child: Text(
+                            'Bot: $agentName',
+                            style: TextStyle(
+                              color: AppColors.primary.withValues(alpha: 0.7),
+                              fontSize: 11,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ),
                       if (subject.isNotEmpty)
                         Padding(
                           padding: const EdgeInsets.only(top: 2),
@@ -247,6 +285,8 @@ class _SupportChatsScreenState extends State<SupportChatsScreen> {
                           child: Text(
                             lastSenderRole == 'dispatch'
                                 ? 'Tú: $lastMsg'
+                                : lastSenderRole == 'bot'
+                                ? 'Bot: $lastMsg'
                                 : lastMsg,
                             style: TextStyle(
                               color: unread > 0

@@ -216,13 +216,48 @@ class _SupportChatDetailScreenState extends State<SupportChatDetailScreen> {
   }
 
   Widget _buildBubble(Map<String, dynamic> msg) {
-    final isDispatch = msg['sender_role'] == 'dispatch';
+    final role = msg['sender_role'] ?? '';
     final senderName = msg['sender_name'] ?? '';
     final text = msg['message'] ?? '';
     final time = DateTime.tryParse(msg['created_at'] ?? '') ?? DateTime.now();
 
+    // System messages — centered notification
+    if (role == 'system') {
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 8),
+        child: Center(
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+            decoration: BoxDecoration(
+              color: AppColors.surface,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: AppColors.cardBorder),
+            ),
+            child: Text(
+              text,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 12,
+                color: text.contains('⚠️')
+                    ? AppColors.error
+                    : text.contains('🟢')
+                    ? AppColors.success
+                    : AppColors.textHint,
+                fontWeight: FontWeight.w500,
+                height: 1.4,
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
+    final isDispatch = role == 'dispatch';
+    final isBot = role == 'bot';
+    final isRight = isDispatch; // Only real dispatch messages on right
+
     return Align(
-      alignment: isDispatch ? Alignment.centerRight : Alignment.centerLeft,
+      alignment: isRight ? Alignment.centerRight : Alignment.centerLeft,
       child: Container(
         margin: const EdgeInsets.only(bottom: 8),
         constraints: BoxConstraints(
@@ -230,18 +265,25 @@ class _SupportChatDetailScreenState extends State<SupportChatDetailScreen> {
         ),
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
         decoration: BoxDecoration(
-          color: isDispatch ? AppColors.primary : AppColors.surface,
+          color: isRight
+              ? AppColors.primary
+              : isBot
+              ? AppColors.primary.withValues(alpha: 0.08)
+              : AppColors.surface,
           borderRadius: BorderRadius.only(
             topLeft: const Radius.circular(16),
             topRight: const Radius.circular(16),
-            bottomLeft: Radius.circular(isDispatch ? 16 : 4),
-            bottomRight: Radius.circular(isDispatch ? 4 : 16),
+            bottomLeft: Radius.circular(isRight ? 16 : 4),
+            bottomRight: Radius.circular(isRight ? 4 : 16),
           ),
+          border: isBot
+              ? Border.all(color: AppColors.primary.withValues(alpha: 0.2))
+              : null,
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            if (!isDispatch && senderName.isNotEmpty)
+            if (!isRight && senderName.isNotEmpty)
               Padding(
                 padding: const EdgeInsets.only(bottom: 3),
                 child: Text(
@@ -249,14 +291,16 @@ class _SupportChatDetailScreenState extends State<SupportChatDetailScreen> {
                   style: TextStyle(
                     fontSize: 11,
                     fontWeight: FontWeight.w600,
-                    color: AppColors.primary.withValues(alpha: 0.9),
+                    color: isBot
+                        ? AppColors.primary
+                        : AppColors.primary.withValues(alpha: 0.9),
                   ),
                 ),
               ),
             Text(
               text,
               style: TextStyle(
-                color: isDispatch ? Colors.black : AppColors.textPrimary,
+                color: isRight ? Colors.black : AppColors.textPrimary,
                 fontSize: 14.5,
                 height: 1.35,
               ),
@@ -266,7 +310,7 @@ class _SupportChatDetailScreenState extends State<SupportChatDetailScreen> {
               '${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}',
               style: TextStyle(
                 fontSize: 10,
-                color: isDispatch ? Colors.black54 : AppColors.textHint,
+                color: isRight ? Colors.black54 : AppColors.textHint,
               ),
             ),
           ],
