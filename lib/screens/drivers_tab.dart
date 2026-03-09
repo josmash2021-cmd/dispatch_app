@@ -1,7 +1,9 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
+import 'package:timeago/timeago.dart' as timeago;
 import '../config/app_theme.dart';
 import '../models/driver_model.dart';
 import '../providers/driver_provider.dart';
@@ -563,6 +565,17 @@ class _DriverCard extends StatelessWidget {
                     _DriverPhotosStrip(driver: driver),
                   const SizedBox(height: 12),
                   _actionTile(
+                    icon: Icons.info_outline_rounded,
+                    label: 'View Details',
+                    subtitle: 'Full profile & documents',
+                    color: AppColors.textSecondary,
+                    onTap: () {
+                      Navigator.pop(ctx);
+                      _showDriverDetail(context, driver);
+                    },
+                  ),
+                  const Divider(color: AppColors.cardBorder, height: 16),
+                  _actionTile(
                     icon: Icons.edit_rounded,
                     label: 'Edit Driver',
                     subtitle: 'Update profile information',
@@ -733,6 +746,71 @@ class _DriverCard extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  // ─── Reset Password ────────────────────────────────────────────────────
+
+  Future<void> _resetPassword(BuildContext ctx, DriverModel driver) async {
+    final ctrl = TextEditingController();
+    final confirmed = await showDialog<bool>(
+      context: ctx,
+      builder: (dCtx) => AlertDialog(
+        backgroundColor: AppColors.surface,
+        title: const Text(
+          'Reset Password',
+          style: TextStyle(color: AppColors.textPrimary),
+        ),
+        content: TextField(
+          controller: ctrl,
+          obscureText: true,
+          style: const TextStyle(color: AppColors.textPrimary),
+          decoration: InputDecoration(
+            hintText: 'New password (min 6 chars)',
+            hintStyle: const TextStyle(color: AppColors.textHint),
+            filled: true,
+            fillColor: AppColors.surfaceHigh,
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(10),
+              borderSide: BorderSide.none,
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dCtx, false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              if (ctrl.text.length >= 6) Navigator.pop(dCtx, true);
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.primary,
+              foregroundColor: const Color(0xFF1A1400),
+            ),
+            child: const Text('Reset'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || driver.sqliteId == null) return;
+    try {
+      await DispatchApiService.updateUser(driver.sqliteId!, {
+        'password': ctrl.text,
+      });
+      if (ctx.mounted) {
+        ScaffoldMessenger.of(ctx).showSnackBar(
+          const SnackBar(content: Text('Password reset successfully')),
+        );
+      }
+    } catch (e) {
+      if (ctx.mounted) {
+        ScaffoldMessenger.of(
+          ctx,
+        ).showSnackBar(SnackBar(content: Text('Failed to reset password: $e')));
+      }
+    }
+    ctrl.dispose();
   }
 
   // ─── Detail Bottom Sheet ────────────────────────────────────────────────
@@ -2125,6 +2203,199 @@ class _DriverPhotosStripState extends State<_DriverPhotosStrip> {
           ),
         ],
       ),
+    );
+  }
+}
+
+// ── Driver Server Documents Widget ─────────────────────
+class _DriverServerDocumentsWidget extends StatefulWidget {
+  const _DriverServerDocumentsWidget({required this.sqliteId});
+  final int sqliteId;
+
+  @override
+  State<_DriverServerDocumentsWidget> createState() =>
+      _DriverServerDocumentsWidgetState();
+}
+
+class _DriverServerDocumentsWidgetState
+    extends State<_DriverServerDocumentsWidget> {
+  List<Map<String, dynamic>>? _docs;
+  bool _loading = true;
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadDocs();
+  }
+
+  Future<void> _loadDocs() async {
+    try {
+      final docs = await DispatchApiService.getUserDocuments(widget.sqliteId);
+      if (mounted)
+        setState(() {
+          _docs = docs;
+          _loading = false;
+        });
+    } catch (e) {
+      if (mounted)
+        setState(() {
+          _error = '$e';
+          _loading = false;
+        });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_loading) {
+      return const Padding(
+        padding: EdgeInsets.symmetric(vertical: 12),
+        child: Center(
+          child: SizedBox(
+            width: 20,
+            height: 20,
+            child: CircularProgressIndicator(
+              color: AppColors.primary,
+              strokeWidth: 2,
+            ),
+          ),
+        ),
+      );
+    }
+    if (_error != null || _docs == null || _docs!.isEmpty) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 8),
+        child: Text(
+          _docs != null && _docs!.isEmpty
+              ? 'No documents uploaded'
+              : 'Documents unavailable',
+          style: const TextStyle(color: AppColors.textHint, fontSize: 12),
+        ),
+      );
+    }
+    return Column(
+      children: _docs!.map((doc) {
+        final type = (doc['doc_type'] as String? ?? 'unknown')
+            .replaceAll('_', ' ')
+            .split(' ')
+            .map(
+              (w) =>
+                  w.isNotEmpty ? '${w[0].toUpperCase()}${w.substring(1)}' : '',
+            )
+            .join(' ');
+        final status = doc['status'] as String? ?? 'pending';
+        final statusColor = switch (status) {
+          'approved' => const Color(0xFF4CAF50),
+          'rejected' => const Color(0xFFE53935),
+          _ => const Color(0xFFFFA726),
+        };
+        final filePath = doc['file_path'] as String?;
+        return Container(
+          margin: const EdgeInsets.only(bottom: 8),
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: AppColors.surfaceHigh,
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Row(
+            children: [
+              Icon(
+                Icons.description_outlined,
+                color: AppColors.textHint,
+                size: 20,
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      type,
+                      style: const TextStyle(
+                        color: AppColors.textPrimary,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    if (doc['doc_number'] != null)
+                      Text(
+                        '# ${doc['doc_number']}',
+                        style: const TextStyle(
+                          color: AppColors.textSecondary,
+                          fontSize: 11,
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: statusColor.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Text(
+                  status.toUpperCase(),
+                  style: TextStyle(
+                    color: statusColor,
+                    fontSize: 10,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ),
+              if (filePath != null) ...[
+                const SizedBox(width: 8),
+                GestureDetector(
+                  onTap: () {
+                    final url = DispatchApiService.documentUrl(filePath);
+                    showDialog(
+                      context: context,
+                      builder: (ctx) => Dialog(
+                        backgroundColor: AppColors.surface,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            ClipRRect(
+                              borderRadius: const BorderRadius.vertical(
+                                top: Radius.circular(16),
+                              ),
+                              child: Image.network(
+                                url,
+                                fit: BoxFit.contain,
+                                errorBuilder: (_, __, ___) => const Padding(
+                                  padding: EdgeInsets.all(32),
+                                  child: Icon(
+                                    Icons.broken_image,
+                                    color: AppColors.textHint,
+                                    size: 48,
+                                  ),
+                                ),
+                              ),
+                            ),
+                            TextButton(
+                              onPressed: () => Navigator.pop(ctx),
+                              child: const Text('Close'),
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
+                  child: const Icon(
+                    Icons.visibility_outlined,
+                    color: AppColors.primary,
+                    size: 18,
+                  ),
+                ),
+              ],
+            ],
+          ),
+        );
+      }).toList(),
     );
   }
 }
