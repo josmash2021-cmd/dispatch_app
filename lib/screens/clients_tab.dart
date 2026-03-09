@@ -305,6 +305,25 @@ class _ClientCard extends StatelessWidget {
                         ),
                       ),
                     ),
+                    // Online indicator (top-right)
+                    Positioned(
+                      right: 0,
+                      top: 0,
+                      child: Container(
+                        width: 12,
+                        height: 12,
+                        decoration: BoxDecoration(
+                          color: client.isOnline
+                              ? AppColors.success
+                              : AppColors.textHint,
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: AppColors.surface,
+                            width: 2,
+                          ),
+                        ),
+                      ),
+                    ),
                   ],
                 ),
                 const SizedBox(width: 14),

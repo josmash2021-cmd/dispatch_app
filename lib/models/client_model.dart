@@ -33,6 +33,7 @@ class ClientModel {
   final String? password; // rider app password (plain)
   final String? licenseUrl;
   final String? documentUrl;
+  final bool isOnline;
 
   ClientModel({
     required this.clientId,
@@ -65,6 +66,7 @@ class ClientModel {
     this.password,
     this.licenseUrl,
     this.documentUrl,
+    this.isOnline = false,
   });
 
   bool get isActive => status == 'active';
@@ -129,6 +131,8 @@ class ClientModel {
           data['licenseUrl'] as String? ?? data['license_url'] as String?,
       documentUrl:
           data['documentUrl'] as String? ?? data['document_url'] as String?,
+      isOnline:
+          data['isOnline'] as bool? ?? data['is_online'] as bool? ?? false,
     );
   }
 

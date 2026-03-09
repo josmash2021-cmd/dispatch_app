@@ -809,7 +809,9 @@ class _UserDetailPageState extends State<UserDetailPage>
     final effectivePhotoUrl = _sqliteId != null
         ? DispatchApiService.photoUrl(_sqliteId!)
         : _photoUrl;
-    final isOnline = widget.driver?.isOnline ?? false;
+    final isOnline = _isDriver
+        ? (widget.driver?.isOnline ?? false)
+        : (widget.client?.isOnline ?? false);
 
     return SliverAppBar(
       expandedHeight: 230,
@@ -894,26 +896,25 @@ class _UserDetailPageState extends State<UserDetailPage>
                           ),
                         ),
                       ),
-                      // Online indicator for drivers (top-right)
-                      if (_isDriver)
-                        Positioned(
-                          right: 2,
-                          top: 2,
-                          child: Container(
-                            width: 14,
-                            height: 14,
-                            decoration: BoxDecoration(
-                              color: isOnline
-                                  ? AppColors.success
-                                  : AppColors.textHint,
-                              shape: BoxShape.circle,
-                              border: Border.all(
-                                color: AppColors.background,
-                                width: 2,
-                              ),
+                      // Online indicator (top-right)
+                      Positioned(
+                        right: 2,
+                        top: 2,
+                        child: Container(
+                          width: 14,
+                          height: 14,
+                          decoration: BoxDecoration(
+                            color: isOnline
+                                ? AppColors.success
+                                : AppColors.textHint,
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: AppColors.background,
+                              width: 2,
                             ),
                           ),
                         ),
+                      ),
                     ],
                   ),
                   const SizedBox(height: 10),
@@ -933,11 +934,10 @@ class _UserDetailPageState extends State<UserDetailPage>
                     children: [
                       _chip(_role.toUpperCase(), AppColors.primary),
                       _chip(_statusLabel, _statusColor),
-                      if (_isDriver)
-                        _chip(
-                          isOnline ? 'Online' : 'Offline',
-                          isOnline ? AppColors.success : AppColors.textHint,
-                        ),
+                      _chip(
+                        isOnline ? 'Online' : 'Offline',
+                        isOnline ? AppColors.success : AppColors.textHint,
+                      ),
                       if (_source != null) _chip(_source!, AppColors.textHint),
                     ],
                   ),
