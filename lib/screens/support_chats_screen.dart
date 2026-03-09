@@ -130,6 +130,8 @@ class _SupportChatsScreenState extends State<SupportChatsScreen> {
                   chatId: chatId,
                   userName: name,
                   userId: userId,
+                  needsEscalation: needsEscalation,
+                  supervisorConnected: chat['supervisor_connected'] == true,
                 ),
               ),
             );

@@ -104,77 +104,77 @@ class _DashboardScreenState extends State<DashboardScreen>
         .limit(10)
         .snapshots()
         .listen((snapshot) {
-      for (final change in snapshot.docChanges) {
-        if (change.type == DocumentChangeType.added) {
-          final data = change.doc.data();
-          if (data == null) continue;
-          final type = data['type'] as String? ?? '';
-          final message = data['message'] as String? ?? '';
-          final userName = data['userName'] as String? ?? '';
-          final chatId = data['chatId'] as int? ?? 0;
+          for (final change in snapshot.docChanges) {
+            if (change.type == DocumentChangeType.added) {
+              final data = change.doc.data();
+              if (data == null) continue;
+              final type = data['type'] as String? ?? '';
+              final message = data['message'] as String? ?? '';
+              final userName = data['userName'] as String? ?? '';
+              final chatId = data['chatId'] as int? ?? 0;
 
-          // Show in-app notification
-          if (mounted) {
-            final isEscalation = type == 'escalation';
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                backgroundColor: isEscalation
-                    ? const Color(0xFFE53935)
-                    : AppColors.primary,
-                content: Row(
-                  children: [
-                    Icon(
-                      isEscalation
-                          ? Icons.warning_rounded
-                          : Icons.chat_bubble_rounded,
-                      color: Colors.white,
-                      size: 20,
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            isEscalation
-                                ? '⚠️ Chat Escalado'
-                                : '💬 Nuevo Mensaje',
-                            style: const TextStyle(
-                              fontWeight: FontWeight.w700,
-                              fontSize: 14,
-                            ),
+              // Show in-app notification
+              if (mounted) {
+                final isEscalation = type == 'escalation';
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    backgroundColor: isEscalation
+                        ? const Color(0xFFE53935)
+                        : AppColors.primary,
+                    content: Row(
+                      children: [
+                        Icon(
+                          isEscalation
+                              ? Icons.warning_rounded
+                              : Icons.chat_bubble_rounded,
+                          color: Colors.white,
+                          size: 20,
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                isEscalation
+                                    ? '⚠️ Chat Escalado'
+                                    : '💬 Nuevo Mensaje',
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.w700,
+                                  fontSize: 14,
+                                ),
+                              ),
+                              Text(
+                                message,
+                                style: const TextStyle(fontSize: 13),
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ],
                           ),
-                          Text(
-                            message,
-                            style: const TextStyle(fontSize: 13),
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ],
-                      ),
+                        ),
+                      ],
                     ),
-                  ],
-                ),
-                behavior: SnackBarBehavior.floating,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                duration: const Duration(seconds: 5),
-                action: SnackBarAction(
-                  label: 'Ver Chat',
-                  textColor: Colors.white,
-                  onPressed: () => _onTabChanged(6), // Go to Chat tab
-                ),
-              ),
-            );
+                    behavior: SnackBarBehavior.floating,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    duration: const Duration(seconds: 5),
+                    action: SnackBarAction(
+                      label: 'Ver Chat',
+                      textColor: Colors.white,
+                      onPressed: () => _onTabChanged(6), // Go to Chat tab
+                    ),
+                  ),
+                );
+              }
+
+              // Mark as read
+              change.doc.reference.update({'isRead': true});
+            }
           }
-
-          // Mark as read
-          change.doc.reference.update({'isRead': true});
-        }
-      }
-    });
+        });
   }
 
   @override

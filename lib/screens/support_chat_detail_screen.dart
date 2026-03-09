@@ -7,12 +7,16 @@ class SupportChatDetailScreen extends StatefulWidget {
   final int chatId;
   final String userName;
   final int? userId;
+  final bool needsEscalation;
+  final bool supervisorConnected;
 
   const SupportChatDetailScreen({
     super.key,
     required this.chatId,
     required this.userName,
     this.userId,
+    this.needsEscalation = false,
+    this.supervisorConnected = false,
   });
 
   @override
@@ -27,11 +31,14 @@ class _SupportChatDetailScreenState extends State<SupportChatDetailScreen> {
   List<Map<String, dynamic>> _messages = [];
   bool _loading = true;
   bool _sending = false;
+  bool _supervisorConnected = false;
+  bool _connecting = false;
   Timer? _pollTimer;
 
   @override
   void initState() {
     super.initState();
+    _supervisorConnected = widget.supervisorConnected;
     _loadMessages();
     _pollTimer = Timer.periodic(
       const Duration(seconds: 3),
@@ -320,6 +327,65 @@ class _SupportChatDetailScreenState extends State<SupportChatDetailScreen> {
   }
 
   Widget _buildInputBar() {
+    // If escalated but not yet connected, show the connect button
+    if (widget.needsEscalation && !_supervisorConnected) {
+      return Container(
+        padding: EdgeInsets.only(
+          left: 16,
+          right: 16,
+          top: 12,
+          bottom: MediaQuery.of(context).padding.bottom + 12,
+        ),
+        decoration: BoxDecoration(
+          color: AppColors.background,
+          border: Border(
+            top: BorderSide(color: AppColors.cardBorder, width: 0.5),
+          ),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              'El usuario ha solicitado un supervisor',
+              style: TextStyle(color: AppColors.textSecondary, fontSize: 13),
+            ),
+            const SizedBox(height: 10),
+            SizedBox(
+              width: double.infinity,
+              height: 48,
+              child: ElevatedButton.icon(
+                onPressed: _connecting ? null : _connectSupervisor,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primary,
+                  foregroundColor: Colors.black,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(28),
+                  ),
+                ),
+                icon: _connecting
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.black,
+                        ),
+                      )
+                    : const Icon(Icons.support_agent_rounded),
+                label: Text(
+                  _connecting ? 'Conectando...' : 'Conectar al chat',
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w700,
+                    fontSize: 15,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
     return Container(
       padding: EdgeInsets.only(
         left: 12,
@@ -379,5 +445,21 @@ class _SupportChatDetailScreenState extends State<SupportChatDetailScreen> {
         ],
       ),
     );
+  }
+
+  Future<void> _connectSupervisor() async {
+    setState(() => _connecting = true);
+    try {
+      await DispatchApiService.connectSupervisor(widget.chatId);
+      if (!mounted) return;
+      setState(() {
+        _supervisorConnected = true;
+        _connecting = false;
+      });
+      await _loadMessages();
+    } catch (e) {
+      debugPrint('[ChatDetail] connect supervisor error: $e');
+      if (mounted) setState(() => _connecting = false);
+    }
   }
 }

@@ -449,6 +449,15 @@ class DispatchApiService {
   static Future<void> closeSupportChat(int chatId) async {
     await _patch('/support/chats/$chatId/close');
   }
+
+  /// Connect supervisor to an escalated chat.
+  static Future<Map<String, dynamic>> connectSupervisor(int chatId) async {
+    final data = await _post(
+      '/support/chats/$chatId/connect-supervisor',
+      body: {},
+    );
+    return data as Map<String, dynamic>;
+  }
 }
 
 class ApiException implements Exception {
