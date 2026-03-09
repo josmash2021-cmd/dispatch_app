@@ -1,4 +1,6 @@
-﻿import 'package:fl_chart/fl_chart.dart';
+﻿import 'dart:async';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
@@ -38,6 +40,8 @@ class _DashboardScreenState extends State<DashboardScreen>
   late Animation<double> _fadeAnim;
   late AnimationController _fabCtrl;
   late Animation<double> _fabScale;
+
+  StreamSubscription<QuerySnapshot>? _notifSub;
 
   static const _pages = <Widget>[
     TripListScreen(),
@@ -88,11 +92,94 @@ class _DashboardScreenState extends State<DashboardScreen>
       context.read<TripProvider>().startListening();
       context.read<ClientProvider>().startListening();
       context.read<DriverProvider>().startListening();
+      _startNotificationListener();
+    });
+  }
+
+  void _startNotificationListener() {
+    _notifSub = FirebaseFirestore.instance
+        .collection('dispatch_notifications')
+        .where('isRead', isEqualTo: false)
+        .orderBy('createdAt', descending: true)
+        .limit(10)
+        .snapshots()
+        .listen((snapshot) {
+      for (final change in snapshot.docChanges) {
+        if (change.type == DocumentChangeType.added) {
+          final data = change.doc.data();
+          if (data == null) continue;
+          final type = data['type'] as String? ?? '';
+          final message = data['message'] as String? ?? '';
+          final userName = data['userName'] as String? ?? '';
+          final chatId = data['chatId'] as int? ?? 0;
+
+          // Show in-app notification
+          if (mounted) {
+            final isEscalation = type == 'escalation';
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                backgroundColor: isEscalation
+                    ? const Color(0xFFE53935)
+                    : AppColors.primary,
+                content: Row(
+                  children: [
+                    Icon(
+                      isEscalation
+                          ? Icons.warning_rounded
+                          : Icons.chat_bubble_rounded,
+                      color: Colors.white,
+                      size: 20,
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            isEscalation
+                                ? '⚠️ Chat Escalado'
+                                : '💬 Nuevo Mensaje',
+                            style: const TextStyle(
+                              fontWeight: FontWeight.w700,
+                              fontSize: 14,
+                            ),
+                          ),
+                          Text(
+                            message,
+                            style: const TextStyle(fontSize: 13),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                behavior: SnackBarBehavior.floating,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                duration: const Duration(seconds: 5),
+                action: SnackBarAction(
+                  label: 'Ver Chat',
+                  textColor: Colors.white,
+                  onPressed: () => _onTabChanged(6), // Go to Chat tab
+                ),
+              ),
+            );
+          }
+
+          // Mark as read
+          change.doc.reference.update({'isRead': true});
+        }
+      }
     });
   }
 
   @override
   void dispose() {
+    _notifSub?.cancel();
     _fadeCtrl.dispose();
     _fabCtrl.dispose();
     super.dispose();
