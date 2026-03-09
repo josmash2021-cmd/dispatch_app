@@ -734,62 +734,85 @@ class _VerificationCard extends StatelessWidget {
               ),
 
               // ── Verification Photos ──
-              const SizedBox(height: 20),
-              _sectionHeader('Verification Photos'),
-              if (request.profilePhotoUrl != null) ...[
-                const SizedBox(height: 8),
-                _photoCard(
-                  context,
-                  'Profile Photo',
-                  DispatchApiService.fullUrl(request.profilePhotoUrl!),
-                ),
+              if (request.idPhotoUrl != null ||
+                  request.selfieUrl != null ||
+                  request.profilePhotoUrl != null ||
+                  request.licenseFrontUrl != null ||
+                  request.verificationVideoUrl != null) ...[
+                const SizedBox(height: 20),
+                _sectionHeader('Verification Photos'),
+                if (request.profilePhotoUrl != null) ...[
+                  const SizedBox(height: 8),
+                  _photoCard(
+                    context,
+                    'Profile Photo',
+                    DispatchApiService.fullUrl(request.profilePhotoUrl!),
+                  ),
+                ] else if (request.userId > 0) ...[
+                  const SizedBox(height: 8),
+                  _photoCard(
+                    context,
+                    'Profile Photo',
+                    DispatchApiService.photoUrl(request.userId),
+                  ),
+                ],
+                if (request.idPhotoUrl != null &&
+                    request.licenseFrontUrl == null) ...[
+                  const SizedBox(height: 8),
+                  _photoCard(
+                    context,
+                    'ID Document (${_docTypeLabel(request.idDocumentType)})',
+                    DispatchApiService.fullUrl(request.idPhotoUrl!),
+                  ),
+                ],
+                if (request.selfieUrl != null) ...[
+                  const SizedBox(height: 8),
+                  _photoCard(
+                    context,
+                    'Biometric Selfie',
+                    DispatchApiService.fullUrl(request.selfieUrl!),
+                  ),
+                ],
+                if (request.licenseFrontUrl != null) ...[
+                  const SizedBox(height: 8),
+                  _photoCard(
+                    context,
+                    'Driver License — Front',
+                    DispatchApiService.fullUrl(request.licenseFrontUrl!),
+                  ),
+                ],
+                if (request.licenseBackUrl != null) ...[
+                  const SizedBox(height: 8),
+                  _photoCard(
+                    context,
+                    'Driver License — Back',
+                    DispatchApiService.fullUrl(request.licenseBackUrl!),
+                  ),
+                ],
+                if (request.insuranceUrl != null) ...[
+                  const SizedBox(height: 8),
+                  _photoCard(
+                    context,
+                    'Insurance Document',
+                    DispatchApiService.fullUrl(request.insuranceUrl!),
+                  ),
+                ],
+                if (request.verificationVideoUrl != null) ...[
+                  const SizedBox(height: 8),
+                  _videoCard(
+                    context,
+                    'Liveness Video',
+                    DispatchApiService.fullUrl(request.verificationVideoUrl!),
+                  ),
+                ],
               ] else if (request.userId > 0) ...[
+                const SizedBox(height: 20),
+                _sectionHeader('Verification Photos'),
                 const SizedBox(height: 8),
                 _photoCard(
                   context,
                   'Profile Photo',
                   DispatchApiService.photoUrl(request.userId),
-                ),
-              ],
-              if (request.licenseFrontUrl != null) ...[
-                const SizedBox(height: 8),
-                _photoCard(
-                  context,
-                  'Driver License — Front',
-                  DispatchApiService.fullUrl(request.licenseFrontUrl!),
-                ),
-              ],
-              if (request.licenseBackUrl != null) ...[
-                const SizedBox(height: 8),
-                _photoCard(
-                  context,
-                  'Driver License — Back',
-                  DispatchApiService.fullUrl(request.licenseBackUrl!),
-                ),
-              ],
-              if (request.insuranceUrl != null) ...[
-                const SizedBox(height: 8),
-                _photoCard(
-                  context,
-                  'Car Insurance',
-                  DispatchApiService.fullUrl(request.insuranceUrl!),
-                ),
-              ],
-              if (request.idPhotoUrl != null &&
-                  request.licenseFrontUrl == null) ...[
-                const SizedBox(height: 8),
-                _photoCard(
-                  context,
-                  'ID Document (${_docTypeLabel(request.idDocumentType)})',
-                  DispatchApiService.fullUrl(request.idPhotoUrl!),
-                ),
-              ],
-              if (request.selfieUrl != null) ...[
-                const SizedBox(height: 8),
-                _photoCard(
-                  context,
-                  'Biometric Selfie',
-                  DispatchApiService.fullUrl(request.selfieUrl!),
                 ),
               ],
               if (request.vehicle != null) ...[
@@ -1219,6 +1242,125 @@ class _VerificationCard extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+
+  Widget _videoCard(BuildContext context, String label, String url) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: const TextStyle(
+            color: AppColors.textSecondary,
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        const SizedBox(height: 6),
+        GestureDetector(
+          onTap: () {
+            // Open video URL in a dialog with an HTML video tag (web)
+            showDialog(
+              context: context,
+              builder: (ctx) => Dialog(
+                backgroundColor: Colors.black,
+                insetPadding: const EdgeInsets.all(16),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.all(12),
+                      child: Row(
+                        children: [
+                          const Icon(
+                            Icons.videocam_rounded,
+                            color: Colors.white,
+                            size: 20,
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              label,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                          IconButton(
+                            icon: const Icon(
+                              Icons.close_rounded,
+                              color: Colors.white,
+                            ),
+                            onPressed: () => Navigator.pop(ctx),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Container(
+                      height: 300,
+                      width: double.infinity,
+                      color: AppColors.surfaceHigh,
+                      child: Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const Icon(
+                              Icons.play_circle_outline_rounded,
+                              color: AppColors.primary,
+                              size: 48,
+                            ),
+                            const SizedBox(height: 12),
+                            SelectableText(
+                              url,
+                              style: const TextStyle(
+                                color: AppColors.textSecondary,
+                                fontSize: 11,
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+          child: Container(
+            height: 120,
+            width: double.infinity,
+            decoration: BoxDecoration(
+              color: AppColors.surfaceHigh,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: AppColors.primary.withValues(alpha: 0.3),
+              ),
+            ),
+            child: const Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.videocam_rounded,
+                  color: AppColors.primary,
+                  size: 36,
+                ),
+                SizedBox(height: 6),
+                Text(
+                  'Tap to view liveness video',
+                  style: TextStyle(
+                    color: AppColors.textSecondary,
+                    fontSize: 12,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
     );
   }
 }

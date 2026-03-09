@@ -37,6 +37,11 @@ class TripService {
     return null;
   }
 
+  /// Get raw Firestore document for a trip.
+  Future<DocumentSnapshot> tripDoc(String tripId) {
+    return _tripsCollection.doc(tripId).get();
+  }
+
   /// Stream de un viaje específico en tiempo real
   Stream<TripModel?> getTripStream(String tripId) {
     return _tripsCollection.doc(tripId).snapshots().map((doc) {

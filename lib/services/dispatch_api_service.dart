@@ -297,6 +297,58 @@ class DispatchApiService {
     return result as Map<String, dynamic>;
   }
 
+  // ═══════════════════════════════════════════════════════
+  //  VERIFICATION ENDPOINTS
+  // ═══════════════════════════════════════════════════════
+
+  /// Approve a driver verification (syncs to backend SQLite + Firestore).
+  static Future<Map<String, dynamic>> approveVerification(int userId) async {
+    final result = await _post('/auth/dispatch-approve/$userId');
+    return result as Map<String, dynamic>;
+  }
+
+  /// Reject a driver verification with reason.
+  static Future<Map<String, dynamic>> rejectVerification(
+    int userId,
+    String reason,
+  ) async {
+    final result = await _post(
+      '/auth/dispatch-reject/$userId',
+      body: {'reason': reason},
+    );
+    return result as Map<String, dynamic>;
+  }
+
+  /// Review any user's verification (approve/reject via PATCH).
+  static Future<Map<String, dynamic>> reviewVerification(
+    int userId, {
+    required String action,
+    String reason = '',
+  }) async {
+    final result = await _patch(
+      '/admin/verifications/$userId',
+      body: {'action': action, 'reason': reason},
+    );
+    return result as Map<String, dynamic>;
+  }
+
+  /// List verifications from backend.
+  static Future<List<Map<String, dynamic>>> listVerifications({
+    String? status,
+    int limit = 100,
+  }) async {
+    final params = <String, String>{'limit': limit.toString()};
+    if (status != null) params['status'] = status;
+    final result = await _get('/admin/verifications', queryParams: params);
+    return (result as List).cast<Map<String, dynamic>>();
+  }
+
+  /// Get driver stats (acceptance rate, completed trips, etc.).
+  static Future<Map<String, dynamic>> getDriverStats(int driverId) async {
+    final result = await _get('/drivers/$driverId/stats');
+    return result as Map<String, dynamic>;
+  }
+
   /// Health check
   static Future<bool> healthCheck() async {
     try {

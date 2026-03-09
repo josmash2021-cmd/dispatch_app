@@ -1,4 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/foundation.dart';
+import 'dispatch_api_service.dart';
 
 class VerificationRequest {
   final String docId;
@@ -19,6 +21,7 @@ class VerificationRequest {
   final String? licenseFrontUrl;
   final String? licenseBackUrl;
   final String? insuranceUrl;
+  final String? verificationVideoUrl;
   final Map<String, dynamic>? vehicle;
   // SSN (masked — only last 4 visible)
   final bool ssnProvided;
@@ -44,6 +47,7 @@ class VerificationRequest {
     this.licenseFrontUrl,
     this.licenseBackUrl,
     this.insuranceUrl,
+    this.verificationVideoUrl,
     this.vehicle,
     this.ssnProvided = false,
     this.ssnMasked,
@@ -77,6 +81,7 @@ class VerificationRequest {
       licenseFrontUrl: data['licenseFrontUrl'] as String?,
       licenseBackUrl: data['licenseBackUrl'] as String?,
       insuranceUrl: data['insuranceUrl'] as String?,
+      verificationVideoUrl: data['verificationVideoUrl'] as String?,
       vehicle: data['vehicle'] as Map<String, dynamic>?,
       ssnProvided: data['ssnProvided'] as bool? ?? false,
       ssnMasked: data['ssnMasked'] as String?,
@@ -114,6 +119,7 @@ class VerificationService {
     if (doc.exists) {
       final data = doc.data() as Map<String, dynamic>? ?? {};
       final role = data['role'] as String? ?? 'rider';
+      final userId = (data['userId'] as num?)?.toInt() ?? 0;
       final col = role == 'driver' ? 'drivers' : 'clients';
       await _firestore.collection(col).doc(docId).set({
         'isVerified': true,
@@ -128,6 +134,21 @@ class VerificationService {
         'verificationReason': null,
         'lastUpdated': FieldValue.serverTimestamp(),
       }, SetOptions(merge: true));
+      // Sync to backend SQLite
+      if (userId > 0) {
+        try {
+          if (role == 'driver') {
+            await DispatchApiService.approveVerification(userId);
+          } else {
+            await DispatchApiService.reviewVerification(
+              userId,
+              action: 'approve',
+            );
+          }
+        } catch (e) {
+          debugPrint('[Verification] Backend approve sync failed: $e');
+        }
+      }
     }
   }
 
@@ -143,6 +164,7 @@ class VerificationService {
     if (doc.exists) {
       final data = doc.data() as Map<String, dynamic>? ?? {};
       final role = data['role'] as String? ?? 'rider';
+      final userId = (data['userId'] as num?)?.toInt() ?? 0;
       final col = role == 'driver' ? 'drivers' : 'clients';
       await _firestore.collection(col).doc(docId).set({
         'isVerified': false,
@@ -156,6 +178,22 @@ class VerificationService {
         'verificationReason': reason,
         'lastUpdated': FieldValue.serverTimestamp(),
       }, SetOptions(merge: true));
+      // Sync to backend SQLite
+      if (userId > 0) {
+        try {
+          if (role == 'driver') {
+            await DispatchApiService.rejectVerification(userId, reason);
+          } else {
+            await DispatchApiService.reviewVerification(
+              userId,
+              action: 'reject',
+              reason: reason,
+            );
+          }
+        } catch (e) {
+          debugPrint('[Verification] Backend reject sync failed: $e');
+        }
+      }
     }
   }
 

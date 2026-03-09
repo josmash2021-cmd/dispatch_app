@@ -6,6 +6,7 @@ import '../config/app_theme.dart';
 import '../models/driver_model.dart';
 import '../models/trip_model.dart';
 import '../providers/trip_provider.dart';
+import '../services/dispatch_api_service.dart';
 import '../services/driver_service.dart';
 import '../services/trip_service.dart';
 import '../widgets/status_badge.dart';
@@ -368,6 +369,43 @@ class _TripDetailScreenState extends State<TripDetailScreen>
       ),
       child: Row(
         children: [
+          if (trip.status == TripStatus.requested) ...[
+            Expanded(
+              child: GestureDetector(
+                onTap: () => _handleAction(context, 'dispatch'),
+                child: Container(
+                  height: 52,
+                  decoration: BoxDecoration(
+                    color: AppColors.primary,
+                    borderRadius: BorderRadius.circular(14),
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppColors.primary.withValues(alpha: 0.35),
+                        blurRadius: 12,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: const Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.send_rounded, color: Colors.white, size: 20),
+                      SizedBox(width: 8),
+                      Text(
+                        'Dispatch',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w700,
+                          fontSize: 15,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(width: 10),
+          ],
           Expanded(
             child: GestureDetector(
               onTap: () => _handleAction(context, action),
@@ -852,6 +890,9 @@ class _TripDetailScreenState extends State<TripDetailScreen>
         provider.updateTripStatus(trip.tripId, TripStatus.accepted);
         Navigator.pop(context);
         break;
+      case 'dispatch':
+        _dispatchToNearest(context);
+        break;
       case 'arrived':
         provider.updateTripStatus(trip.tripId, TripStatus.driverArrived);
         Navigator.pop(context);
@@ -870,6 +911,47 @@ class _TripDetailScreenState extends State<TripDetailScreen>
       case 'delete':
         _showDeleteDialog(context);
         break;
+    }
+  }
+
+  void _dispatchToNearest(BuildContext context) async {
+    // Read sqliteId from Firestore doc
+    final tripService = TripService();
+    final doc = await tripService.tripDoc(trip.tripId);
+    final data = doc.data() as Map<String, dynamic>? ?? {};
+    final sqliteId = data['sqliteId'] as int?;
+    if (sqliteId == null) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Trip not synced to backend yet')),
+        );
+      }
+      return;
+    }
+    try {
+      final result = await DispatchApiService.dispatchTrip(sqliteId);
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            backgroundColor: AppColors.surfaceHigh,
+            behavior: SnackBarBehavior.floating,
+            content: Text(
+              result['message'] as String? ?? 'Dispatched successfully',
+              style: const TextStyle(color: AppColors.textPrimary),
+            ),
+          ),
+        );
+        Navigator.pop(context);
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            backgroundColor: AppColors.error,
+            content: Text('Dispatch failed: $e'),
+          ),
+        );
+      }
     }
   }
 
