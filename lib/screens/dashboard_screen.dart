@@ -255,6 +255,7 @@ class _AppDrawer extends StatelessWidget {
     _NavItem(Icons.verified_user_outlined, Icons.verified_user, 'Verify'),
     _NavItem(Icons.bar_chart_outlined, Icons.bar_chart, 'Stats'),
     _NavItem(Icons.receipt_long_outlined, Icons.receipt_long, 'Reports'),
+    _NavItem(Icons.chat_outlined, Icons.chat_rounded, 'Chat'),
     _NavItem(Icons.settings_outlined, Icons.settings_rounded, 'Config'),
     _NavItem(Icons.event_note_outlined, Icons.event_note_rounded, 'Scheduled'),
   ];
