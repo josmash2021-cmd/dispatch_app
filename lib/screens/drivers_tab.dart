@@ -243,7 +243,7 @@ class _DriverCard extends StatelessWidget {
           width: 48,
           height: 48,
           fit: BoxFit.cover,
-          errorBuilder: (_, __, ___) => _initialAvatar(),
+          errorBuilder: (_, _, _) => _initialAvatar(),
         ),
       );
     }
@@ -505,7 +505,7 @@ class _DriverCard extends StatelessWidget {
                             width: 44,
                             height: 44,
                             fit: BoxFit.cover,
-                            errorBuilder: (_, __, ___) => Container(
+                            errorBuilder: (_, _, _) => Container(
                               width: 44,
                               height: 44,
                               decoration: BoxDecoration(
@@ -2133,7 +2133,7 @@ class _DriverPhotosStripState extends State<_DriverPhotosStrip> {
             height: 90,
             width: double.infinity,
             fit: BoxFit.cover,
-            errorBuilder: (_, __, ___) => Container(
+            errorBuilder: (_, _, _) => Container(
               height: 90,
               decoration: BoxDecoration(
                 color: AppColors.surfaceHigh,
@@ -2232,17 +2232,19 @@ class _DriverServerDocumentsWidgetState
   Future<void> _loadDocs() async {
     try {
       final docs = await DispatchApiService.getUserDocuments(widget.sqliteId);
-      if (mounted)
+      if (mounted) {
         setState(() {
           _docs = docs;
           _loading = false;
         });
+      }
     } catch (e) {
-      if (mounted)
+      if (mounted) {
         setState(() {
           _error = '$e';
           _loading = false;
         });
+      }
     }
   }
 
@@ -2366,7 +2368,7 @@ class _DriverServerDocumentsWidgetState
                               child: Image.network(
                                 url,
                                 fit: BoxFit.contain,
-                                errorBuilder: (_, __, ___) => const Padding(
+                                errorBuilder: (_, _, _) => const Padding(
                                   padding: EdgeInsets.all(32),
                                   child: Icon(
                                     Icons.broken_image,

@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
 import '../models/client_model.dart';
@@ -53,6 +54,7 @@ class ClientService {
         }, onError: (e) => controller.addError(e));
 
     final sub2 = _usersCollection
+        .where('role', isEqualTo: 'rider')
         .orderBy('createdAt', descending: true)
         .snapshots()
         .map((s) => s.docs.map((d) => ClientModel.fromFirestore(d)).toList())
@@ -89,7 +91,38 @@ class ClientService {
     final data = client.toMap();
     data['createdAt'] = FieldValue.serverTimestamp();
     final docRef = await _clientsCollection.add(data);
+    // Best-effort: register in backend so SQLite stays in sync
+    _syncNewClientToBackend(docRef.id, client);
     return docRef.id;
+  }
+
+  /// Register a newly-added client in the backend SQLite via /auth/register.
+  void _syncNewClientToBackend(String firestoreId, ClientModel client) async {
+    try {
+      final tempPassword = _generateTempPassword();
+      final user = await DispatchApiService.registerUser(
+        firstName: client.firstName,
+        lastName: client.lastName,
+        phone: client.phone,
+        email: client.email,
+        password: tempPassword,
+        role: 'rider',
+      );
+      final sqliteId = user['id'] as int?;
+      if (sqliteId != null) {
+        await _clientsCollection.doc(firestoreId).update({
+          'sqliteId': sqliteId,
+        });
+      }
+    } catch (e) {
+      debugPrint('[ClientService] Backend register sync failed: $e');
+    }
+  }
+
+  static String _generateTempPassword() {
+    const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    final rng = Random.secure();
+    return List.generate(12, (_) => chars[rng.nextInt(chars.length)]).join();
   }
 
   /// Update a client

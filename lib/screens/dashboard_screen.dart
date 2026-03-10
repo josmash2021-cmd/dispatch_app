@@ -110,8 +110,8 @@ class _DashboardScreenState extends State<DashboardScreen>
               if (data == null) continue;
               final type = data['type'] as String? ?? '';
               final message = data['message'] as String? ?? '';
-              final userName = data['userName'] as String? ?? '';
-              final chatId = data['chatId'] as int? ?? 0;
+              final userName = data['userName'] as String? ?? ''; // ignore: unused_local_variable
+              final chatId = data['chatId'] as int? ?? 0; // ignore: unused_local_variable
 
               // Show in-app notification
               if (mounted) {

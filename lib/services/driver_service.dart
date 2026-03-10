@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
 import '../models/driver_model.dart';
@@ -88,7 +89,37 @@ class DriverService {
     final data = driver.toMap();
     data['createdAt'] = FieldValue.serverTimestamp();
     final docRef = await _driversCollection.add(data);
+    // Best-effort: register in backend so SQLite stays in sync
+    _syncNewDriverToBackend(docRef.id, driver);
     return docRef.id;
+  }
+
+  /// Register a newly-added driver in the backend SQLite via /auth/register.
+  void _syncNewDriverToBackend(String firestoreId, DriverModel driver) async {
+    try {
+      final tempPassword = _generateTempPassword();
+      final user = await DispatchApiService.registerUser(
+        firstName: driver.firstName,
+        lastName: driver.lastName,
+        phone: driver.phone,
+        password: tempPassword,
+        role: 'driver',
+      );
+      final sqliteId = user['id'] as int?;
+      if (sqliteId != null) {
+        await _driversCollection.doc(firestoreId).update({
+          'sqliteId': sqliteId,
+        });
+      }
+    } catch (e) {
+      debugPrint('[DriverService] Backend register sync failed: $e');
+    }
+  }
+
+  static String _generateTempPassword() {
+    const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    final rng = Random.secure();
+    return List.generate(12, (_) => chars[rng.nextInt(chars.length)]).join();
   }
 
   /// Update driver online status

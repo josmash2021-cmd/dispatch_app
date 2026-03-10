@@ -393,6 +393,28 @@ class DispatchApiService {
     return result as Map<String, dynamic>;
   }
 
+  /// Register a new user via the backend /auth/register endpoint.
+  /// Returns the created user map (includes id, role, etc.).
+  static Future<Map<String, dynamic>> registerUser({
+    required String firstName,
+    required String lastName,
+    required String phone,
+    String? email,
+    required String password,
+    String role = 'rider',
+  }) async {
+    final result = await _post('/auth/register', body: {
+      'first_name': firstName,
+      'last_name': lastName,
+      'phone': phone,
+      if (email != null && email.isNotEmpty) 'email': email,
+      'password': password,
+      'role': role,
+    });
+    final user = (result as Map<String, dynamic>)['user'];
+    return user as Map<String, dynamic>;
+  }
+
   /// Permanently delete a user and their documents.
   static Future<void> deleteUser(int userId) async {
     await _delete('/admin/users/$userId');

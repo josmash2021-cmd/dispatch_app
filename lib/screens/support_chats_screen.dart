@@ -94,7 +94,7 @@ class _SupportChatsScreenState extends State<SupportChatsScreen> {
     final userId = chat['user_id'] as int?;
     final chatId = chat['id'] as int;
     final needsEscalation = chat['needs_escalation'] == true;
-    final botPhase = chat['bot_phase'] ?? '';
+    final botPhase = chat['bot_phase'] ?? ''; // ignore: unused_local_variable
     final agentName = chat['agent_name'] ?? '';
 
     final String? photoUrl;
