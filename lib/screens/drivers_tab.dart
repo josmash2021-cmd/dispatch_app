@@ -1066,15 +1066,10 @@ class _DriverCard extends StatelessWidget {
                 'Username',
                 driver.username ?? driver.email ?? driver.phone,
               ),
-              _detailRow(
-                Icons.lock_outlined,
-                'Password',
-                (driver.password != null ||
-                        driver.passwordHash != null ||
-                        driver.hasPassword)
-                    ? '••••••••'
-                    : 'Not set',
-              ),
+              if (driver.sqliteId != null)
+                _UserPasswordWidget(sqliteId: driver.sqliteId!)
+              else
+                _detailRow(Icons.lock_outlined, 'Password', 'Not set'),
               if (driver.sqliteId != null &&
                   (driver.password != null ||
                       driver.passwordHash != null ||
