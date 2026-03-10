@@ -2228,3 +2228,215 @@ class _UDServerDocsWidgetState extends State<_UDServerDocsWidget> {
     );
   }
 }
+
+// ─── Password Widget ──────────────────────────────────────────────────────────
+
+class _UDPasswordWidget extends StatefulWidget {
+  final int sqliteId;
+
+  const _UDPasswordWidget({required this.sqliteId});
+
+  @override
+  State<_UDPasswordWidget> createState() => _UDPasswordWidgetState();
+}
+
+class _UDPasswordWidgetState extends State<_UDPasswordWidget> {
+  String? _password;
+  bool _loading = true;
+  String? _error;
+  bool _obscurePassword = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadPassword();
+  }
+
+  Future<void> _loadPassword() async {
+    try {
+      final detail = await DispatchApiService.getUserDetail(widget.sqliteId);
+      final pwd = detail['password'] as String?;
+      if (mounted) {
+        setState(() {
+          _password = pwd;
+          _loading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _error = '$e';
+          _loading = false;
+        });
+      }
+    }
+  }
+
+  void _copyPassword() {
+    if (_password != null) {
+      Clipboard.setData(ClipboardData(text: _password!));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          backgroundColor: AppColors.success,
+          behavior: SnackBarBehavior.floating,
+          content: Text('Contraseña copiada al portapapeles'),
+          duration: Duration(seconds: 2),
+        ),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_loading) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 12),
+        child: Row(
+          children: [
+            const Icon(
+              Icons.lock_outlined,
+              size: 20,
+              color: AppColors.textHint,
+            ),
+            const SizedBox(width: 12),
+            const Expanded(
+              child: Text(
+                'Contraseña',
+                style: TextStyle(
+                  color: AppColors.textSecondary,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+            const SizedBox(
+              width: 16,
+              height: 16,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            ),
+          ],
+        ),
+      );
+    }
+
+    if (_error != null) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 12),
+        child: Row(
+          children: [
+            const Icon(
+              Icons.lock_outlined,
+              size: 20,
+              color: AppColors.error,
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Contraseña',
+                    style: TextStyle(
+                      color: AppColors.textSecondary,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    'Error al cargar',
+                    style: TextStyle(
+                      color: AppColors.error.withValues(alpha: 0.7),
+                      fontSize: 12,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    final displayPassword = _password ?? 'Sin contraseña';
+    final hasPassword = _password != null && _password!.isNotEmpty;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 12),
+      child: Row(
+        children: [
+          Icon(
+            Icons.lock_outlined,
+            size: 20,
+            color: hasPassword ? AppColors.primary : AppColors.textHint,
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Contraseña',
+                  style: TextStyle(
+                    color: AppColors.textSecondary,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        hasPassword && _obscurePassword
+                            ? '••••••••'
+                            : displayPassword,
+                        style: TextStyle(
+                          color: hasPassword
+                              ? AppColors.textPrimary
+                              : AppColors.textHint,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          fontFamily: hasPassword ? 'monospace' : null,
+                        ),
+                      ),
+                    ),
+                    if (hasPassword) ...[
+                      const SizedBox(width: 8),
+                      InkWell(
+                        onTap: () => setState(() => _obscurePassword = !_obscurePassword),
+                        borderRadius: BorderRadius.circular(8),
+                        child: Padding(
+                          padding: const EdgeInsets.all(6),
+                          child: Icon(
+                            _obscurePassword
+                                ? Icons.visibility_outlined
+                                : Icons.visibility_off_outlined,
+                            size: 18,
+                            color: AppColors.primary,
+                          ),
+                        ),
+                      ),
+                      InkWell(
+                        onTap: _copyPassword,
+                        borderRadius: BorderRadius.circular(8),
+                        child: const Padding(
+                          padding: EdgeInsets.all(6),
+                          child: Icon(
+                            Icons.copy_rounded,
+                            size: 18,
+                            color: AppColors.primary,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
