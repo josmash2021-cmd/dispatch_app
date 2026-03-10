@@ -10,7 +10,7 @@ import '../config/env.dart';
 /// Used by the dispatch admin panel to sync operations with the backend.
 class DispatchApiService {
   static const String _defaultTunnelUrl =
-      'https://first-rolls-dec-saw.trycloudflare.com';
+      'https://baseball-citations-expenditures-boxed.trycloudflare.com';
   static const String _localNetworkUrl = 'http://172.20.11.24:8000';
   static const String _localUrl = 'http://10.0.2.2:8000';
   static const String _adbUrl = 'http://localhost:8000';
