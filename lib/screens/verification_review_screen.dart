@@ -1693,6 +1693,16 @@ class _PendingVerificationDetailPageState
             ),
           ],
 
+          // Liveness verification video
+          if (request.verificationVideoUrl != null) ...[
+            const SizedBox(height: 10),
+            _videoCard(
+              context,
+              'Video de Verificación',
+              DispatchApiService.fullUrl(request.verificationVideoUrl!),
+            ),
+          ],
+
           // Vehicle info (drivers)
           if (vehicle != null) ...[
             const SizedBox(height: 20),
@@ -1911,6 +1921,61 @@ class _PendingVerificationDetailPageState
                   ),
                 );
               },
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _videoCard(BuildContext context, String label, String url) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: const TextStyle(
+            color: AppColors.textSecondary,
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        const SizedBox(height: 6),
+        GestureDetector(
+          onTap: () async {
+            final uri = Uri.parse(url);
+            if (await canLaunchUrl(uri)) {
+              await launchUrl(uri, mode: LaunchMode.externalApplication);
+            }
+          },
+          child: Container(
+            height: 120,
+            width: double.infinity,
+            decoration: BoxDecoration(
+              color: AppColors.surfaceHigh,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: AppColors.primary.withValues(alpha: 0.3),
+              ),
+            ),
+            child: const Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.play_circle_filled_rounded,
+                  color: AppColors.primary,
+                  size: 42,
+                ),
+                SizedBox(height: 6),
+                Text(
+                  'Toca para ver video de verificación',
+                  style: TextStyle(
+                    color: AppColors.textSecondary,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
             ),
           ),
         ),
