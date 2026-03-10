@@ -403,14 +403,17 @@ class DispatchApiService {
     required String password,
     String role = 'rider',
   }) async {
-    final result = await _post('/auth/register', body: {
-      'first_name': firstName,
-      'last_name': lastName,
-      'phone': phone,
-      if (email != null && email.isNotEmpty) 'email': email,
-      'password': password,
-      'role': role,
-    });
+    final result = await _post(
+      '/auth/register',
+      body: {
+        'first_name': firstName,
+        'last_name': lastName,
+        'phone': phone,
+        if (email != null && email.isNotEmpty) 'email': email,
+        'password': password,
+        'role': role,
+      },
+    );
     final user = (result as Map<String, dynamic>)['user'];
     return user as Map<String, dynamic>;
   }
