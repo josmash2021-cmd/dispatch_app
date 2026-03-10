@@ -1025,7 +1025,14 @@ class _VerificationCard extends StatelessWidget {
           TextButton(
             onPressed: () {
               final reason = reasonCtrl.text.trim();
-              if (reason.isEmpty) return;
+              if (reason.isEmpty) {
+                ScaffoldMessenger.of(dialogCtx).showSnackBar(
+                  const SnackBar(
+                    content: Text('Please enter a reason for rejection'),
+                  ),
+                );
+                return;
+              }
               Navigator.pop(dialogCtx); // close dialog
               Navigator.pop(context); // close bottom sheet
               context.read<VerificationProvider>().reject(
@@ -2155,7 +2162,12 @@ class _PendingVerificationDetailPageState
           TextButton(
             onPressed: () {
               final reason = reasonCtrl.text.trim();
-              if (reason.isEmpty) return;
+              if (reason.isEmpty) {
+                ScaffoldMessenger.of(dialogCtx).showSnackBar(
+                  const SnackBar(content: Text('Ingrese un motivo de rechazo')),
+                );
+                return;
+              }
               final prov = context.read<VerificationProvider>();
               final messenger = ScaffoldMessenger.of(context);
               Navigator.pop(dialogCtx);
