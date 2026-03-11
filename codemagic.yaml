@@ -115,6 +115,11 @@ workflows:
       - name: Flutter pub get
         script: flutter pub get
 
+      - name: Generate Launcher Icons
+        script: |
+          flutter pub run flutter_launcher_icons:main
+          echo "Icons generated with white background"
+
       - name: Generate iOS config
         script: flutter build ios --config-only --no-codesign --no-pub
 
@@ -334,6 +339,11 @@ workflows:
       - name: Flutter pub get
         script: flutter pub get
 
+      - name: Generate Launcher Icons
+        script: |
+          flutter pub run flutter_launcher_icons:main
+          echo "Icons generated with white background"
+
       - name: Flutter build IPA
         script: |
           flutter build ipa --release --export-options-plist=/Users/builder/export_options.plist
@@ -385,6 +395,11 @@ workflows:
       - name: Flutter pub get
         script: flutter pub get
 
+      - name: Generate Launcher Icons
+        script: |
+          flutter pub run flutter_launcher_icons:main
+          echo "Icons generated with white background"
+
       - name: Build Android AAB
         script: |
           flutter build appbundle --release --build-name=1.0.0 --build-number=$BUILD_NUMBER
@@ -431,6 +446,11 @@ workflows:
 
       - name: Flutter pub get
         script: flutter pub get
+
+      - name: Generate Launcher Icons
+        script: |
+          flutter pub run flutter_launcher_icons:main
+          echo "Icons generated with white background"
 
       - name: Build APK
         script: |
