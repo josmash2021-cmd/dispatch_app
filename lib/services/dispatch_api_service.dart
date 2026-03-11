@@ -10,15 +10,15 @@ import '../config/env.dart';
 /// Used by the dispatch admin panel to sync operations with the backend.
 class DispatchApiService {
   static const String _defaultTunnelUrl =
-      'https://api.cruiseinride.com';
+      'https://jaida-intervarsity-tashina.ngrok-free.dev';
   static const String _localNetworkUrl = 'http://172.20.11.24:8000';
   static const String _localUrl = 'http://10.0.2.2:8000';
   static const String _adbUrl = 'http://localhost:8000';
 
   static const String _serverUrlPrefKey = 'dispatch_server_url';
 
-  // USAR IP LOCAL PRIMERO - Servidor activo en PC
-  static String _activeUrl = _localNetworkUrl;
+  // USAR NGROK PRIMERO - Servidor expuesto a internet
+  static String _activeUrl = _defaultTunnelUrl;
   static String get activeServerUrl => _activeUrl;
 
   static const String _apiKey = Env.apiKey;
