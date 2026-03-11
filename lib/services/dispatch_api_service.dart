@@ -17,7 +17,8 @@ class DispatchApiService {
 
   static const String _serverUrlPrefKey = 'dispatch_server_url';
 
-  static String _activeUrl = _defaultTunnelUrl;
+  // USAR IP LOCAL PRIMERO - Servidor activo en PC
+  static String _activeUrl = _localNetworkUrl;
   static String get activeServerUrl => _activeUrl;
 
   static const String _apiKey = Env.apiKey;
