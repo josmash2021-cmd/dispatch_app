@@ -13,18 +13,20 @@ class TripService {
     TripStatus? statusFilter,
     int? limit,
   }) {
-    Query query = _tripsCollection.orderBy('createdAt', descending: true);
-
-    if (statusFilter != null) {
-      query = query.where('status', isEqualTo: statusFilter.value);
-    }
-
-    if (limit != null) {
-      query = query.limit(limit);
-    }
-
-    return query.snapshots().map((snapshot) {
-      return snapshot.docs.map((doc) => TripModel.fromFirestore(doc)).toList();
+    return _tripsCollection.snapshots().map((snapshot) {
+      List<TripModel> list = snapshot.docs.map((doc) => TripModel.fromFirestore(doc)).toList();
+      if (statusFilter != null) {
+        list = list.where((t) => t.status == statusFilter).toList();
+      }
+      list.sort((a, b) {
+        final aTime = a.createdAt ?? DateTime(2000);
+        final bTime = b.createdAt ?? DateTime(2000);
+        return bTime.compareTo(aTime);
+      });
+      if (limit != null && list.length > limit) {
+        list = list.sublist(0, limit);
+      }
+      return list;
     });
   }
 
