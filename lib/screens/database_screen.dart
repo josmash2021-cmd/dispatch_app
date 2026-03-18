@@ -42,36 +42,7 @@ class _DatabaseScreenState extends State<DatabaseScreen>
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: Row(
-          children: [
-            Container(
-              width: 32,
-              height: 32,
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [AppColors.primary, AppColors.primaryLight],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-                borderRadius: BorderRadius.circular(9),
-              ),
-              child: const Icon(
-                Icons.storage_rounded,
-                color: Color(0xFF08090C),
-                size: 17,
-              ),
-            ),
-            const SizedBox(width: 10),
-            const Text(
-              'Database',
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.w700,
-                color: AppColors.textPrimary,
-              ),
-            ),
-          ],
-        ),
+        automaticallyImplyLeading: false,
         backgroundColor: AppColors.background,
         elevation: 0,
         bottom: PreferredSize(

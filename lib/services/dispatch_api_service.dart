@@ -20,6 +20,10 @@ class DispatchApiService {
   static String _activeUrl = _defaultTunnelUrl;
   static String get activeServerUrl => _activeUrl;
 
+  // Simple cache for user details to reduce API calls
+  static final Map<String, _CacheEntry> _cache = {};
+  static const Duration _cacheDuration = Duration(seconds: 30);
+
   static const String _apiKey = Env.apiKey;
   static const String _hmacSecret = Env.hmacSecret;
 
@@ -151,15 +155,34 @@ class DispatchApiService {
   static Future<dynamic> _get(
     String path, {
     Map<String, String>? queryParams,
+    Duration timeout = const Duration(seconds: 10),
+    bool useCache = false,
   }) async {
+    final cacheKey = '$path${queryParams?.toString() ?? ""}';
+    
+    // Check cache
+    if (useCache && _cache.containsKey(cacheKey)) {
+      final entry = _cache[cacheKey]!;
+      if (entry.isValid) {
+        debugPrint('[DispatchApi] Cache hit for $path');
+        return entry.data;
+      }
+      _cache.remove(cacheKey);
+    }
+    
     final uri = Uri.parse(
       '$_activeUrl$path',
     ).replace(queryParameters: queryParams);
     final res = await http
         .get(uri, headers: _headers())
-        .timeout(const Duration(seconds: 15));
+        .timeout(timeout);
     if (res.statusCode >= 200 && res.statusCode < 300) {
-      return jsonDecode(res.body);
+      final data = jsonDecode(res.body);
+      // Store in cache if requested
+      if (useCache) {
+        _cache[cacheKey] = _CacheEntry(data);
+      }
+      return data;
     }
     throw ApiException(res.statusCode, _extractDetail(res.body));
   }
@@ -167,6 +190,7 @@ class DispatchApiService {
   static Future<dynamic> _post(
     String path, {
     Map<String, dynamic>? body,
+    Duration timeout = const Duration(seconds: 10),
   }) async {
     final res = await http
         .post(
@@ -174,7 +198,7 @@ class DispatchApiService {
           headers: _headers(),
           body: body != null ? jsonEncode(body) : null,
         )
-        .timeout(const Duration(seconds: 15));
+        .timeout(timeout);
     if (res.statusCode >= 200 && res.statusCode < 300) {
       return jsonDecode(res.body);
     }
@@ -184,6 +208,7 @@ class DispatchApiService {
   static Future<dynamic> _patch(
     String path, {
     Map<String, dynamic>? body,
+    Duration timeout = const Duration(seconds: 10),
   }) async {
     final res = await http
         .patch(
@@ -191,8 +216,10 @@ class DispatchApiService {
           headers: _headers(),
           body: body != null ? jsonEncode(body) : null,
         )
-        .timeout(const Duration(seconds: 15));
+        .timeout(timeout);
     if (res.statusCode >= 200 && res.statusCode < 300) {
+      // Clear cache on updates
+      _cache.clear();
       return jsonDecode(res.body);
     }
     throw ApiException(res.statusCode, _extractDetail(res.body));
@@ -201,11 +228,18 @@ class DispatchApiService {
   static Future<dynamic> _delete(String path) async {
     final res = await http
         .delete(Uri.parse('$_activeUrl$path'), headers: _headers())
-        .timeout(const Duration(seconds: 15));
+        .timeout(const Duration(seconds: 10));
     if (res.statusCode >= 200 && res.statusCode < 300) {
+      // Clear cache on deletes
+      _cache.clear();
       return jsonDecode(res.body);
     }
     throw ApiException(res.statusCode, _extractDetail(res.body));
+  }
+
+  /// Clear the cache manually
+  static void clearCache() {
+    _cache.clear();
   }
 
   static String _extractDetail(String body) {
@@ -518,4 +552,16 @@ class ApiException implements Exception {
   const ApiException(this.statusCode, this.message);
   @override
   String toString() => 'ApiException($statusCode): $message';
+}
+
+/// Simple cache entry with timestamp
+class _CacheEntry {
+  final dynamic data;
+  final DateTime timestamp;
+  
+  _CacheEntry(this.data) : timestamp = DateTime.now();
+  
+  bool get isValid {
+    return DateTime.now().difference(timestamp) < DispatchApiService._cacheDuration;
+  }
 }

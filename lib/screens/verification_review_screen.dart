@@ -2301,6 +2301,8 @@ class _UserDetailWidgetState extends State<_UserDetailWidget> {
     final backendIdPhoto = _user!['id_photo_url'] as String?;
     final backendSelfie = _user!['selfie_url'] as String?;
     final vehicleType = _user!['vehicle_type'] as String?;
+    final role = _user!['role'] as String? ?? 'rider';
+    final isDriver = role == 'driver' || (vehicleType != null && vehicleType.isNotEmpty);
     final username = _user!['username'] as String?;
 
     debugPrint('[UserDetail] build: password=$password, ssnProvided=$ssnProvided, backendIdPhoto=$backendIdPhoto, backendSelfie=$backendSelfie, docs=${docs.length}');
@@ -2434,11 +2436,11 @@ class _UserDetailWidgetState extends State<_UserDetailWidget> {
             _buildPhotoCard(context, 'Selfie', backendSelfie),
         ],
 
-        // ── Documents from server ──
-        if (docs.isNotEmpty) ...[
+        // ── Documents from server (solo para drivers) ──
+        if (isDriver && docs.isNotEmpty) ...[
           const SizedBox(height: 12),
           const Text(
-            'Server Documents',
+            'Documentos',
             style: TextStyle(
               color: AppColors.textPrimary,
               fontSize: 14,
