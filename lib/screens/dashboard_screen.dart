@@ -92,7 +92,9 @@ class _DashboardScreenState extends State<DashboardScreen>
       context.read<TripProvider>().startListening();
       context.read<ClientProvider>().startListening();
       context.read<DriverProvider>().startListening();
+      context.read<VerificationProvider>().startListening();
       _startNotificationListener();
+      _startProfileChangeListener();
     });
   }
 
@@ -175,6 +177,109 @@ class _DashboardScreenState extends State<DashboardScreen>
 
               // Mark as read
               change.doc.reference.update({'isRead': true});
+            }
+          }
+        });
+  }
+
+  void _startProfileChangeListener() {
+    // Listen for client profile changes (photo, phone, password updates)
+    FirebaseFirestore.instance
+        .collection('clients')
+        .where('lastUpdated', isGreaterThan: Timestamp.fromDate(
+          DateTime.now().subtract(const Duration(minutes: 1))
+        ))
+        .snapshots()
+        .listen((snapshot) {
+          for (final change in snapshot.docChanges) {
+            if (change.type == DocumentChangeType.modified) {
+              final data = change.doc.data();
+              if (data == null) continue;
+              final name = data['firstName'] ?? data['first_name'] ?? 'Usuario';
+              final changes = <String>[];
+              
+              if (data['photoUrl'] != null) changes.add('foto de perfil');
+              if (data['phone'] != null) changes.add('teléfono');
+              if (data['passwordUpdated'] == true) changes.add('contraseña');
+              
+              if (changes.isNotEmpty && mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    backgroundColor: AppColors.warning,
+                    content: Row(
+                      children: [
+                        const Icon(Icons.person_outline, color: Colors.white, size: 20),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            '📋 $name actualizó: ${changes.join(', ')}',
+                            style: const TextStyle(fontWeight: FontWeight.w600),
+                          ),
+                        ),
+                      ],
+                    ),
+                    behavior: SnackBarBehavior.floating,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    duration: const Duration(seconds: 6),
+                    action: SnackBarAction(
+                      label: 'Ver DB',
+                      textColor: Colors.white,
+                      onPressed: () => _onTabChanged(2), // Database tab
+                    ),
+                  ),
+                );
+              }
+            }
+          }
+        });
+    
+    // Listen for driver profile changes
+    FirebaseFirestore.instance
+        .collection('drivers')
+        .where('lastUpdated', isGreaterThan: Timestamp.fromDate(
+          DateTime.now().subtract(const Duration(minutes: 1))
+        ))
+        .snapshots()
+        .listen((snapshot) {
+          for (final change in snapshot.docChanges) {
+            if (change.type == DocumentChangeType.modified) {
+              final data = change.doc.data();
+              if (data == null) continue;
+              final name = data['firstName'] ?? data['first_name'] ?? 'Conductor';
+              final changes = <String>[];
+              
+              if (data['photoUrl'] != null) changes.add('foto de perfil');
+              if (data['phone'] != null) changes.add('teléfono');
+              if (data['passwordUpdated'] == true) changes.add('contraseña');
+              if (data['vehicle'] != null) changes.add('vehículo');
+              
+              if (changes.isNotEmpty && mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    backgroundColor: const Color(0xFF1565C0),
+                    content: Row(
+                      children: [
+                        const Icon(Icons.local_taxi_outlined, color: Colors.white, size: 20),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            '🚕 $name actualizó: ${changes.join(', ')}',
+                            style: const TextStyle(fontWeight: FontWeight.w600),
+                          ),
+                        ),
+                      ],
+                    ),
+                    behavior: SnackBarBehavior.floating,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    duration: const Duration(seconds: 6),
+                    action: SnackBarAction(
+                      label: 'Ver DB',
+                      textColor: Colors.white,
+                      onPressed: () => _onTabChanged(2),
+                    ),
+                  ),
+                );
+              }
             }
           }
         });
