@@ -14,6 +14,8 @@ import '../providers/trip_provider.dart';
 import '../providers/verification_provider.dart';
 import '../services/notification_service.dart';
 import '../widgets/stat_card.dart';
+import 'riders_screen.dart';
+import 'drivers_screen.dart';
 import 'trip_list_screen.dart';
 import 'create_trip_screen.dart';
 import 'database_screen.dart';
@@ -48,8 +50,10 @@ class _DashboardScreenState extends State<DashboardScreen>
   static const _pages = <Widget>[
     TripListScreen(),
     FleetMapScreen(),
-    DatabaseScreen(),
-    VerificationReviewScreen(),
+    RidersScreen(),      // Separate Riders page
+    DriversScreen(),     // Separate Drivers page
+    VerificationReviewScreen(),  // Rider verification
+    VerificationReviewScreen(),  // Driver verification (will filter by role)
     _StatsContent(),
     ReportsScreen(),
     SupportChatsScreen(),
@@ -60,8 +64,10 @@ class _DashboardScreenState extends State<DashboardScreen>
   static const _navItems = [
     _NavItem(Icons.directions_car_outlined, Icons.directions_car, 'Trips'),
     _NavItem(Icons.map_outlined, Icons.map, 'Fleet Map'),
-    _NavItem(Icons.group_outlined, Icons.group_rounded, 'Database'),
-    _NavItem(Icons.verified_user_outlined, Icons.verified_user, 'Verify'),
+    _NavItem(Icons.person_outline, Icons.person, 'Riders'),      // Separate Riders
+    _NavItem(Icons.local_taxi_outlined, Icons.local_taxi, 'Drivers'),  // Separate Drivers
+    _NavItem(Icons.verified_user_outlined, Icons.verified_user, 'Verify Riders'),
+    _NavItem(Icons.local_taxi_rounded, Icons.local_taxi, 'Verify Drivers'),
     _NavItem(Icons.bar_chart_outlined, Icons.bar_chart, 'Stats'),
     _NavItem(Icons.receipt_long_outlined, Icons.receipt_long, 'Reports'),
     _NavItem(Icons.chat_outlined, Icons.chat_rounded, 'Chat'),
