@@ -25,6 +25,8 @@ class DriverProvider extends ChangeNotifier {
   int get totalDrivers => _drivers.length;
   int get onlineDrivers => _drivers.where((d) => d.isOnline).length;
   int get offlineDrivers => _drivers.where((d) => !d.isOnline).length;
+  int get verifiedDrivers => _drivers.where((d) => d.isVerified).length;
+  List<DriverModel> get filteredDrivers => _filteredDrivers;
 
   /// Start listening to real-time driver updates
   void startListening() {

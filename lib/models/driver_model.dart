@@ -72,6 +72,9 @@ class DriverModel {
   bool get isActive => status == 'active';
   bool get isInactive => status == 'deactivated';
   bool get isBlocked => status == 'blocked';
+  bool get isVerified =>
+      (licenseUrl != null && licenseUrl!.isNotEmpty) &&
+      (documentUrl != null && documentUrl!.isNotEmpty);
 
   String get fullName => '$firstName $lastName'.trim();
 

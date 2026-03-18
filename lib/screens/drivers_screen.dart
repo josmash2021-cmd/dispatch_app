@@ -216,7 +216,7 @@ class _ShimmerList extends StatelessWidget {
     return ListView.builder(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       itemCount: 6,
-      itemBuilder: (_, __) => const ShimmerCard(height: 80, margin: EdgeInsets.only(bottom: 8)),
+      itemBuilder: (_, __) => ShimmerCard(height: 80, margin: const EdgeInsets.only(bottom: 8)),
     );
   }
 }
