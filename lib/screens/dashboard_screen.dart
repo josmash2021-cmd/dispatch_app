@@ -16,6 +16,7 @@ import '../services/notification_service.dart';
 import '../widgets/stat_card.dart';
 import 'riders_screen.dart';
 import 'drivers_screen.dart';
+import 'driver_reports_screen.dart';
 import 'home_menu_screen.dart';
 import 'trip_list_screen.dart';
 import 'create_trip_screen.dart';
@@ -51,16 +52,16 @@ class _DashboardScreenState extends State<DashboardScreen>
   static const _navItems = [
     _NavItem(Icons.home_outlined, Icons.home, 'Inicio'),
     _NavItem(Icons.directions_car_outlined, Icons.directions_car, 'Viajes'),
-    _NavItem(Icons.map_outlined, Icons.map, 'Mapa'),
+    _NavItem(Icons.map_outlined, Icons.map, 'Mapa Fleet'),
     _NavItem(Icons.person_outline, Icons.person, 'Riders'),
     _NavItem(Icons.local_taxi_outlined, Icons.local_taxi, 'Drivers'),
     _NavItem(Icons.verified_user_outlined, Icons.verified_user, 'Verif. Riders'),
     _NavItem(Icons.local_taxi_rounded, Icons.local_taxi, 'Verif. Drivers'),
-    _NavItem(Icons.bar_chart_outlined, Icons.bar_chart, 'Stats'),
-    _NavItem(Icons.receipt_long_outlined, Icons.receipt_long, 'Reportes'),
-    _NavItem(Icons.chat_outlined, Icons.chat_rounded, 'Chat'),
-    _NavItem(Icons.settings_outlined, Icons.settings_rounded, 'Config'),
-    _NavItem(Icons.event_note_outlined, Icons.event_note_rounded, 'Agenda'),
+    _NavItem(Icons.analytics_outlined, Icons.analytics, 'Analytics'),
+    _NavItem(Icons.report_problem_outlined, Icons.report_problem, 'Rep. Drivers'),
+    _NavItem(Icons.chat_outlined, Icons.chat_rounded, 'Soporte'),
+    _NavItem(Icons.calendar_today_outlined, Icons.calendar_today, 'Agendados'),
+    _NavItem(Icons.settings_outlined, Icons.settings, 'Config'),
   ];
 
   List<Widget> get _pages => [
@@ -71,11 +72,11 @@ class _DashboardScreenState extends State<DashboardScreen>
     const DriversScreen(),
     const VerificationReviewScreen(),
     const VerificationReviewScreen(),
-    const _StatsContent(),
-    const ReportsScreen(),
+    const _StatsContent(),  // Analytics (Stats + Reportes)
+    const DriverReportsScreen(),  // NUEVO: Reportes de Drivers (crashes, bugs)
     const SupportChatsScreen(),
-    const AdminConfigScreen(),
     const ScheduledRidesScreen(),
+    const AdminConfigScreen(),
   ];
 
   @override

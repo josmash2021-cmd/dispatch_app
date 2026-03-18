@@ -36,13 +36,14 @@ class _HomeMenuScreenState extends State<HomeMenuScreen>
   int _driverCount = 0;
   int _pendingVerifications = 0;
   int _activeTrips = 0;
-  int _supportChats = 0;
+  int _driverReports = 0;
   
   StreamSubscription? _ridersSub;
   StreamSubscription? _driversSub;
   StreamSubscription? _verifSub;
   StreamSubscription? _tripsSub;
   StreamSubscription? _chatsSub;
+  StreamSubscription? _driverReportsSub;
 
   @override
   void initState() {
@@ -93,6 +94,13 @@ class _HomeMenuScreenState extends State<HomeMenuScreen>
         .where('hasUnread', isEqualTo: true)
         .snapshots()
         .listen((snap) => setState(() => _supportChats = snap.docs.length));
+    
+    // Driver reports (crashes, bugs, etc.)
+    _driverReportsSub = FirebaseFirestore.instance
+        .collection('driver_reports')
+        .where('status', isEqualTo: 'pending')
+        .snapshots()
+        .listen((snap) => setState(() => _driverReports = snap.docs.length));
   }
 
   @override
@@ -103,6 +111,7 @@ class _HomeMenuScreenState extends State<HomeMenuScreen>
     _verifSub?.cancel();
     _tripsSub?.cancel();
     _chatsSub?.cancel();
+    _driverReportsSub?.cancel();
     super.dispose();
   }
 
@@ -136,27 +145,30 @@ class _HomeMenuScreenState extends State<HomeMenuScreen>
                     childAspectRatio: 1.1,
                   ),
                   delegate: SliverChildListDelegate([
+                    // FILA 1: Operaciones
                     _MenuCard(
                       icon: Icons.directions_car,
                       label: 'Viajes',
-                      sublabel: '$_activeTrips activos',
+                      sublabel: '$_activeTrips viajes activos',
                       color: const Color(0xFF4CAF50),
-                      onTap: () => _navigate(0),
-                    ),
-                    _MenuCard(
-                      icon: Icons.map,
-                      label: 'Mapa',
-                      sublabel: 'Fleet live',
-                      color: const Color(0xFF2196F3),
                       onTap: () => _navigate(1),
                     ),
                     _MenuCard(
+                      icon: Icons.map,
+                      label: 'Mapa Fleet',
+                      sublabel: 'Ubicaciones en tiempo real',
+                      color: const Color(0xFF2196F3),
+                      onTap: () => _navigate(2),
+                    ),
+                    
+                    // FILA 2: Usuarios
+                    _MenuCard(
                       icon: Icons.person,
                       label: 'Riders',
-                      sublabel: '$_riderCount usuarios',
+                      sublabel: '$_riderCount usuarios registrados',
                       color: const Color(0xFF9C27B0),
                       badge: _riderCount > 0 ? '$_riderCount' : null,
-                      onTap: () => _navigate(2),
+                      onTap: () => _navigate(3),
                     ),
                     _MenuCard(
                       icon: Icons.local_taxi,
@@ -164,55 +176,64 @@ class _HomeMenuScreenState extends State<HomeMenuScreen>
                       sublabel: '$_driverCount conductores',
                       color: const Color(0xFFFF9800),
                       badge: _driverCount > 0 ? '$_driverCount' : null,
-                      onTap: () => _navigate(3),
+                      onTap: () => _navigate(4),
                     ),
+                    
+                    // FILA 3: Verificaciones
                     _MenuCard(
                       icon: Icons.verified_user,
                       label: 'Verificar Riders',
                       sublabel: _pendingVerifications > 0 
-                        ? '$_pendingVerifications pendientes'
-                        : 'Sin pendientes',
+                        ? '$_pendingVerifications cuentas pendientes'
+                        : 'Sin verificaciones pendientes',
                       color: const Color(0xFFE91E63),
                       badge: _pendingVerifications > 0 ? '$_pendingVerifications' : null,
-                      onTap: () => _navigate(4),
+                      onTap: () => _navigate(5),
                     ),
                     _MenuCard(
                       icon: Icons.local_taxi_rounded,
                       label: 'Verificar Drivers',
-                      sublabel: 'Verificación conductores',
+                      sublabel: 'Verificación de conductores',
                       color: const Color(0xFF00BCD4),
-                      onTap: () => _navigate(5),
-                    ),
-                    _MenuCard(
-                      icon: Icons.bar_chart,
-                      label: 'Estadísticas',
-                      sublabel: 'Reportes y métricas',
-                      color: const Color(0xFF3F51B5),
                       onTap: () => _navigate(6),
                     ),
+                    
+                    // FILA 4: Datos y Reportes
                     _MenuCard(
-                      icon: Icons.receipt_long,
-                      label: 'Reportes',
-                      sublabel: 'Historial y facturas',
-                      color: const Color(0xFF795548),
+                      icon: Icons.analytics,
+                      label: 'Analytics',
+                      sublabel: 'Estadísticas y reportes',
+                      color: const Color(0xFF3F51B5),
                       onTap: () => _navigate(7),
                     ),
+                    _MenuCard(
+                      icon: Icons.report_problem,
+                      label: 'Reportes Drivers',
+                      sublabel: _driverReports > 0
+                        ? '$_driverReports problemas reportados'
+                        : 'Sin reportes pendientes',
+                      color: const Color(0xFFF44336),
+                      badge: _driverReports > 0 ? '$_driverReports' : null,
+                      onTap: () => _navigate(8),
+                    ),
+                    
+                    // FILA 5: Comunicación y Agenda
                     _MenuCard(
                       icon: Icons.chat_bubble,
                       label: 'Soporte',
                       sublabel: _supportChats > 0
                         ? '$_supportChats chats nuevos'
-                        : 'Sin mensajes nuevos',
+                        : 'Soporte al cliente',
                       color: const Color(0xFF607D8B),
                       badge: _supportChats > 0 ? '$_supportChats' : null,
-                      onTap: () => _navigate(8),
+                      onTap: () => _navigate(9),
                     ),
                     _MenuCard(
                       icon: Icons.calendar_today,
                       label: 'Agendados',
                       sublabel: 'Viajes programados',
                       color: const Color(0xFF009688),
-                      onTap: () => _navigate(9),
+                      onTap: () => _navigate(10),
                     ),
                   ]),
                 ),
