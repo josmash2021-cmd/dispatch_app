@@ -16,6 +16,7 @@ import '../services/notification_service.dart';
 import '../widgets/stat_card.dart';
 import 'riders_screen.dart';
 import 'drivers_screen.dart';
+import 'home_menu_screen.dart';
 import 'trip_list_screen.dart';
 import 'create_trip_screen.dart';
 import 'database_screen.dart';
@@ -47,32 +48,34 @@ class _DashboardScreenState extends State<DashboardScreen>
   StreamSubscription<QuerySnapshot>? _notifSub;
   StreamSubscription<NotificationEvent>? _notificationStreamSub;
 
-  static const _pages = <Widget>[
-    TripListScreen(),
-    FleetMapScreen(),
-    RidersScreen(),      // Separate Riders page
-    DriversScreen(),     // Separate Drivers page
-    VerificationReviewScreen(),  // Rider verification
-    VerificationReviewScreen(),  // Driver verification (will filter by role)
-    _StatsContent(),
-    ReportsScreen(),
-    SupportChatsScreen(),
-    AdminConfigScreen(),
-    ScheduledRidesScreen(),
-  ];
-
   static const _navItems = [
-    _NavItem(Icons.directions_car_outlined, Icons.directions_car, 'Trips'),
-    _NavItem(Icons.map_outlined, Icons.map, 'Fleet Map'),
-    _NavItem(Icons.person_outline, Icons.person, 'Riders'),      // Separate Riders
-    _NavItem(Icons.local_taxi_outlined, Icons.local_taxi, 'Drivers'),  // Separate Drivers
-    _NavItem(Icons.verified_user_outlined, Icons.verified_user, 'Verify Riders'),
-    _NavItem(Icons.local_taxi_rounded, Icons.local_taxi, 'Verify Drivers'),
+    _NavItem(Icons.home_outlined, Icons.home, 'Inicio'),
+    _NavItem(Icons.directions_car_outlined, Icons.directions_car, 'Viajes'),
+    _NavItem(Icons.map_outlined, Icons.map, 'Mapa'),
+    _NavItem(Icons.person_outline, Icons.person, 'Riders'),
+    _NavItem(Icons.local_taxi_outlined, Icons.local_taxi, 'Drivers'),
+    _NavItem(Icons.verified_user_outlined, Icons.verified_user, 'Verif. Riders'),
+    _NavItem(Icons.local_taxi_rounded, Icons.local_taxi, 'Verif. Drivers'),
     _NavItem(Icons.bar_chart_outlined, Icons.bar_chart, 'Stats'),
-    _NavItem(Icons.receipt_long_outlined, Icons.receipt_long, 'Reports'),
+    _NavItem(Icons.receipt_long_outlined, Icons.receipt_long, 'Reportes'),
     _NavItem(Icons.chat_outlined, Icons.chat_rounded, 'Chat'),
     _NavItem(Icons.settings_outlined, Icons.settings_rounded, 'Config'),
-    _NavItem(Icons.event_note_outlined, Icons.event_note_rounded, 'Scheduled'),
+    _NavItem(Icons.event_note_outlined, Icons.event_note_rounded, 'Agenda'),
+  ];
+
+  List<Widget> get _pages => [
+    HomeMenuScreen(onNavigate: _onTabChanged),
+    const TripListScreen(),
+    const FleetMapScreen(),
+    const RidersScreen(),
+    const DriversScreen(),
+    const VerificationReviewScreen(),
+    const VerificationReviewScreen(),
+    const _StatsContent(),
+    const ReportsScreen(),
+    const SupportChatsScreen(),
+    const AdminConfigScreen(),
+    const ScheduledRidesScreen(),
   ];
 
   @override
