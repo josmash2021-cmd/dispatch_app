@@ -1,0 +1,14 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "Run Dispatch App (Windows)",
+			"type": "shell",
+			"command": "flutter run -d windows",
+			"isBackground": true,
+			"problemMatcher": [
+				"$dart-build"
+			]
+		}
+	]
+}

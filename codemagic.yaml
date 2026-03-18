@@ -1,0 +1,451 @@
+workflows:
+
+  ios-sideloadly:
+    name: iOS Sideloadly (unsigned IPA)
+    max_build_duration: 60
+    instance_type: mac_mini_m2
+    environment:
+      flutter: stable
+      xcode: latest
+      cocoapods: default
+      groups:
+        - firebase_credentials
+        - google_maps
+      vars:
+        BUNDLE_ID: "com.uberclone.dispatch.dispatchApp"
+        FLUTTER_XCODE_CODE_SIGNING_ALLOWED: "NO"
+        FLUTTER_XCODE_CODE_SIGNING_REQUIRED: "NO"
+    triggering:
+      events:
+        - push
+      branch_patterns:
+        - pattern: "master"
+          include: true
+          source: true
+    scripts:
+      - name: Generate env.dart
+        script: |
+          mkdir -p "$CM_BUILD_DIR/lib/config"
+          cat > "$CM_BUILD_DIR/lib/config/env.dart" << 'DARTEOF'
+          class Env {
+            static const String apiKey = 'HWB88VurhLM-1GdVML2PT92iqNSbeJ52TU1VO37MBZS6RYlyWvfIpaTdD54GT_5u';
+            static const String hmacSecret = 'qUDmTNu1Dxxg_xo7kaUfRba4XiU_5H1ZhkUMDuVrD2dLQ2ImT8JXZ5FgUyXpSJ5h';
+          }
+          DARTEOF
+          echo "env.dart generated"
+
+      - name: Normalize CRLF to LF in all plist and xcconfig files
+        script: |
+          find "$CM_BUILD_DIR/ios" -name "*.plist" -print0 | xargs -0 perl -i -pe 's/\r//g'
+          find "$CM_BUILD_DIR/ios" -name "*.xcconfig" -print0 | xargs -0 perl -i -pe 's/\r//g'
+          echo "Line endings normalized."
+
+      - name: Write GoogleService-Info.plist
+        script: |
+          python3 << 'PYEOF'
+          import os, textwrap
+          plist = textwrap.dedent("""\
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+          \t<key>API_KEY</key>
+          	<string>AIzaSyBW_EyQYZUWbWzD6CAvxo9Btowb7bxALCU</string>
+          \t<key>GCM_SENDER_ID</key>
+          \t<string>56054738352</string>
+          \t<key>PLIST_VERSION</key>
+          \t<string>1</string>
+          \t<key>BUNDLE_ID</key>
+          \t<string>com.uberclone.dispatch.dispatchApp</string>
+          \t<key>PROJECT_ID</key>
+          \t<string>cruise-af9f1</string>
+          \t<key>STORAGE_BUCKET</key>
+          \t<string>cruise-af9f1.firebasestorage.app</string>
+          \t<key>IS_ADS_ENABLED</key>
+          \t<false/>
+          \t<key>IS_ANALYTICS_ENABLED</key>
+          \t<false/>
+          \t<key>IS_APPINVITE_ENABLED</key>
+          \t<true/>
+          \t<key>IS_GCM_ENABLED</key>
+          \t<true/>
+          \t<key>IS_SIGNIN_ENABLED</key>
+          \t<true/>
+          \t<key>CLIENT_ID</key>
+          \t<string>56054738352-placeholder.apps.googleusercontent.com</string>
+          \t<key>REVERSED_CLIENT_ID</key>
+          \t<string>com.googleusercontent.apps.56054738352-placeholder</string>
+          \t<key>GOOGLE_APP_ID</key>
+          \t<string>1:56054738352:ios:1e63ceaeb97cdb6bc1ba75</string>
+          </dict>
+          </plist>
+          """)
+          path = os.path.join(os.environ['CM_BUILD_DIR'], 'ios', 'Runner', 'GoogleService-Info.plist')
+          with open(path, 'w', newline='\n', encoding='utf-8') as f:
+              f.write(plist)
+          print(f"Written: {path}")
+          PYEOF
+          if [ -n "$GOOGLE_SERVICE_INFO_PLIST" ]; then
+            echo "$GOOGLE_SERVICE_INFO_PLIST" | base64 --decode > "$CM_BUILD_DIR/ios/Runner/GoogleService-Info.plist"
+            perl -i -pe 's/\r//g' "$CM_BUILD_DIR/ios/Runner/GoogleService-Info.plist"
+            echo "Real GoogleService-Info.plist injected from secret."
+          fi
+
+      - name: Inject Google Maps API key
+        script: |
+          if [ -n "$MAPS_API_KEY_IOS" ]; then
+            /usr/libexec/PlistBuddy -c "Set :GMSApiKey $MAPS_API_KEY_IOS" "$CM_BUILD_DIR/ios/Runner/Info.plist"
+            echo "Maps key injected."
+          fi
+
+      - name: Validate all plist files with plutil
+        script: |
+          FAIL=0
+          while IFS= read -r -d '' f; do
+            if plutil -lint "$f" > /dev/null 2>&1; then
+              echo "OK: $f"
+            else
+              echo "FAIL: $f"
+              plutil -lint "$f" || true
+              FAIL=1
+            fi
+          done < <(find "$CM_BUILD_DIR/ios" -name "*.plist" -print0)
+          if [ "$FAIL" = "1" ]; then exit 1; fi
+
+      - name: Flutter pub get
+        script: flutter pub get
+
+      - name: Generate iOS config
+        script: flutter build ios --config-only --no-codesign --no-pub
+
+      - name: Install CocoaPods
+        script: |
+          cd ios
+          for i in 1 2 3; do
+            echo "=== pod install attempt $i ==="
+            pod install && break
+            echo "Attempt $i failed, waiting 30s..."
+            sleep 30
+          done
+          # Verify Pods were installed
+          if [ ! -d Pods ]; then
+            echo "ERROR: Pods directory not found after 3 attempts"
+            exit 1
+          fi
+          echo "CocoaPods installed successfully"
+
+      - name: Disable code signing
+        script: |
+          cd ios
+          python3 << 'PYEOF'
+          import re, glob
+
+          def patch_pbxproj(path):
+              with open(path, 'r') as f:
+                  content = f.read()
+              # Remove entitlements
+              content = re.sub(r'\s*CODE_SIGN_ENTITLEMENTS = [^;]*;', '', content)
+              # Clear signing identity
+              content = re.sub(r'"CODE_SIGN_IDENTITY\[sdk=iphoneos\*\]" = "[^"]*"',
+                               '"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = ""', content)
+              content = re.sub(r'CODE_SIGN_IDENTITY = "[^"]*"',
+                               'CODE_SIGN_IDENTITY = ""', content)
+              # Remove development team
+              content = re.sub(r'DEVELOPMENT_TEAM = [^;]*;',
+                               'DEVELOPMENT_TEAM = "";', content)
+              # Set manual signing
+              content = re.sub(r'CODE_SIGN_STYLE = Automatic',
+                               'CODE_SIGN_STYLE = Manual', content)
+              # Disable product validation
+              content = re.sub(r'VALIDATE_PRODUCT = YES',
+                               'VALIDATE_PRODUCT = NO', content)
+              # Remove existing CODE_SIGNING_ALLOWED/REQUIRED lines to avoid dupes
+              content = re.sub(r'\n\s*CODE_SIGNING_ALLOWED = [^;]*;', '', content)
+              content = re.sub(r'\n\s*CODE_SIGNING_REQUIRED = [^;]*;', '', content)
+              # Inject CODE_SIGNING_ALLOWED=NO into every buildSettings block
+              content = content.replace(
+                  'buildSettings = {',
+                  'buildSettings = {\n\t\t\t\tCODE_SIGNING_ALLOWED = NO;\n\t\t\t\tCODE_SIGNING_REQUIRED = NO;'
+              )
+              with open(path, 'w') as f:
+                  f.write(content)
+              print(f"Patched: {path}")
+
+          patch_pbxproj('Runner.xcodeproj/project.pbxproj')
+          for p in glob.glob('Pods/**/*.pbxproj', recursive=True):
+              patch_pbxproj(p)
+          PYEOF
+
+          # Inject into xcconfig (no leading spaces)
+          printf 'CODE_SIGNING_ALLOWED=NO\nCODE_SIGNING_REQUIRED=NO\nCODE_SIGN_IDENTITY=\nCODE_SIGN_ENTITLEMENTS=\nEXPANDED_CODE_SIGN_IDENTITY=\n' >> Flutter/Release.xcconfig
+          printf 'CODE_SIGNING_ALLOWED=NO\nCODE_SIGNING_REQUIRED=NO\nCODE_SIGN_IDENTITY=\nCODE_SIGN_ENTITLEMENTS=\nEXPANDED_CODE_SIGN_IDENTITY=\n' >> Flutter/Debug.xcconfig
+          echo "Code signing disabled."
+
+      - name: Build iOS with xcodebuild (no codesign)
+        script: |
+          set -e
+          # Use xcodebuild directly to avoid Flutter's Development Team check
+          cd "$CM_BUILD_DIR/ios"
+          xcodebuild \
+            -workspace Runner.xcworkspace \
+            -scheme Runner \
+            -configuration Release \
+            -sdk iphoneos \
+            -destination 'generic/platform=iOS' \
+            -archivePath "$CM_BUILD_DIR/build/ios/Runner.xcarchive" \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" \
+            DEVELOPMENT_TEAM="" \
+            PROVISIONING_PROFILE_SPECIFIER="" \
+            archive | tail -20
+
+          # Extract .app from archive
+          APP=$(find "$CM_BUILD_DIR/build/ios/Runner.xcarchive" -name "*.app" -type d | head -1)
+          if [ -z "$APP" ]; then
+            echo "ERROR: No .app found in archive"
+            find "$CM_BUILD_DIR/build/ios" -name "*.app" -type d || true
+            exit 1
+          fi
+
+          # Copy .app to expected location for packaging step
+          mkdir -p "$CM_BUILD_DIR/build/ios/iphoneos"
+          ditto "$APP" "$CM_BUILD_DIR/build/ios/iphoneos/Runner.app"
+          echo "Build succeeded: $APP"
+          echo "Size: $(du -sh "$APP" | cut -f1)"
+
+      - name: Package unsigned IPA
+        script: |
+          set -e
+          # Look for Runner.app in multiple possible locations
+          APP_PATH=$(find "$CM_BUILD_DIR/build/ios" -name "Runner.app" -type d | head -1)
+          if [ -z "$APP_PATH" ]; then
+            echo "ERROR: Runner.app not found anywhere"
+            find "$CM_BUILD_DIR/build/ios" -maxdepth 5 -type d -name "*.app" || true
+            exit 1
+          fi
+          echo "Found app: $APP_PATH"
+          echo "App size: $(du -sh "$APP_PATH" | cut -f1)"
+          ls -la "$APP_PATH/"
+          
+          IPA_DIR="$CM_BUILD_DIR/build/ios/ipa"
+          PAYLOAD="$IPA_DIR/Payload"
+          rm -rf "$PAYLOAD" "$IPA_DIR/CruiseDispatch_unsigned.ipa"
+          mkdir -p "$PAYLOAD"
+          
+          # Use ditto to preserve symlinks and macOS attributes
+          ditto "$APP_PATH" "$PAYLOAD/Runner.app"
+          
+          # Verify Payload has real content
+          PAYLOAD_SIZE=$(du -sm "$PAYLOAD" | cut -f1)
+          echo "Payload size: ${PAYLOAD_SIZE} MB"
+          if [ "$PAYLOAD_SIZE" -lt 1 ]; then
+            echo "ERROR: Payload too small (${PAYLOAD_SIZE} MB), build may have failed"
+            find "$PAYLOAD" -type f | head -20
+            exit 1
+          fi
+          
+          # Create IPA using ditto (Apple's recommended zip tool)
+          cd "$IPA_DIR"
+          ditto -c -k --sequesterRsrc --keepParent Payload CruiseDispatch_unsigned.ipa
+          
+          IPA_SIZE=$(du -sh CruiseDispatch_unsigned.ipa | cut -f1)
+          echo "IPA created: CruiseDispatch_unsigned.ipa ($IPA_SIZE)"
+
+    artifacts:
+      - build/ios/ipa/CruiseDispatch_unsigned.ipa
+
+    publishing:
+      email:
+        recipients:
+          - josmash2021@gmail.com
+        notify:
+          success: true
+          failure: true
+
+
+  ios-release:
+    name: iOS Release Build
+    max_build_duration: 90
+    instance_type: mac_mini_m2
+    environment:
+      flutter: stable
+      xcode: latest
+      cocoapods: default
+      groups:
+        - app_store_credentials
+        - firebase_credentials
+        - google_maps
+      vars:
+        BUNDLE_ID: "com.uberclone.dispatch.dispatchApp"
+        XCODE_SCHEME: "Runner"
+        XCODE_WORKSPACE: "ios/Runner.xcworkspace"
+    triggering:
+      events:
+        - tag
+      branch_patterns:
+        - pattern: "master"
+          include: true
+          source: true
+    scripts:
+      - name: Generate env.dart
+        script: |
+          mkdir -p "$CM_BUILD_DIR/lib/config"
+          cat > "$CM_BUILD_DIR/lib/config/env.dart" << 'DARTEOF'
+          class Env {
+            static const String apiKey = 'HWB88VurhLM-1GdVML2PT92iqNSbeJ52TU1VO37MBZS6RYlyWvfIpaTdD54GT_5u';
+            static const String hmacSecret = 'qUDmTNu1Dxxg_xo7kaUfRba4XiU_5H1ZhkUMDuVrD2dLQ2ImT8JXZ5FgUyXpSJ5h';
+          }
+          DARTEOF
+          echo "env.dart generated"
+
+      - name: Normalize CRLF to LF
+        script: |
+          find "$CM_BUILD_DIR/ios" -name "*.plist" -print0 | xargs -0 perl -i -pe 's/\r//g'
+          find "$CM_BUILD_DIR/ios" -name "*.xcconfig" -print0 | xargs -0 perl -i -pe 's/\r//g'
+
+      - name: Inject GoogleService-Info.plist
+        script: |
+          if [ -n "$GOOGLE_SERVICE_INFO_PLIST" ]; then
+            echo "$GOOGLE_SERVICE_INFO_PLIST" | base64 --decode > "$CM_BUILD_DIR/ios/Runner/GoogleService-Info.plist"
+            perl -i -pe 's/\r//g' "$CM_BUILD_DIR/ios/Runner/GoogleService-Info.plist"
+          fi
+
+      - name: Inject Google Maps API key
+        script: |
+          if [ -n "$MAPS_API_KEY_IOS" ]; then
+            /usr/libexec/PlistBuddy -c "Set :GMSApiKey $MAPS_API_KEY_IOS" "$CM_BUILD_DIR/ios/Runner/Info.plist"
+          fi
+
+      - name: Set up keychain
+        script: keychain initialize
+
+      - name: Fetch signing files
+        script: |
+          app-store-connect fetch-signing-files "$BUNDLE_ID" --type IOS_APP_STORE --create
+
+      - name: Add certificates to keychain
+        script: keychain add-certificates
+
+      - name: Set up Xcode code signing
+        script: |
+          xcode-project use-profiles --workspace "$XCODE_WORKSPACE" --scheme "$XCODE_SCHEME"
+
+      - name: Flutter pub get
+        script: flutter pub get
+
+      - name: Flutter build IPA
+        script: |
+          flutter build ipa --release --export-options-plist=/Users/builder/export_options.plist
+
+    artifacts:
+      - build/ios/ipa/*.ipa
+
+    publishing:
+      email:
+        recipients:
+          - josmash2021@gmail.com
+        notify:
+          success: true
+          failure: true
+      app_store_connect:
+        api_key: $APP_STORE_CONNECT_PRIVATE_KEY
+        key_id: $APP_STORE_CONNECT_KEY_IDENTIFIER
+        issuer_id: $APP_STORE_CONNECT_ISSUER_ID
+        submit_to_testflight: false
+
+
+  android-release:
+    name: Android Release Build
+    max_build_duration: 60
+    instance_type: linux_x2
+    environment:
+      flutter: stable
+      groups:
+        - firebase_credentials
+        - google_maps
+    triggering:
+      events:
+        - push
+      branch_patterns:
+        - pattern: "master"
+          include: true
+    scripts:
+      - name: Generate env.dart
+        script: |
+          mkdir -p "$CM_BUILD_DIR/lib/config"
+          cat > "$CM_BUILD_DIR/lib/config/env.dart" << 'DARTEOF'
+          class Env {
+            static const String apiKey = 'HWB88VurhLM-1GdVML2PT92iqNSbeJ52TU1VO37MBZS6RYlyWvfIpaTdD54GT_5u';
+            static const String hmacSecret = 'qUDmTNu1Dxxg_xo7kaUfRba4XiU_5H1ZhkUMDuVrD2dLQ2ImT8JXZ5FgUyXpSJ5h';
+          }
+          DARTEOF
+          echo "env.dart generated"
+
+      - name: Flutter pub get
+        script: flutter pub get
+
+      - name: Build Android AAB
+        script: |
+          flutter build appbundle --release --build-name=1.0.0 --build-number=$BUILD_NUMBER
+
+    artifacts:
+      - build/app/outputs/**/*.aab
+
+    publishing:
+      email:
+        recipients:
+          - josmash2021@gmail.com
+        notify:
+          success: true
+          failure: true
+
+
+  android-apk:
+    name: Android APK (installable)
+    max_build_duration: 60
+    instance_type: linux_x2
+    environment:
+      flutter: stable
+      java: 17
+      groups:
+        - firebase_credentials
+        - google_maps
+    triggering:
+      events:
+        - push
+      branch_patterns:
+        - pattern: "master"
+          include: true
+    scripts:
+      - name: Generate env.dart
+        script: |
+          mkdir -p "$CM_BUILD_DIR/lib/config"
+          cat > "$CM_BUILD_DIR/lib/config/env.dart" << 'DARTEOF'
+          class Env {
+            static const String apiKey = 'HWB88VurhLM-1GdVML2PT92iqNSbeJ52TU1VO37MBZS6RYlyWvfIpaTdD54GT_5u';
+            static const String hmacSecret = 'qUDmTNu1Dxxg_xo7kaUfRba4XiU_5H1ZhkUMDuVrD2dLQ2ImT8JXZ5FgUyXpSJ5h';
+          }
+          DARTEOF
+          echo "env.dart generated"
+
+      - name: Flutter pub get
+        script: flutter pub get
+
+      - name: Build APK
+        script: |
+          flutter build apk --release --no-tree-shake-icons
+          APK_PATH=$(find build/app/outputs -name "*.apk" -type f | head -1)
+          echo "APK: $APK_PATH"
+          echo "Size: $(du -sh "$APK_PATH" | cut -f1)"
+
+    artifacts:
+      - build/app/outputs/**/*.apk
+
+    publishing:
+      email:
+        recipients:
+          - josmash2021@gmail.com
+        notify:
+          success: true
+          failure: true

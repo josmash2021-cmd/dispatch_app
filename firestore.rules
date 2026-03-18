@@ -1,0 +1,171 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ═══════════════════════════════════════════════════════════════════
+    // HELPERS
+    // ═══════════════════════════════════════════════════════════════════
+
+    function isOwner() {
+      return request.auth != null
+        && request.auth.token.email == 'royalpurplecorp@gmail.com';
+    }
+
+    function isAdmin() {
+      return request.auth != null
+        && exists(/databases/$(database)/documents/admins/$(request.auth.uid));
+    }
+
+    function isOwnerOrAdmin() {
+      return isOwner() || isAdmin();
+    }
+
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwnDoc(docId) {
+      return request.auth != null && request.auth.uid == docId;
+    }
+
+    function isNonEmptyString(field) {
+      return field is string && field.size() > 0;
+    }
+
+    // ═══════════════════════════════════════════════════════════════════    // CONFIG COLLECTION — admin-controlled (pricing, service zones, etc.)
+    // Owner: full read/write
+    // All authenticated users: read-only (Cruise app reads serviceZones)
+    // ══════════════════════════════════════════════════════════════════════
+    match /config/{docId} {
+      allow read: if isAuthenticated();
+      allow write: if isOwnerOrAdmin();
+    }
+
+    // ══════════════════════════════════════════════════════════════════════
+    // VERIFICATIONS COLLECTION — identity verification docs
+    // ══════════════════════════════════════════════════════════════════════
+    match /verifications/{docId} {
+      allow read: if isOwnerOrAdmin()
+        || (isAuthenticated() && resource.data.userId == request.auth.uid);
+      allow create: if isAuthenticated();
+      allow update: if isOwnerOrAdmin()
+        || (isAuthenticated() && resource.data.userId == request.auth.uid);
+      allow delete: if isOwnerOrAdmin();
+    }
+
+    // ══════════════════════════════════════════════════════════════════════    // ADMINS COLLECTION — owner read only, no new admins ever
+    // ═══════════════════════════════════════════════════════════════════
+    match /admins/{adminId} {
+      allow read: if isOwnerOrAdmin();
+      allow create: if isOwner() && adminId == request.auth.uid;
+      allow update, delete: if false;
+    }
+
+    // ═══════════════════════════════════════════════════════════════════
+    // TRIPS COLLECTION
+    // Owner: full access
+    // Authenticated users: read own trips, create trips
+    // ═══════════════════════════════════════════════════════════════════
+    match /trips/{tripId} {
+      allow read: if isOwnerOrAdmin()
+        || (isAuthenticated() && resource.data.passengerId == request.auth.uid)
+        || (isAuthenticated() && resource.data.driverId == request.auth.uid);
+      allow create: if isOwnerOrAdmin()
+        || (isAuthenticated()
+            && isNonEmptyString(request.resource.data.passengerName)
+            && isNonEmptyString(request.resource.data.pickupAddress)
+            && isNonEmptyString(request.resource.data.dropoffAddress));
+      allow update: if isOwnerOrAdmin()
+        || (isAuthenticated() && resource.data.driverId == request.auth.uid)
+        || (isAuthenticated() && resource.data.passengerId == request.auth.uid);
+      allow delete: if isOwnerOrAdmin();
+    }
+
+    // ═══════════════════════════════════════════════════════════════════
+    // USERS COLLECTION — passenger/rider app registrations
+    // Users create & update their own doc (uid = docId)
+    // Owner: full read/write
+    // ═══════════════════════════════════════════════════════════════════
+    match /users/{userId} {
+      allow read: if isOwnerOrAdmin() || isOwnDoc(userId);
+      allow create: if isOwnerOrAdmin() || (isAuthenticated() && isOwnDoc(userId));
+      allow update: if isOwnerOrAdmin() || isOwnDoc(userId);
+      allow delete: if isOwnerOrAdmin();
+
+      // Payment methods subcollection
+      match /payment_methods/{methodId} {
+        allow read: if isOwner() || isOwnDoc(userId);
+        allow create, update: if isOwnDoc(userId);
+        allow delete: if isOwner() || isOwnDoc(userId);
+      }
+    }
+
+    // ═══════════════════════════════════════════════════════════════════
+    // CLIENTS COLLECTION — dispatch-managed clients
+    // Users can also create/update their own doc here
+    // Owner: full access
+    // ═══════════════════════════════════════════════════════════════════
+    match /clients/{clientId} {
+      allow read: if isOwnerOrAdmin() || isOwnDoc(clientId);
+      allow create: if isOwnerOrAdmin()
+        || (isAuthenticated() && isOwnDoc(clientId));
+      allow update: if isOwnerOrAdmin() || isOwnDoc(clientId);
+      allow delete: if isOwnerOrAdmin();
+
+      // Payment methods subcollection
+      match /payment_methods/{methodId} {
+        allow read: if isOwner() || isOwnDoc(clientId);
+        allow create, update: if isOwnDoc(clientId);
+        allow delete: if isOwner() || isOwnDoc(clientId);
+      }
+    }
+
+    // ═══════════════════════════════════════════════════════════════════
+    // DRIVERS COLLECTION
+    // Drivers can create & update their own doc (location, status)
+    // Owner: full access
+    // ═══════════════════════════════════════════════════════════════════
+    match /drivers/{driverId} {
+      allow read: if isOwnerOrAdmin() || isOwnDoc(driverId);
+      allow create: if isOwnerOrAdmin()
+        || (isAuthenticated() && isOwnDoc(driverId));
+      allow update: if isOwnerOrAdmin() || isOwnDoc(driverId);
+      allow delete: if isOwnerOrAdmin();
+
+      // Payment methods / earnings subcollection
+      match /payment_methods/{methodId} {
+        allow read: if isOwner() || isOwnDoc(driverId);
+        allow create, update: if isOwnDoc(driverId);
+        allow delete: if isOwner() || isOwnDoc(driverId);
+      }
+    }
+
+    // ═══════════════════════════════════════════════════════════════════
+    // AUDIT LOG — owner can create & read, immutable
+    // ═══════════════════════════════════════════════════════════════════
+    match /audit_log/{logId} {
+      allow read: if isOwnerOrAdmin();
+      allow create: if isOwnerOrAdmin();
+      allow update, delete: if false;
+    }
+
+    // ═══════════════════════════════════════════════════════════════════
+    // SCHEDULED RIDES
+    // ═══════════════════════════════════════════════════════════════════
+    match /scheduled_rides/{rideId} {
+      allow read: if isOwnerOrAdmin()
+        || (isAuthenticated() && resource.data.passengerId == request.auth.uid);
+      allow create: if isAuthenticated();
+      allow update: if isOwnerOrAdmin()
+        || (isAuthenticated() && resource.data.passengerId == request.auth.uid);
+      allow delete: if isOwnerOrAdmin();
+    }
+
+    // ═══════════════════════════════════════════════════════════════════
+    // DENY ALL — everything else blocked permanently
+    // ═══════════════════════════════════════════════════════════════════
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
