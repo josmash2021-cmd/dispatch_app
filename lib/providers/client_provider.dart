@@ -23,6 +23,8 @@ class ClientProvider extends ChangeNotifier {
   StreamSubscription? _subscription;
 
   int get totalClients => _clients.length;
+  int get verifiedClients => _clients.where((c) => c.isVerified).length;
+  List<ClientModel> get filteredClients => _filteredClients;
 
   /// Start listening to real-time client updates
   void startListening() {

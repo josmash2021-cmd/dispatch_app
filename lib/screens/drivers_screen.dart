@@ -3,7 +3,7 @@ import 'package:provider/provider.dart';
 import '../config/app_theme.dart';
 import '../providers/driver_provider.dart';
 import '../services/dispatch_api_service.dart';
-import '../widgets/shimmer_loading.dart';
+import '../widgets/shimmer_loading.dart'; // ShimmerPersonCard
 import 'driver_detail_screen.dart';
 
 class DriversScreen extends StatefulWidget {
@@ -85,7 +85,7 @@ class _DriversScreenState extends State<DriversScreen> {
                             onTap: () => Navigator.push(
                               context,
                               MaterialPageRoute(
-                                builder: (_) => DriverDetailScreen(sqliteId: driver.sqliteId),
+                                builder: (_) => DriverDetailScreen(sqliteId: driver.sqliteId ?? 0),
                               ),
                             ),
                           );
@@ -216,7 +216,7 @@ class _ShimmerList extends StatelessWidget {
     return ListView.builder(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       itemCount: 6,
-      itemBuilder: (_, __) => ShimmerCard(height: 80, margin: const EdgeInsets.only(bottom: 8)),
+      itemBuilder: (_, __) => const ShimmerPersonCard(),
     );
   }
 }

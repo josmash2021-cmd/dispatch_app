@@ -4,7 +4,6 @@ import 'package:crypto/crypto.dart';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
-import '../config/env.dart';
 
 /// HTTP client for the Cruise FastAPI backend with API-key + HMAC signing.
 /// Used by the dispatch admin panel to sync operations with the backend.
@@ -24,8 +23,10 @@ class DispatchApiService {
   static final Map<String, _CacheEntry> _cache = {};
   static const Duration _cacheDuration = Duration(seconds: 30);
 
-  static const String _apiKey = Env.apiKey;
-  static const String _hmacSecret = Env.hmacSecret;
+  static const String _apiKey =
+      'HWB88VurhLM-1GdVML2PT92iqNSbeJ52TU1VO37MBZS6RYlyWvfIpaTdD54GT_5u';
+  static const String _hmacSecret =
+      'qUDmTNu1Dxxg_xo7kaUfRba4XiU_5H1ZhkUMDuVrD2dLQ2ImT8JXZ5FgUyXpSJ5h';
 
   /// Load persisted server URL. Call once before runApp().
   static Future<void> init() async {

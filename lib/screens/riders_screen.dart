@@ -84,7 +84,7 @@ class _RidersScreenState extends State<RidersScreen> {
                             onTap: () => Navigator.push(
                               context,
                               MaterialPageRoute(
-                                builder: (_) => RiderDetailScreen(sqliteId: client.sqliteId),
+                                builder: (_) => RiderDetailScreen(sqliteId: client.sqliteId ?? 0),
                               ),
                             ),
                           );
@@ -193,7 +193,7 @@ class _ShimmerList extends StatelessWidget {
     return ListView.builder(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       itemCount: 6,
-      itemBuilder: (_, __) => const ShimmerCard(height: 80, margin: EdgeInsets.only(bottom: 8)),
+      itemBuilder: (_, __) => const ShimmerPersonCard(),
     );
   }
 }
