@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../config/app_theme.dart';
 import '../services/dispatch_api_service.dart';
-import '../services/chat_service.dart';
 import 'support_chat_detail_screen.dart';
 
 class RiderDetailScreen extends StatefulWidget {
@@ -31,8 +30,17 @@ class _RiderDetailScreenState extends State<RiderDetailScreen> {
       // Load user details from backend
       final userDetail = await DispatchApiService.getUserDetail(widget.sqliteId);
       
-      // Load support chats
-      final chats = await ChatService.getUserChats(widget.sqliteId);
+      // Load support chats from Firestore
+      final chatsSnap = await FirebaseFirestore.instance
+          .collection('support_chats')
+          .where('userId', isEqualTo: widget.sqliteId)
+          .orderBy('createdAt', descending: true)
+          .get();
+      final chats = chatsSnap.docs.map((d) {
+        final data = d.data();
+        data['id'] = int.tryParse(d.id) ?? 0;
+        return data;
+      }).toList();
       
       if (mounted) {
         setState(() {

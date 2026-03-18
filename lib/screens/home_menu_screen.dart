@@ -37,6 +37,7 @@ class _HomeMenuScreenState extends State<HomeMenuScreen>
   int _pendingVerifications = 0;
   int _activeTrips = 0;
   int _driverReports = 0;
+  int _supportChats = 0;
   
   StreamSubscription? _ridersSub;
   StreamSubscription? _driversSub;
