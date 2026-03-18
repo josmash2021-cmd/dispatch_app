@@ -396,10 +396,12 @@ class _DashboardScreenState extends State<DashboardScreen>
         backgroundColor: AppColors.background,
         elevation: 0,
         scrolledUnderElevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.menu_rounded, color: AppColors.primary),
-          onPressed: () => _scaffoldKey.currentState?.openDrawer(),
-        ),
+        leading: _currentIndex == 0 
+          ? null  // No back button on home
+          : IconButton(
+              icon: const Icon(Icons.arrow_back_rounded, color: AppColors.primary),
+              onPressed: () => _onTabChanged(0),  // Back to home
+            ),
         title: Text(
           _currentTitle,
           style: const TextStyle(
@@ -412,7 +414,7 @@ class _DashboardScreenState extends State<DashboardScreen>
           if (_currentIndex == 0)
             IconButton(
               icon: const Icon(Icons.add_rounded, color: AppColors.primary),
-              tooltip: 'New Trip',
+              tooltip: 'Nuevo Viaje',
               onPressed: () => Navigator.push(
                 context,
                 scaleExpandRoute(const CreateTripScreen()),
@@ -443,14 +445,6 @@ class _DashboardScreenState extends State<DashboardScreen>
               ),
             ),
         ],
-      ),
-      drawer: _AppDrawer(
-        currentIndex: _currentIndex,
-        pendingVerifications: verif.pendingCount,
-        onSelect: (i) {
-          Navigator.pop(context);
-          _onTabChanged(i);
-        },
       ),
       body: AnimatedBuilder(
         animation: _fadeAnim,
