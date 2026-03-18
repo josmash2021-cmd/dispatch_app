@@ -12,6 +12,7 @@ import '../providers/dashboard_provider.dart';
 import '../providers/driver_provider.dart';
 import '../providers/trip_provider.dart';
 import '../providers/verification_provider.dart';
+import '../services/notification_service.dart';
 import '../widgets/stat_card.dart';
 import 'trip_list_screen.dart';
 import 'create_trip_screen.dart';
@@ -42,6 +43,7 @@ class _DashboardScreenState extends State<DashboardScreen>
   late Animation<double> _fabScale;
 
   StreamSubscription<QuerySnapshot>? _notifSub;
+  StreamSubscription<NotificationEvent>? _notificationStreamSub;
 
   static const _pages = <Widget>[
     TripListScreen(),
@@ -95,6 +97,7 @@ class _DashboardScreenState extends State<DashboardScreen>
       context.read<VerificationProvider>().startListening();
       _startNotificationListener();
       _startProfileChangeListener();
+      _startNotificationService();
     });
   }
 
@@ -285,9 +288,72 @@ class _DashboardScreenState extends State<DashboardScreen>
         });
   }
 
+  void _startNotificationService() {
+    // Start the notification service to listen for profile changes
+    NotificationService().startListening(context);
+    
+    // Listen to the notification stream for showing in-app notifications
+    _notificationStreamSub = notificationStream.stream.listen((event) {
+      if (!mounted) return;
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          backgroundColor: event.color,
+          content: Row(
+            children: [
+              Icon(event.icon, color: Colors.white, size: 20),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      event.title,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w700,
+                        fontSize: 14,
+                      ),
+                    ),
+                    Text(
+                      event.message,
+                      style: const TextStyle(fontSize: 13),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          duration: event.duration,
+          action: SnackBarAction(
+            label: event.actionLabel,
+            textColor: Colors.white,
+            onPressed: () {
+              if (event.onAction != null) {
+                event.onAction!();
+              }
+              // Navigate based on notification type
+              if (event.title.contains('verificación')) {
+                _onTabChanged(3); // Verify tab
+              } else {
+                _onTabChanged(2); // Database tab
+              }
+            },
+          ),
+        ),
+      );
+    });
+  }
+
   @override
   void dispose() {
     _notifSub?.cancel();
+    _notificationStreamSub?.cancel();
+    NotificationService().stop();
     _fadeCtrl.dispose();
     _fabCtrl.dispose();
     super.dispose();
