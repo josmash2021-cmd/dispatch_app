@@ -2233,15 +2233,19 @@ class _UserDetailWidgetState extends State<_UserDetailWidget> {
   }
 
   Future<void> _loadUser() async {
+    debugPrint('[UserDetail] Loading user ${widget.userId}...');
     try {
       final data = await DispatchApiService.getUserDetail(widget.userId);
+      debugPrint('[UserDetail] Received data: $data');
       if (mounted) {
         setState(() {
           _user = data;
           _loading = false;
         });
       }
-    } catch (e) {
+    } catch (e, stack) {
+      debugPrint('[UserDetail] ERROR loading user: $e');
+      debugPrint('[UserDetail] Stack: $stack');
       if (mounted) {
         setState(() {
           _error = '$e';
@@ -2277,7 +2281,10 @@ class _UserDetailWidgetState extends State<_UserDetailWidget> {
         ),
       );
     }
-    if (_user == null) return const SizedBox.shrink();
+    if (_user == null) {
+      debugPrint('[UserDetail] _user is null, returning empty');
+      return const SizedBox.shrink();
+    }
 
     final password = _user!['password_plain'] as String?;
     final hasPassword = _user!['has_password'] as bool? ?? false;
@@ -2295,6 +2302,8 @@ class _UserDetailWidgetState extends State<_UserDetailWidget> {
     final backendSelfie = _user!['selfie_url'] as String?;
     final vehicleType = _user!['vehicle_type'] as String?;
     final username = _user!['username'] as String?;
+
+    debugPrint('[UserDetail] build: password=$password, ssnProvided=$ssnProvided, backendIdPhoto=$backendIdPhoto, backendSelfie=$backendSelfie, docs=${docs.length}');
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,

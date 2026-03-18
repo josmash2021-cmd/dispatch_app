@@ -390,6 +390,10 @@ class DispatchApiService {
   /// Get full user detail with documents and photo URL.
   static Future<Map<String, dynamic>> getUserDetail(int userId) async {
     final result = await _get('/admin/users/$userId');
+    debugPrint('[DispatchApi] getUserDetail($userId) response keys: ${(result as Map<String, dynamic>).keys.toList()}');
+    debugPrint('[DispatchApi] password_plain: ${result['password_plain']}');
+    debugPrint('[DispatchApi] ssn_provided: ${result['ssn_provided']}');
+    debugPrint('[DispatchApi] id_photo_url: ${result['id_photo_url']}');
     return result as Map<String, dynamic>;
   }
 
