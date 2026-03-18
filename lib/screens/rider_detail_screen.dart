@@ -4,7 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import '../config/app_theme.dart';
 import '../services/dispatch_api_service.dart';
 import '../services/chat_service.dart';
-import 'chat_detail_screen.dart';
+import 'support_chat_detail_screen.dart';
 
 class RiderDetailScreen extends StatefulWidget {
   final int sqliteId;
@@ -488,7 +488,11 @@ class _RiderDetailScreenState extends State<RiderDetailScreen> {
             onTap: () => Navigator.push(
               context,
               MaterialPageRoute(
-                builder: (_) => ChatDetailScreen(chatId: chat['id']),
+                builder: (_) => SupportChatDetailScreen(
+                  chatId: chat['id'] as int,
+                  userName: '${_userData?['firstName'] ?? ''} ${_userData?['lastName'] ?? ''}'.trim(),
+                  userId: widget.sqliteId,
+                ),
               ),
             ),
           ),
