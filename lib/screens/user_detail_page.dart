@@ -807,9 +807,10 @@ class _UserDetailPageState extends State<UserDetailPage>
   }
 
   SliverAppBar _buildSliverHeader() {
-    final effectivePhotoUrl = _sqliteId != null
-        ? DispatchApiService.photoUrl(_sqliteId!)
-        : _photoUrl;
+    final rawPhoto = _photoUrl;
+    final effectivePhotoUrl = rawPhoto != null && rawPhoto.isNotEmpty
+        ? DispatchApiService.fullUrl(rawPhoto)
+        : null;
     final isOnline = _isDriver
         ? (widget.driver?.isOnline ?? false)
         : (widget.client?.isOnline ?? false);
@@ -1064,9 +1065,10 @@ class _UserDetailPageState extends State<UserDetailPage>
   // ── Tab 2: Fotos & Docs ───────────────────────────────────────────────────
 
   Widget _buildPhotosTab() {
-    final effectivePhotoUrl = _sqliteId != null
-        ? DispatchApiService.photoUrl(_sqliteId!)
-        : _photoUrl;
+    final rawPhoto2 = _photoUrl;
+    final effectivePhotoUrl = rawPhoto2 != null && rawPhoto2.isNotEmpty
+        ? DispatchApiService.fullUrl(rawPhoto2)
+        : null;
 
     final hasContent =
         effectivePhotoUrl != null ||
@@ -1112,9 +1114,9 @@ class _UserDetailPageState extends State<UserDetailPage>
         if (_licenseUrl != null || _documentUrl != null) ...[
           _sectionCard('Documentos (Firestore)', Icons.folder_rounded, [
             if (_licenseUrl != null)
-              _photoTileWithDownload('Licencia', _licenseUrl!),
+              _photoTileWithDownload('Licencia', DispatchApiService.fullUrl(_licenseUrl!)),
             if (_documentUrl != null)
-              _photoTileWithDownload('Documento', _documentUrl!),
+              _photoTileWithDownload('Documento', DispatchApiService.fullUrl(_documentUrl!)),
           ]),
           const SizedBox(height: 12),
         ],
