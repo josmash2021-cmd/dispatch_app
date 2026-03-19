@@ -255,6 +255,14 @@ class ClientService {
     }
   }
 
+  /// Get blocked clients
+  Future<QuerySnapshot> getBlockedClients() async {
+    return await _clientsCollection
+        .where('status', isEqualTo: 'blocked')
+        .orderBy('lastUpdated', descending: true)
+        .get();
+  }
+
   /// Get client by ID
   Future<ClientModel?> getClientById(String clientId) async {
     final doc = await _clientsCollection.doc(clientId).get();

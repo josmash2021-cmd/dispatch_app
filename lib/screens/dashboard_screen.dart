@@ -28,6 +28,7 @@ import 'scheduled_rides_screen.dart';
 import 'support_chats_screen.dart';
 import 'verification_review_screen.dart';
 import 'audit_logs_screen.dart';
+import 'blocked_users_screen.dart';
 import 'pricing_config_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
@@ -66,6 +67,7 @@ class _DashboardScreenState extends State<DashboardScreen>
     _NavItem(Icons.settings_outlined, Icons.settings, 'Config'),
     _NavItem(Icons.security_outlined, Icons.security, 'Audit Logs'),
     _NavItem(Icons.local_offer_outlined, Icons.local_offer, 'Pricing'),
+    _NavItem(Icons.block_outlined, Icons.block, 'Blocked Users'),
   ];
 
   List<Widget> get _pages => [
@@ -83,6 +85,7 @@ class _DashboardScreenState extends State<DashboardScreen>
     const AdminConfigScreen(),
     const AuditLogsScreen(),  // NEW: Audit Logs
     const PricingConfigScreen(),  // NEW: Pricing Configuration
+    const BlockedUsersScreen(),  // NEW: Blocked Users
   ];
 
   @override

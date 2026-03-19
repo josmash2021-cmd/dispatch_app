@@ -254,6 +254,14 @@ class DriverService {
     }
   }
 
+  /// Get blocked drivers
+  Future<QuerySnapshot> getBlockedDrivers() async {
+    return await _driversCollection
+        .where('status', isEqualTo: 'blocked')
+        .orderBy('lastUpdated', descending: true)
+        .get();
+  }
+
   /// Get driver by ID
   Future<DriverModel?> getDriverById(String driverId) async {
     final doc = await _driversCollection.doc(driverId).get();

@@ -39,6 +39,19 @@ class _AdminConfigScreenState extends State<AdminConfigScreen> {
   double _noShowFee = 10.00;
   int _maxWaitMinutes = 10;
 
+  // Driver hourly earnings config
+  double _driverHourlyRate = 15.00;
+  double _driverMinimumHourly = 12.00;
+  double _driverPeakHourly = 25.00;
+  int _peakStartHour = 17;
+  int _peakEndHour = 20;
+
+  // App mode/state
+  String _appMode = 'production'; // 'production', 'maintenance', 'beta'
+  bool _acceptingNewTrips = true;
+  bool _driverRegistrationOpen = true;
+  bool _riderRegistrationOpen = true;
+
   // Service zones — active US states
   Set<String> _activeStates = {};
   final _stateSearchCtrl = TextEditingController();
@@ -83,6 +96,28 @@ class _AdminConfigScreenState extends State<AdminConfigScreen> {
           _noShowFee = (d['no_show_fee'] as num?)?.toDouble() ?? _noShowFee;
           _maxWaitMinutes =
               (d['max_wait_minutes'] as num?)?.toInt() ?? _maxWaitMinutes;
+          // Driver earnings
+          _driverHourlyRate =
+              (d['driver_hourly_rate'] as num?)?.toDouble() ?? _driverHourlyRate;
+          _driverMinimumHourly =
+              (d['driver_minimum_hourly'] as num?)?.toDouble() ?? _driverMinimumHourly;
+          _driverPeakHourly =
+              (d['driver_peak_hourly'] as num?)?.toDouble() ?? _driverPeakHourly;
+          _peakStartHour =
+              (d['peak_start_hour'] as num?)?.toInt() ?? _peakStartHour;
+          _peakEndHour =
+              (d['peak_end_hour'] as num?)?.toInt() ?? _peakEndHour;
+        });
+      }
+
+      final appConfigSnap = await _db.collection('config').doc('app').get();
+      if (appConfigSnap.exists) {
+        final d = appConfigSnap.data()!;
+        setState(() {
+          _appMode = d['app_mode'] as String? ?? _appMode;
+          _acceptingNewTrips = d['accepting_new_trips'] as bool? ?? _acceptingNewTrips;
+          _driverRegistrationOpen = d['driver_registration_open'] as bool? ?? _driverRegistrationOpen;
+          _riderRegistrationOpen = d['rider_registration_open'] as bool? ?? _riderRegistrationOpen;
         });
       }
 
@@ -121,6 +156,19 @@ class _AdminConfigScreenState extends State<AdminConfigScreen> {
         'cancel_fee': _cancelFee,
         'no_show_fee': _noShowFee,
         'max_wait_minutes': _maxWaitMinutes,
+        'driver_hourly_rate': _driverHourlyRate,
+        'driver_minimum_hourly': _driverMinimumHourly,
+        'driver_peak_hourly': _driverPeakHourly,
+        'peak_start_hour': _peakStartHour,
+        'peak_end_hour': _peakEndHour,
+        'updated_at': FieldValue.serverTimestamp(),
+      });
+
+      await _db.collection('config').doc('app').set({
+        'app_mode': _appMode,
+        'accepting_new_trips': _acceptingNewTrips,
+        'driver_registration_open': _driverRegistrationOpen,
+        'rider_registration_open': _riderRegistrationOpen,
         'updated_at': FieldValue.serverTimestamp(),
       });
 
@@ -313,6 +361,58 @@ class _AdminConfigScreenState extends State<AdminConfigScreen> {
                       suffix: ' min',
                     ),
                   ]),
+
+                  const SizedBox(height: 20),
+                  _sectionHeader('Driver Earnings (Hourly)', Icons.access_time),
+                  _configCard([
+                    _sliderRow(
+                      'Standard rate',
+                      _driverHourlyRate,
+                      5,
+                      50,
+                      (v) => setState(() => _driverHourlyRate = v),
+                      prefix: '\$',
+                      suffix: '/hr',
+                    ),
+                    _sliderRow(
+                      'Minimum hourly',
+                      _driverMinimumHourly,
+                      5,
+                      30,
+                      (v) => setState(() => _driverMinimumHourly = v),
+                      prefix: '\$',
+                      suffix: '/hr',
+                    ),
+                    _sliderRow(
+                      'Peak hour rate',
+                      _driverPeakHourly,
+                      10,
+                      60,
+                      (v) => setState(() => _driverPeakHourly = v),
+                      prefix: '\$',
+                      suffix: '/hr',
+                    ),
+                    _intSliderRow(
+                      'Peak starts at',
+                      _peakStartHour,
+                      16,
+                      20,
+                      (v) => setState(() => _peakStartHour = v),
+                      suffix: ':00',
+                    ),
+                    _intSliderRow(
+                      'Peak ends at',
+                      _peakEndHour,
+                      18,
+                      23,
+                      (v) => setState(() => _peakEndHour = v),
+                      suffix: ':00',
+                    ),
+                  ]),
+
+                  const SizedBox(height: 20),
+                  _sectionHeader('App Mode & Status', Icons.settings_applications),
+                  _buildAppModeSection(),
 
                   const SizedBox(height: 20),
                   _sectionHeader(
@@ -518,6 +618,146 @@ class _AdminConfigScreenState extends State<AdminConfigScreen> {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildAppModeSection() {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.cardBorder),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // App Mode Selector
+          Text(
+            'Application Mode',
+            style: TextStyle(
+              color: AppColors.textSecondary,
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              _modeButton('Production', 'production', Icons.check_circle),
+              const SizedBox(width: 8),
+              _modeButton('Maintenance', 'maintenance', Icons.build),
+              const SizedBox(width: 8),
+              _modeButton('Beta', 'beta', Icons.science),
+            ],
+          ),
+          const SizedBox(height: 16),
+          const Divider(color: AppColors.cardBorder),
+          const SizedBox(height: 16),
+          // Toggle switches for app functions
+          _toggleRow(
+            'Accepting New Trips',
+            _acceptingNewTrips,
+            (v) => setState(() => _acceptingNewTrips = v),
+            Icons.local_taxi,
+          ),
+          const SizedBox(height: 12),
+          _toggleRow(
+            'Driver Registration Open',
+            _driverRegistrationOpen,
+            (v) => setState(() => _driverRegistrationOpen = v),
+            Icons.person_add,
+          ),
+          const SizedBox(height: 12),
+          _toggleRow(
+            'Rider Registration Open',
+            _riderRegistrationOpen,
+            (v) => setState(() => _riderRegistrationOpen = v),
+            Icons.person_add_alt,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _modeButton(String label, String mode, IconData icon) {
+    final isSelected = _appMode == mode;
+    final color = mode == 'production'
+        ? AppColors.success
+        : mode == 'maintenance'
+            ? AppColors.warning
+            : AppColors.primary;
+    return Expanded(
+      child: GestureDetector(
+        onTap: () => setState(() => _appMode = mode),
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+          decoration: BoxDecoration(
+            color: isSelected ? color.withOpacity(0.15) : AppColors.surfaceHigh,
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(
+              color: isSelected ? color : AppColors.cardBorder,
+              width: isSelected ? 2 : 1,
+            ),
+          ),
+          child: Column(
+            children: [
+              Icon(
+                icon,
+                color: isSelected ? color : AppColors.textHint,
+                size: 24,
+              ),
+              const SizedBox(height: 4),
+              Text(
+                label,
+                style: TextStyle(
+                  color: isSelected ? color : AppColors.textSecondary,
+                  fontSize: 12,
+                  fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _toggleRow(
+    String label,
+    bool value,
+    ValueChanged<bool> onChanged,
+    IconData icon,
+  ) {
+    return Row(
+      children: [
+        Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: AppColors.surfaceHigh,
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Icon(icon, color: AppColors.primary, size: 20),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Text(
+            label,
+            style: const TextStyle(
+              color: AppColors.textPrimary,
+              fontSize: 14,
+            ),
+          ),
+        ),
+        Switch(
+          value: value,
+          onChanged: onChanged,
+          activeColor: AppColors.primary,
+          inactiveThumbColor: AppColors.textHint,
+          inactiveTrackColor: AppColors.surfaceHigh,
+        ),
+      ],
     );
   }
 
