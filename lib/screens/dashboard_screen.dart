@@ -74,12 +74,12 @@ class _DashboardScreenState extends State<DashboardScreen>
     HomeMenuScreen(onNavigate: _onTabChanged),
     const TripListScreen(),
     const FleetMapScreen(),
-    const RidersScreen(),
-    const DriversScreen(),
+    const RidersScreen(showAppBar: false),
+    const DriversScreen(showAppBar: false),
     const VerificationReviewScreen(),
     const VerificationReviewScreen(),
     const _StatsContent(),  // Analytics (Stats + Reportes)
-    const DriverReportsScreen(),  // NUEVO: Reportes de Drivers (crashes, bugs)
+    const DriverReportsScreen(showAppBar: false),  // NUEVO: Reportes de Drivers (crashes, bugs)
     const SupportChatsScreen(),
     const ScheduledRidesScreen(),
     const AdminConfigScreen(),

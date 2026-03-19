@@ -7,7 +7,8 @@ import '../widgets/shimmer_loading.dart'; // ShimmerPersonCard
 import 'driver_detail_screen.dart';
 
 class DriversScreen extends StatefulWidget {
-  const DriversScreen({super.key});
+  final bool showAppBar;
+  const DriversScreen({super.key, this.showAppBar = true});
 
   @override
   State<DriversScreen> createState() => _DriversScreenState();
@@ -28,6 +29,23 @@ class _DriversScreenState extends State<DriversScreen> {
 
     return Scaffold(
       backgroundColor: AppColors.background,
+      appBar: widget.showAppBar
+          ? AppBar(
+              backgroundColor: AppColors.background,
+              elevation: 0,
+              leading: IconButton(
+                icon: const Icon(Icons.arrow_back_rounded, color: AppColors.primary),
+                onPressed: () => Navigator.pop(context),
+              ),
+              title: const Text(
+                'Drivers',
+                style: TextStyle(
+                  color: AppColors.textPrimary,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            )
+          : null,
       body: Column(
         children: [
           // Search bar

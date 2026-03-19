@@ -3,6 +3,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../config/app_theme.dart';
+import '../models/client_model.dart';
+import '../models/driver_model.dart';
 import '../services/client_service.dart';
 import '../services/driver_service.dart';
 import 'user_detail_page.dart';
@@ -219,6 +221,55 @@ class _AccountAppealsScreenState extends State<AccountAppealsScreen>
       }
     }
     reasonCtrl.dispose();
+  }
+
+  Future<void> _navigateToUserDetail(Map<String, dynamic> appeal) async {
+    final firestoreId = appeal['userFirestoreId'] as String?;
+    final role = appeal['userRole'] as String? ?? '';
+    if (firestoreId == null || firestoreId.isEmpty) return;
+
+    try {
+      if (role == 'driver') {
+        final doc = await FirebaseFirestore.instance
+            .collection('drivers')
+            .doc(firestoreId)
+            .get();
+        if (doc.exists && mounted) {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => UserDetailPage(
+                driver: DriverModel.fromFirestore(doc),
+              ),
+            ),
+          );
+        }
+      } else {
+        final doc = await FirebaseFirestore.instance
+            .collection('clients')
+            .doc(firestoreId)
+            .get();
+        if (doc.exists && mounted) {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => UserDetailPage(
+                client: ClientModel.fromFirestore(doc),
+              ),
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error al cargar perfil: $e'),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
+    }
   }
 
   @override
@@ -580,15 +631,7 @@ class _AccountAppealsScreenState extends State<AccountAppealsScreen>
                 const Spacer(),
                 if (appeal['userFirestoreId'] != null)
                   TextButton.icon(
-                    onPressed: () => Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => UserDetailPage(
-                          firestoreId: appeal['userFirestoreId'],
-                          role: appeal['userRole'] ?? 'rider',
-                        ),
-                      ),
-                    ),
+                    onPressed: () => _navigateToUserDetail(appeal),
                     icon: const Icon(Icons.person_search, size: 16),
                     label: const Text('Ver perfil', style: TextStyle(fontSize: 12)),
                     style: TextButton.styleFrom(

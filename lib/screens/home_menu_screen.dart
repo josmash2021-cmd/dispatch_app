@@ -398,6 +398,15 @@ class _HomeMenuScreenState extends State<HomeMenuScreen>
       color: AppColors.primary,
       items: [
         _MenuAction(
+          icon: Icons.people,
+          label: 'Ver Todos',
+          badge: _riderCount > 0 ? '$_riderCount' : null,
+          onTap: () => Navigator.push(
+            context,
+            slideFromRightRoute(const RidersScreen()),
+          ),
+        ),
+        _MenuAction(
           icon: Icons.verified_user,
           label: 'Verificación',
           badge: _pendingVerifications > 0 ? '$_pendingVerifications' : null,
@@ -451,6 +460,15 @@ class _HomeMenuScreenState extends State<HomeMenuScreen>
       icon: Icons.local_taxi,
       color: AppColors.primary,
       items: [
+        _MenuAction(
+          icon: Icons.people,
+          label: 'Ver Todos',
+          badge: _driverCount > 0 ? '$_driverCount' : null,
+          onTap: () => Navigator.push(
+            context,
+            slideFromRightRoute(const DriversScreen()),
+          ),
+        ),
         _MenuAction(
           icon: Icons.verified_user,
           label: 'Verificación',

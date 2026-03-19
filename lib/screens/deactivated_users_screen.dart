@@ -310,10 +310,7 @@ class _DeactivatedUsersScreenState extends State<DeactivatedUsersScreen>
               onPressed: () => Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (_) => UserDetailPage(
-                    firestoreId: driver.driverId,
-                    role: 'driver',
-                  ),
+                  builder: (_) => UserDetailPage(driver: driver),
                 ),
               ),
             ),
@@ -391,10 +388,7 @@ class _DeactivatedUsersScreenState extends State<DeactivatedUsersScreen>
               onPressed: () => Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (_) => UserDetailPage(
-                    firestoreId: rider.clientId,
-                    role: 'rider',
-                  ),
+                  builder: (_) => UserDetailPage(client: rider),
                 ),
               ),
             ),

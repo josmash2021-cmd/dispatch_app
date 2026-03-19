@@ -4,7 +4,8 @@ import 'package:flutter/material.dart';
 import '../config/app_theme.dart';
 
 class DriverReportsScreen extends StatefulWidget {
-  const DriverReportsScreen({super.key});
+  final bool showAppBar;
+  const DriverReportsScreen({super.key, this.showAppBar = true});
 
   @override
   State<DriverReportsScreen> createState() => _DriverReportsScreenState();
@@ -66,6 +67,23 @@ class _DriverReportsScreenState extends State<DriverReportsScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.background,
+      appBar: widget.showAppBar
+          ? AppBar(
+              backgroundColor: AppColors.background,
+              elevation: 0,
+              leading: IconButton(
+                icon: const Icon(Icons.arrow_back_rounded, color: AppColors.primary),
+                onPressed: () => Navigator.pop(context),
+              ),
+              title: const Text(
+                'Reportes de Drivers',
+                style: TextStyle(
+                  color: AppColors.textPrimary,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            )
+          : null,
       body: Column(
         children: [
           // Stats Header

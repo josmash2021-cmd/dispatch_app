@@ -8,7 +8,8 @@ import '../widgets/shimmer_loading.dart';
 import 'rider_detail_screen.dart';
 
 class RidersScreen extends StatefulWidget {
-  const RidersScreen({super.key});
+  final bool showAppBar;
+  const RidersScreen({super.key, this.showAppBar = true});
 
   @override
   State<RidersScreen> createState() => _RidersScreenState();
@@ -29,6 +30,23 @@ class _RidersScreenState extends State<RidersScreen> {
 
     return Scaffold(
       backgroundColor: AppColors.background,
+      appBar: widget.showAppBar
+          ? AppBar(
+              backgroundColor: AppColors.background,
+              elevation: 0,
+              leading: IconButton(
+                icon: const Icon(Icons.arrow_back_rounded, color: AppColors.primary),
+                onPressed: () => Navigator.pop(context),
+              ),
+              title: const Text(
+                'Riders',
+                style: TextStyle(
+                  color: AppColors.textPrimary,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            )
+          : null,
       body: Column(
         children: [
           // Search bar
