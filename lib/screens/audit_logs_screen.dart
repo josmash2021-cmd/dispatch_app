@@ -23,7 +23,7 @@ class _AuditLogsScreenState extends State<AuditLogsScreen> {
     {'value': 'ADMIN_TRIP_CREATED', 'label': 'Trip Created', 'icon': Icons.add_circle},
     {'value': 'ADMIN_TRIP_UPDATED', 'label': 'Trip Updated', 'icon': Icons.edit},
     {'value': 'ADMIN_TRIP_DELETED', 'label': 'Trip Deleted', 'icon': Icons.delete},
-    {'value': 'ADMIN_USER_EDIT', 'label': 'User Edited', 'icon': Icons.person_edit},
+    {'value': 'ADMIN_USER_EDIT', 'label': 'User Edited', 'icon': Icons.edit},
     {'value': 'ADMIN_USER_DELETED', 'label': 'User Deleted', 'icon': Icons.person_remove},
     {'value': 'ADMIN_VERIFICATION', 'label': 'Verification', 'icon': Icons.verified_user},
     {'value': 'ADMIN_DISPATCH', 'label': 'Dispatch', 'icon': Icons.local_taxi},
