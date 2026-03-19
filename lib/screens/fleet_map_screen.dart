@@ -250,11 +250,11 @@ class _FleetMapScreenState extends State<FleetMapScreen> {
       ..lineTo(5, 16)
       ..quadraticBezierTo(6, 4, w / 2, 4)
       ..close();
-    c.drawPath(bodyPath, Paint()..color = const Color(0xFFF5F5F5));
+    c.drawPath(bodyPath, Paint()..color = const Color(0xFFFFFFFF));
     c.drawPath(
       bodyPath,
       Paint()
-        ..color = const Color(0xFFBBBBBB)
+        ..color = const Color(0xFFE8C547)
         ..style = PaintingStyle.stroke
         ..strokeWidth = 0.8,
     );
@@ -271,13 +271,13 @@ class _FleetMapScreenState extends State<FleetMapScreen> {
       ..lineTo(w - 12, 40)
       ..lineTo(12, 40)
       ..close();
-    c.drawPath(fwPath, Paint()..color = const Color(0xFF2D3748));
+    c.drawPath(fwPath, Paint()..color = const Color(0xFF000000));
     c.drawRRect(
       RRect.fromRectAndRadius(
         const Rect.fromLTWH(12, 40, 18, 18),
         const Radius.circular(2),
       ),
-      Paint()..color = const Color(0xFFE2E2E2),
+      Paint()..color = const Color(0xFFFFFFFF),
     );
     final rwPath = Path()
       ..moveTo(12, 58)
@@ -285,7 +285,7 @@ class _FleetMapScreenState extends State<FleetMapScreen> {
       ..lineTo(w - 10, 70)
       ..lineTo(10, 70)
       ..close();
-    c.drawPath(rwPath, Paint()..color = const Color(0xFF2D3748));
+    c.drawPath(rwPath, Paint()..color = const Color(0xFF000000));
     c.drawLine(
       const Offset(12, 78),
       Offset(w - 12, 78),
@@ -312,16 +312,16 @@ class _FleetMapScreenState extends State<FleetMapScreen> {
         Rect.fromLTWH(8, h - 10, 7, 4),
         const Radius.circular(2),
       ),
-      Paint()..color = const Color(0xFFE53E3E),
+      Paint()..color = const Color(0xFFE8C547),
     );
     c.drawRRect(
       RRect.fromRectAndRadius(
         Rect.fromLTWH(w - 15, h - 10, 7, 4),
         const Radius.circular(2),
       ),
-      Paint()..color = const Color(0xFFE53E3E),
+      Paint()..color = const Color(0xFFE8C547),
     );
-    final wp = Paint()..color = const Color(0xFF1A1A1A);
+    final wp = Paint()..color = const Color(0xFF000000);
     c.drawRRect(
       RRect.fromRectAndRadius(
         const Rect.fromLTWH(2, 20, 5, 14),
@@ -608,15 +608,9 @@ class _FleetMapScreenState extends State<FleetMapScreen> {
     for (final dp in _displayDrivers) {
       final icon = _simulationMode
           ? (_simCarIcon ?? gm.BitmapDescriptor.defaultMarker)
-          : dp.driver.isOnline
-          ? (_gmOnlineIcon ??
-                gm.BitmapDescriptor.defaultMarkerWithHue(
-                  gm.BitmapDescriptor.hueGreen,
-                ))
-          : (_gmOfflineIcon ??
-                gm.BitmapDescriptor.defaultMarkerWithHue(
-                  gm.BitmapDescriptor.hueRed,
-                ));
+          : gm.BitmapDescriptor.defaultMarkerWithHue(
+              gm.BitmapDescriptor.hueYellow,
+            );
       markers.add(
         gm.Marker(
           markerId: gm.MarkerId('driver_${dp.driver.driverId}'),

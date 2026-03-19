@@ -1073,12 +1073,12 @@ class _TripDetailScreenState extends State<TripDetailScreen>
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF9C27B0).withOpacity(0.15),
+                  color: AppColors.primary.withOpacity(0.15),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: const Icon(
                   Icons.money_off_rounded,
-                  color: Color(0xFF9C27B0),
+                  color: AppColors.primary,
                   size: 20,
                 ),
               ),
