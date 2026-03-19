@@ -774,6 +774,7 @@ class _ContextMenuCard extends StatelessWidget {
                                 fontWeight: FontWeight.w700,
                               ),
                             ),
+                          ),
                       ],
                     ),
                     Column(
