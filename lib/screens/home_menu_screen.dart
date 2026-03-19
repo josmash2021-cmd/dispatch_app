@@ -748,7 +748,24 @@ class _HomeMenuScreenState extends State<HomeMenuScreen>
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 AnimatedSwitcher(
-                  duration: const Duration(milliseconds: 250),
+                  duration: const Duration(milliseconds: 300),
+                  transitionBuilder: (Widget child, Animation<double> animation) {
+                    final isEntering = child.key == ValueKey(isDispatch);
+                    final slideAnim = Tween<Offset>(
+                      begin: isEntering ? const Offset(0.3, 0) : const Offset(-0.3, 0),
+                      end: Offset.zero,
+                    ).animate(CurvedAnimation(
+                      parent: animation,
+                      curve: Curves.easeOutCubic,
+                    ));
+                    return FadeTransition(
+                      opacity: animation,
+                      child: SlideTransition(
+                        position: slideAnim,
+                        child: child,
+                      ),
+                    );
+                  },
                   child: Text(
                     isDispatch ? 'Dashboard Dispatch' : 'Dashboard Admin',
                     key: ValueKey(isDispatch),
@@ -759,13 +776,34 @@ class _HomeMenuScreenState extends State<HomeMenuScreen>
                     ),
                   ),
                 ),
-                Text(
-                  isDispatch
-                      ? 'Gestión operativa de viajes'
-                      : 'Administración del sistema',
-                  style: const TextStyle(
-                    fontSize: 13,
-                    color: AppColors.textSecondary,
+                AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 300),
+                  transitionBuilder: (Widget child, Animation<double> animation) {
+                    final isEntering = child.key == ValueKey(isDispatch);
+                    final slideAnim = Tween<Offset>(
+                      begin: isEntering ? const Offset(-0.2, 0) : const Offset(0.2, 0),
+                      end: Offset.zero,
+                    ).animate(CurvedAnimation(
+                      parent: animation,
+                      curve: Curves.easeOutCubic,
+                    ));
+                    return FadeTransition(
+                      opacity: animation,
+                      child: SlideTransition(
+                        position: slideAnim,
+                        child: child,
+                      ),
+                    );
+                  },
+                  child: Text(
+                    isDispatch
+                        ? 'Gestión operativa de viajes'
+                        : 'Administración del sistema',
+                    key: ValueKey(isDispatch),
+                    style: const TextStyle(
+                      fontSize: 13,
+                      color: AppColors.textSecondary,
+                    ),
                   ),
                 ),
               ],
