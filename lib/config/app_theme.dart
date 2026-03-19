@@ -9,15 +9,15 @@ class AppColors {
   static const Color background = Color(0xFF08090C);
   static const Color surface = Color(0xFF101114);
   static const Color surfaceHigh = Color(0xFF161719);
-  static const Color cardBorder = Color(0xFF1C1C22); // white @ 6% on #0E0F12
+  static const Color cardBorder = Color(0xFF08090C); // black
 
   // Primary accent — Cruise Gold
   static const Color primary = Color(0xFFE8C547);
   static const Color primaryDark = Color(0xFFC9A83A);
   static const Color primaryLight = Color(0xFFF5D990);
 
-  // Accent secondary (warm amber)
-  static const Color accent = Color(0xFFF0D060);
+  // Accent secondary - same as primary gold
+  static const Color accent = Color(0xFFE8C547); // gold
 
   // Text — white with opacity levels
   static const Color textPrimary = Color(0xFFFFFFFF);
@@ -30,14 +30,14 @@ class AppColors {
   static const Color driverArrived = Color(0xFFF5D990); // gold-light
   static const Color inProgress = Color(0xFFE8C547); // gold
   static const Color completed = Color(0xFFFFFFFF); // white
-  static const Color cancelled = Color(0xFF1C1C22); // dark gray
+  static const Color cancelled = Color(0xFF000000); // pure black
 
   // Semantic - MINIMALIST: only black, white, gold
   static const Color success = Color(0xFFE8C547); // gold (was green)
   static const Color warning = Color(0xFFE8C547); // gold
-  static const Color error = Color(0xFF1C1C22); // dark (was red)
+  static const Color error = Color(0xFFFFFFFF); // white for contrast
   static const Color info = Color(0xFFE8C547); // gold
-  static const Color divider = Color(0xFF1C1C22);
+  static const Color divider = Color(0xFF08090C); // black
 }
 
 // Cruise-identical Cupertino transitions for all platforms
