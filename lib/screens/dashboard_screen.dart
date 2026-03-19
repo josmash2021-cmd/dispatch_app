@@ -27,6 +27,8 @@ import 'reports_screen.dart';
 import 'scheduled_rides_screen.dart';
 import 'support_chats_screen.dart';
 import 'verification_review_screen.dart';
+import 'audit_logs_screen.dart';
+import 'pricing_config_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -62,6 +64,8 @@ class _DashboardScreenState extends State<DashboardScreen>
     _NavItem(Icons.chat_outlined, Icons.chat_rounded, 'Soporte'),
     _NavItem(Icons.calendar_today_outlined, Icons.calendar_today, 'Agendados'),
     _NavItem(Icons.settings_outlined, Icons.settings, 'Config'),
+    _NavItem(Icons.security_outlined, Icons.security, 'Audit Logs'),
+    _NavItem(Icons.local_offer_outlined, Icons.local_offer, 'Pricing'),
   ];
 
   List<Widget> get _pages => [
@@ -77,6 +81,8 @@ class _DashboardScreenState extends State<DashboardScreen>
     const SupportChatsScreen(),
     const ScheduledRidesScreen(),
     const AdminConfigScreen(),
+    const AuditLogsScreen(),  // NEW: Audit Logs
+    const PricingConfigScreen(),  // NEW: Pricing Configuration
   ];
 
   @override
@@ -523,6 +529,8 @@ class _AppDrawer extends StatelessWidget {
     _NavItem(Icons.chat_outlined, Icons.chat_rounded, 'Chat'),
     _NavItem(Icons.settings_outlined, Icons.settings_rounded, 'Config'),
     _NavItem(Icons.event_note_outlined, Icons.event_note_rounded, 'Scheduled'),
+    _NavItem(Icons.security_outlined, Icons.security_rounded, 'Audit Logs'),
+    _NavItem(Icons.local_offer_outlined, Icons.local_offer_rounded, 'Pricing'),
   ];
 
   @override

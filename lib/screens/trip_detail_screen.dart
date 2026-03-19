@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../config/app_theme.dart';
 import '../models/driver_model.dart';
 import '../models/trip_model.dart';
+import '../providers/refund_provider.dart';
 import '../providers/trip_provider.dart';
 import '../services/dispatch_api_service.dart';
 import '../services/driver_service.dart';
@@ -203,6 +204,15 @@ class _TripDetailScreenState extends State<TripDetailScreen>
                 'Delete',
                 AppColors.error,
               ),
+              // Show refund option for completed or cancelled trips with payment
+              if (trip.status == TripStatus.completed || 
+                  trip.status == TripStatus.cancelled)
+                _menuItem(
+                  'refund',
+                  Icons.money_off_rounded,
+                  'Process Refund',
+                  const Color(0xFF9C27B0),
+                ),
             ],
           ),
         ],
@@ -911,6 +921,9 @@ class _TripDetailScreenState extends State<TripDetailScreen>
       case 'delete':
         _showDeleteDialog(context);
         break;
+      case 'refund':
+        _showRefundDialog(context);
+        break;
     }
   }
 
@@ -1020,6 +1033,273 @@ class _TripDetailScreenState extends State<TripDetailScreen>
             child: const Text('Delete'),
           ),
         ],
+      ),
+    );
+  }
+
+  void _showRefundDialog(BuildContext context) async {
+    // Get sqliteId from trip
+    final tripService = TripService();
+    final doc = await tripService.tripDoc(trip.tripId);
+    final data = doc.data() as Map<String, dynamic>? ?? {};
+    final sqliteId = data['sqliteId'] as int?;
+    
+    if (sqliteId == null) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            backgroundColor: AppColors.error,
+            content: Text('Trip not synced to backend - cannot process refund'),
+          ),
+        );
+      }
+      return;
+    }
+
+    final reasonCtrl = TextEditingController(text: 'Customer requested refund');
+    final amountCtrl = TextEditingController();
+    bool fullRefund = true;
+
+    if (!context.mounted) return;
+    
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setState) => AlertDialog(
+          backgroundColor: AppColors.surface,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF9C27B0).withOpacity(0.15),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Icon(
+                  Icons.money_off_rounded,
+                  color: Color(0xFF9C27B0),
+                  size: 20,
+                ),
+              ),
+              const SizedBox(width: 10),
+              const Text(
+                'Process Refund',
+                style: TextStyle(
+                  color: AppColors.textPrimary,
+                  fontSize: 18,
+                ),
+              ),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                'Trip: #${trip.tripId.substring(trip.tripId.length > 8 ? trip.tripId.length - 8 : 0).toUpperCase()}',
+                style: const TextStyle(
+                  color: AppColors.textSecondary,
+                  fontSize: 14,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'Original fare: \$${trip.fare.toStringAsFixed(2)}',
+                style: const TextStyle(
+                  color: AppColors.primary,
+                  fontWeight: FontWeight.w700,
+                  fontSize: 16,
+                ),
+              ),
+              const SizedBox(height: 16),
+              // Full vs Partial refund toggle
+              Container(
+                decoration: BoxDecoration(
+                  color: AppColors.surfaceHigh,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: GestureDetector(
+                        onTap: () => setState(() => fullRefund = true),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(vertical: 10),
+                          decoration: BoxDecoration(
+                            color: fullRefund
+                                ? AppColors.primary.withOpacity(0.2)
+                                : null,
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text(
+                            'Full Refund',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              color: fullRefund
+                                  ? AppColors.primary
+                                  : AppColors.textSecondary,
+                              fontWeight: fullRefund
+                                  ? FontWeight.w700
+                                  : FontWeight.w500,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                    Expanded(
+                      child: GestureDetector(
+                        onTap: () => setState(() => fullRefund = false),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(vertical: 10),
+                          decoration: BoxDecoration(
+                            color: !fullRefund
+                                ? AppColors.primary.withOpacity(0.2)
+                                : null,
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text(
+                            'Partial',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              color: !fullRefund
+                                  ? AppColors.primary
+                                  : AppColors.textSecondary,
+                              fontWeight: !fullRefund
+                                  ? FontWeight.w700
+                                  : FontWeight.w500,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+              if (!fullRefund)
+                TextField(
+                  controller: amountCtrl,
+                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                  style: const TextStyle(color: AppColors.textPrimary),
+                  decoration: InputDecoration(
+                    labelText: 'Refund Amount (\$)',
+                    labelStyle: const TextStyle(color: AppColors.textSecondary),
+                    prefixText: '\$',
+                    prefixStyle: const TextStyle(color: AppColors.primary),
+                    filled: true,
+                    fillColor: AppColors.surfaceHigh,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      borderSide: BorderSide.none,
+                    ),
+                  ),
+                ),
+              if (!fullRefund) const SizedBox(height: 12),
+              TextField(
+                controller: reasonCtrl,
+                style: const TextStyle(color: AppColors.textPrimary),
+                decoration: InputDecoration(
+                  labelText: 'Reason for Refund',
+                  labelStyle: const TextStyle(color: AppColors.textSecondary),
+                  filled: true,
+                  fillColor: AppColors.surfaceHigh,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                    borderSide: BorderSide.none,
+                  ),
+                ),
+                maxLines: 2,
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text(
+                'Cancel',
+                style: TextStyle(color: AppColors.textSecondary),
+              ),
+            ),
+            Consumer<RefundProvider>(
+              builder: (context, refundProvider, _) {
+                return ElevatedButton(
+                  onPressed: refundProvider.isLoading
+                      ? null
+                      : () async {
+                          final reason = reasonCtrl.text.trim();
+                          if (reason.isEmpty) return;
+
+                          double? refundAmount;
+                          if (!fullRefund) {
+                            final amountText = amountCtrl.text.trim();
+                            if (amountText.isEmpty) return;
+                            refundAmount = double.tryParse(amountText);
+                            if (refundAmount == null || refundAmount <= 0) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  backgroundColor: AppColors.error,
+                                  content: Text('Invalid refund amount'),
+                                ),
+                              );
+                              return;
+                            }
+                            if (refundAmount > trip.fare) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  backgroundColor: AppColors.error,
+                                  content: Text(
+                                    'Refund amount cannot exceed original fare',
+                                  ),
+                                ),
+                              );
+                              return;
+                            }
+                          }
+
+                          Navigator.pop(ctx);
+                          
+                          final success = await refundProvider.processRefund(
+                            tripId: sqliteId,
+                            reason: reason,
+                            amount: refundAmount,
+                          );
+
+                          if (success && context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                backgroundColor: AppColors.success,
+                                behavior: SnackBarBehavior.floating,
+                                content: Text(
+                                  refundAmount != null
+                                      ? 'Partial refund of \$${refundAmount.toStringAsFixed(2)} processed'
+                                      : 'Full refund of \$${trip.fare.toStringAsFixed(2)} processed',
+                                ),
+                              ),
+                            );
+                          }
+                        },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF9C27B0),
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
+                  child: refundProvider.isLoading
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        )
+                      : const Text('Process Refund'),
+                );
+              },
+            ),
+          ],
+        ),
       ),
     );
   }

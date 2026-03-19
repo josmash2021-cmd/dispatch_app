@@ -6,10 +6,14 @@ import 'package:timeago/timeago.dart' as timeago;
 
 import 'config/app_theme.dart';
 import 'firebase_options.dart';
+import 'providers/audit_log_provider.dart';
 import 'providers/auth_provider.dart';
 import 'providers/client_provider.dart';
 import 'providers/dashboard_provider.dart';
 import 'providers/driver_provider.dart';
+import 'providers/notification_provider.dart';
+import 'providers/pricing_provider.dart';
+import 'providers/refund_provider.dart';
 import 'providers/trip_provider.dart';
 import 'providers/verification_provider.dart';
 import 'screens/splash_screen.dart';
@@ -47,6 +51,10 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => ClientProvider()),
         ChangeNotifierProvider(create: (_) => DriverProvider()),
         ChangeNotifierProvider(create: (_) => VerificationProvider()),
+        ChangeNotifierProvider(create: (_) => NotificationProvider()),
+        ChangeNotifierProvider(create: (_) => PricingProvider()),
+        ChangeNotifierProvider(create: (_) => RefundProvider()),
+        ChangeNotifierProvider(create: (_) => AuditLogProvider()),
       ],
       child: MaterialApp(
         title: 'Dispatch Admin',

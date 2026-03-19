@@ -9,6 +9,7 @@ import '../services/dispatch_api_service.dart';
 import 'user_detail_page.dart';
 import '../widgets/animated_list_item.dart';
 import '../widgets/re_auth_dialog.dart';
+import '../widgets/send_notification_dialog.dart';
 import '../widgets/shimmer_loading.dart';
 
 class ClientsTab extends StatefulWidget {
@@ -517,6 +518,16 @@ class _ClientCard extends StatelessWidget {
                 },
               ),
               const Divider(color: AppColors.cardBorder, height: 16),
+              _actionTile(
+                icon: Icons.notifications_active_rounded,
+                label: 'Send Notification',
+                subtitle: 'Push notification to device',
+                color: const Color(0xFF00BCD4),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  _showSendNotification(context, client);
+                },
+              ),
               if (!client.isActive)
                 _actionTile(
                   icon: Icons.check_circle_outline_rounded,
@@ -827,6 +838,33 @@ class _ClientCard extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  void _showSendNotification(BuildContext context, ClientModel client) {
+    // Get sqliteId from Firestore doc
+    FirebaseFirestore.instance
+        .collection('clients')
+        .doc(client.clientId)
+        .get()
+        .then((doc) {
+      final data = doc.data() as Map<String, dynamic>? ?? {};
+      final sqliteId = data['sqliteId'] as int?;
+      
+      if (sqliteId == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            backgroundColor: AppColors.error,
+            content: Text('Client not synced to backend - cannot send notification'),
+          ),
+        );
+        return;
+      }
+
+      context.showSendNotificationDialog(
+        userId: sqliteId,
+        userName: client.fullName,
+      );
+    });
   }
 
   void _confirmDelete(BuildContext context, ClientModel client) {

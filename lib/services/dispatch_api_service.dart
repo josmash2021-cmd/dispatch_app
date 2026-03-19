@@ -545,6 +545,245 @@ class DispatchApiService {
     );
     return data as Map<String, dynamic>;
   }
+
+  // ═══════════════════════════════════════════════════════
+  //  PAYMENTS & REFUNDS
+  // ═══════════════════════════════════════════════════════
+
+  /// Process a refund for a trip
+  static Future<Map<String, dynamic>> refundPayment({
+    required int tripId,
+    required String reason,
+    double? amount,
+  }) async {
+    final body = <String, dynamic>{
+      'trip_id': tripId,
+      'reason': reason,
+    };
+    if (amount != null) {
+      body['amount'] = amount;
+    }
+    final result = await _post('/payments/refund', body: body);
+    return result as Map<String, dynamic>;
+  }
+
+  /// Get payment details for a trip
+  static Future<Map<String, dynamic>> getPaymentDetails(int tripId) async {
+    final result = await _get('/payments/trip/$tripId');
+    return result as Map<String, dynamic>;
+  }
+
+  /// Get driver's Stripe Connect status
+  static Future<Map<String, dynamic>> getDriverStripeStatus(int driverId) async {
+    final result = await _get('/drivers/$driverId/stripe-status');
+    return result as Map<String, dynamic>;
+  }
+
+  // ═══════════════════════════════════════════════════════
+  //  NOTIFICATIONS
+  // ═══════════════════════════════════════════════════════
+
+  /// Send push notification to a specific user
+  static Future<Map<String, dynamic>> sendNotification({
+    required int userId,
+    required String title,
+    required String body,
+    Map<String, dynamic>? data,
+  }) async {
+    final requestBody = <String, dynamic>{
+      'user_id': userId,
+      'title': title,
+      'body': body,
+    };
+    if (data != null) {
+      requestBody['data'] = data;
+    }
+    final result = await _post('/notifications/send', body: requestBody);
+    return result as Map<String, dynamic>;
+  }
+
+  /// Send notification to all online drivers
+  static Future<Map<String, dynamic>> broadcastToDrivers({
+    required String title,
+    required String body,
+    Map<String, dynamic>? data,
+  }) async {
+    final requestBody = <String, dynamic>{
+      'title': title,
+      'body': body,
+    };
+    if (data != null) {
+      requestBody['data'] = data;
+    }
+    final result = await _post('/notifications/broadcast/drivers', body: requestBody);
+    return result as Map<String, dynamic>;
+  }
+
+  /// Send notification to all riders
+  static Future<Map<String, dynamic>> broadcastToRiders({
+    required String title,
+    required String body,
+    Map<String, dynamic>? data,
+  }) async {
+    final requestBody = <String, dynamic>{
+      'title': title,
+      'body': body,
+    };
+    if (data != null) {
+      requestBody['data'] = data;
+    }
+    final result = await _post('/notifications/broadcast/riders', body: requestBody);
+    return result as Map<String, dynamic>;
+  }
+
+  // ═══════════════════════════════════════════════════════
+  //  PRICING & CONFIGURATION
+  // ═══════════════════════════════════════════════════════
+
+  /// Get current pricing configuration
+  static Future<Map<String, dynamic>> getPricingConfig() async {
+    final result = await _get('/admin/pricing');
+    return result as Map<String, dynamic>;
+  }
+
+  /// Update pricing configuration
+  static Future<Map<String, dynamic>> updatePricingConfig({
+    double? baseFare,
+    double? perMileRate,
+    double? perMinuteRate,
+    double? minimumFare,
+    double? surgeMultiplier,
+    double? airportFee,
+    double? bookingFee,
+  }) async {
+    final body = <String, dynamic>{};
+    if (baseFare != null) body['base_fare'] = baseFare;
+    if (perMileRate != null) body['per_mile_rate'] = perMileRate;
+    if (perMinuteRate != null) body['per_minute_rate'] = perMinuteRate;
+    if (minimumFare != null) body['minimum_fare'] = minimumFare;
+    if (surgeMultiplier != null) body['surge_multiplier'] = surgeMultiplier;
+    if (airportFee != null) body['airport_fee'] = airportFee;
+    if (bookingFee != null) body['booking_fee'] = bookingFee;
+    
+    final result = await _patch('/admin/pricing', body: body);
+    return result as Map<String, dynamic>;
+  }
+
+  // ═══════════════════════════════════════════════════════
+  //  AUDIT LOGS
+  // ═══════════════════════════════════════════════════════
+
+  /// Get security audit logs
+  static Future<List<Map<String, dynamic>>> getAuditLogs({
+    int limit = 100,
+    int offset = 0,
+    String? action,
+    String? startDate,
+    String? endDate,
+  }) async {
+    final params = <String, String>{
+      'limit': limit.toString(),
+      'offset': offset.toString(),
+    };
+    if (action != null) params['action'] = action;
+    if (startDate != null) params['start_date'] = startDate;
+    if (endDate != null) params['end_date'] = endDate;
+    
+    final result = await _get('/admin/audit-logs', queryParams: params);
+    return (result as List).cast<Map<String, dynamic>>();
+  }
+
+  // ═══════════════════════════════════════════════════════
+  //  DRIVER LOCATION HISTORY
+  // ═══════════════════════════════════════════════════════
+
+  /// Get driver's location history
+  static Future<List<Map<String, dynamic>>> getDriverLocationHistory(
+    int driverId, {
+    int limit = 100,
+    String? startTime,
+    String? endTime,
+  }) async {
+    final params = <String, String>{'limit': limit.toString()};
+    if (startTime != null) params['start_time'] = startTime;
+    if (endTime != null) params['end_time'] = endTime;
+    
+    final result = await _get('/drivers/$driverId/locations', queryParams: params);
+    return (result as List).cast<Map<String, dynamic>>();
+  }
+
+  // ═══════════════════════════════════════════════════════
+  //  FINANCIAL REPORTS
+  // ═══════════════════════════════════════════════════════
+
+  /// Get revenue report
+  static Future<Map<String, dynamic>> getRevenueReport({
+    String? period, // 'daily', 'weekly', 'monthly'
+    String? startDate,
+    String? endDate,
+  }) async {
+    final params = <String, String>{};
+    if (period != null) params['period'] = period;
+    if (startDate != null) params['start_date'] = startDate;
+    if (endDate != null) params['end_date'] = endDate;
+    
+    final result = await _get('/admin/reports/revenue', queryParams: params);
+    return result as Map<String, dynamic>;
+  }
+
+  /// Get driver's earnings report
+  static Future<Map<String, dynamic>> getDriverEarningsReport(
+    int driverId, {
+    String? startDate,
+    String? endDate,
+  }) async {
+    final params = <String, String>{};
+    if (startDate != null) params['start_date'] = startDate;
+    if (endDate != null) params['end_date'] = endDate;
+    
+    final result = await _get('/drivers/$driverId/earnings', queryParams: params);
+    return result as Map<String, dynamic>;
+  }
+
+  /// Get platform commission report
+  static Future<Map<String, dynamic>> getPlatformCommissionReport({
+    String? period,
+    String? startDate,
+    String? endDate,
+  }) async {
+    final params = <String, String>{};
+    if (period != null) params['period'] = period;
+    if (startDate != null) params['start_date'] = startDate;
+    if (endDate != null) params['end_date'] = endDate;
+    
+    final result = await _get('/admin/reports/commission', queryParams: params);
+    return result as Map<String, dynamic>;
+  }
+
+  // ═══════════════════════════════════════════════════════
+  //  BULK OPERATIONS
+  // ═══════════════════════════════════════════════════════
+
+  /// Delete all users (DANGER - owner only)
+  static Future<Map<String, dynamic>> deleteAllUsers() async {
+    final result = await _delete('/admin/users');
+    return result as Map<String, dynamic>;
+  }
+
+  /// Bulk update user status
+  static Future<Map<String, dynamic>> bulkUpdateUserStatus({
+    required List<int> userIds,
+    required String status,
+  }) async {
+    final result = await _post(
+      '/admin/users/bulk-status',
+      body: {
+        'user_ids': userIds,
+        'status': status,
+      },
+    );
+    return result as Map<String, dynamic>;
+  }
 }
 
 class ApiException implements Exception {

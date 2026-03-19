@@ -11,6 +11,7 @@ import '../services/dispatch_api_service.dart';
 import 'user_detail_page.dart';
 import '../widgets/animated_list_item.dart';
 import '../widgets/re_auth_dialog.dart';
+import '../widgets/send_notification_dialog.dart';
 import '../widgets/shimmer_loading.dart';
 
 class DriversTab extends StatefulWidget {
@@ -619,6 +620,17 @@ class _DriverCard extends StatelessWidget {
                         _changeStatus(context, driver, 'blocked');
                       },
                     ),
+                  const Divider(color: AppColors.cardBorder, height: 24),
+                  _actionTile(
+                    icon: Icons.notifications_active_rounded,
+                    label: 'Send Notification',
+                    subtitle: 'Push notification to driver',
+                    color: const Color(0xFF00BCD4),
+                    onTap: () {
+                      Navigator.pop(ctx);
+                      _showSendNotification(context, driver);
+                    },
+                  ),
                   const Divider(color: AppColors.cardBorder, height: 24),
                   _actionTile(
                     icon: Icons.delete_forever_rounded,
@@ -1527,6 +1539,23 @@ class _DriverCard extends StatelessWidget {
           vertical: 12,
         ),
       ),
+    );
+  }
+
+  void _showSendNotification(BuildContext context, DriverModel driver) {
+    if (driver.sqliteId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          backgroundColor: AppColors.error,
+          content: Text('Driver not synced to backend - cannot send notification'),
+        ),
+      );
+      return;
+    }
+
+    context.showSendNotificationDialog(
+      userId: driver.sqliteId!,
+      userName: driver.fullName,
     );
   }
 
