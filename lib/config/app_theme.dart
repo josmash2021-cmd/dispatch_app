@@ -24,19 +24,19 @@ class AppColors {
   static const Color textSecondary = Color(0x80FFFFFF); // white 50%
   static const Color textHint = Color(0x40FFFFFF); // white 25%
 
-  // Status colors
-  static const Color requested = Color(0xFFE8C547); // gold — waiting
-  static const Color accepted = Color(0xFFF0D060); // bright gold — driver on way
-  static const Color driverArrived = Color(0xFFF5D990); // gold-light — arrived
-  static const Color inProgress = Color(0xFFE8C547); // gold — riding
-  static const Color completed = Color(0xFF4ADE80); // green — done
-  static const Color cancelled = Color(0xFFFF5A5A); // red — cancelled
+  // Status colors - MINIMALIST: only black, white, gold
+  static const Color requested = Color(0xFFE8C547); // gold
+  static const Color accepted = Color(0xFFE8C547); // gold
+  static const Color driverArrived = Color(0xFFF5D990); // gold-light
+  static const Color inProgress = Color(0xFFE8C547); // gold
+  static const Color completed = Color(0xFFFFFFFF); // white
+  static const Color cancelled = Color(0xFF1C1C22); // dark gray
 
-  // Semantic
-  static const Color success = Color(0xFF4ADE80);
-  static const Color warning = Color(0xFFE8C547);
-  static const Color error = Color(0xFFFF5A5A);
-  static const Color info = Color(0xFFE8C547);
+  // Semantic - MINIMALIST: only black, white, gold
+  static const Color success = Color(0xFFE8C547); // gold (was green)
+  static const Color warning = Color(0xFFE8C547); // gold
+  static const Color error = Color(0xFF1C1C22); // dark (was red)
+  static const Color info = Color(0xFFE8C547); // gold
   static const Color divider = Color(0xFF1C1C22);
 }
 

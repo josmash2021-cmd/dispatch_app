@@ -30,17 +30,23 @@ class _RiderDetailScreenState extends State<RiderDetailScreen> {
       // Load user details from backend
       final userDetail = await DispatchApiService.getUserDetail(widget.sqliteId);
       
-      // Load support chats from Firestore
+      // Load support chats from Firestore - removed orderBy to avoid index requirement
       final chatsSnap = await FirebaseFirestore.instance
           .collection('support_chats')
           .where('userId', isEqualTo: widget.sqliteId)
-          .orderBy('createdAt', descending: true)
           .get();
       final chats = chatsSnap.docs.map((d) {
         final data = d.data();
         data['id'] = int.tryParse(d.id) ?? 0;
         return data;
       }).toList();
+      // Sort locally by createdAt
+      chats.sort((a, b) {
+        final aTime = a['createdAt'] as Timestamp?;
+        final bTime = b['createdAt'] as Timestamp?;
+        if (aTime == null || bTime == null) return 0;
+        return bTime.compareTo(aTime); // descending
+      });
       
       if (mounted) {
         setState(() {
