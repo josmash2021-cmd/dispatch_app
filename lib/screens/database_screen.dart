@@ -43,6 +43,10 @@ class _DatabaseScreenState extends State<DatabaseScreen>
       backgroundColor: AppColors.background,
       appBar: AppBar(
         automaticallyImplyLeading: false,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_rounded, color: AppColors.primary),
+          onPressed: () => Navigator.pop(context),
+        ),
         backgroundColor: AppColors.background,
         elevation: 0,
         bottom: PreferredSize(

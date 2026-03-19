@@ -21,7 +21,13 @@ class _ScheduledRidesScreenState extends State<ScheduledRidesScreen> {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
+        automaticallyImplyLeading: false,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_rounded, color: AppColors.primary),
+          onPressed: () => Navigator.pop(context),
+        ),
         backgroundColor: AppColors.background,
+        elevation: 0,
         title: const Text(
           'Scheduled Rides',
           style: TextStyle(color: AppColors.textPrimary),
@@ -318,9 +324,20 @@ class _ScheduledRidesScreenState extends State<ScheduledRidesScreen> {
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: AppColors.surface,
-        title: const Text(
-          'Assign Driver',
-          style: TextStyle(color: AppColors.textPrimary),
+        appBar: AppBar(
+          backgroundColor: AppColors.background,
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back_rounded, color: AppColors.primary),
+            onPressed: () => Navigator.pop(context),
+          ),
+          elevation: 0,
+          title: const Text(
+            'Assign Driver',
+            style: TextStyle(
+              color: AppColors.textPrimary,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
         ),
         content: SizedBox(
           width: double.maxFinite,
@@ -398,9 +415,20 @@ class _ScheduledRidesScreenState extends State<ScheduledRidesScreen> {
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: AppColors.surface,
-        title: const Text(
-          'Cancel Ride?',
-          style: TextStyle(color: AppColors.textPrimary),
+        appBar: AppBar(
+          backgroundColor: AppColors.background,
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back_rounded, color: AppColors.primary),
+            onPressed: () => Navigator.pop(context),
+          ),
+          elevation: 0,
+          title: const Text(
+            'Cancel Ride?',
+            style: TextStyle(
+              color: AppColors.textPrimary,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
         ),
         content: const Text(
           'This will cancel the scheduled ride. The rider will be notified.',

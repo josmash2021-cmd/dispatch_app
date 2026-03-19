@@ -171,6 +171,10 @@ class _BlockedUsersScreenState extends State<BlockedUsersScreen>
       backgroundColor: AppColors.background,
       appBar: AppBar(
         backgroundColor: AppColors.background,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_rounded, color: AppColors.primary),
+          onPressed: () => Navigator.pop(context),
+        ),
         elevation: 0,
         title: const Text(
           'Blocked Users',

@@ -204,6 +204,11 @@ class _AdminConfigScreenState extends State<AdminConfigScreen> {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
+        backgroundColor: AppColors.background,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_rounded, color: AppColors.primary),
+          onPressed: () => Navigator.pop(context),
+        ),
         title: const Text('Admin Configuration'),
         actions: [
           TextButton.icon(

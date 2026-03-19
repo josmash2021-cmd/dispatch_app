@@ -39,6 +39,10 @@ class _VerificationReviewScreenState extends State<VerificationReviewScreen> {
       backgroundColor: AppColors.background,
       appBar: AppBar(
         backgroundColor: AppColors.background,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_rounded, color: AppColors.primary),
+          onPressed: () => Navigator.pop(context),
+        ),
         title: Row(
           children: [
             const Text('Verification Review'),
