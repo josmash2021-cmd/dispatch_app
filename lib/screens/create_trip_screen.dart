@@ -249,7 +249,7 @@ class _CreateTripScreenState extends State<CreateTripScreen>
                 _buildSection(
                   icon: Icons.alt_route_rounded,
                   title: 'Route',
-                  color: const Color(0xFF4FC3F7),
+                  color: AppColors.primary,
                   children: [
                     _locationField(
                       ctrl: _pickupAddressCtrl,

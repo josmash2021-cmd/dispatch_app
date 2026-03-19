@@ -142,9 +142,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                 final isEscalation = type == 'escalation';
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
-                    backgroundColor: isEscalation
-                        ? const Color(0xFFE53935)
-                        : AppColors.primary,
+                    backgroundColor: AppColors.primary,
                     content: Row(
                       children: [
                         Icon(
