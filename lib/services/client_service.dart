@@ -45,7 +45,6 @@ class ClientService {
     }
 
     final sub1 = _clientsCollection
-        .orderBy('createdAt', descending: true)
         .snapshots()
         .map((s) => s.docs.map((d) => ClientModel.fromFirestore(d)).toList())
         .listen((clients) {
@@ -55,7 +54,6 @@ class ClientService {
 
     final sub2 = _usersCollection
         .where('role', isEqualTo: 'rider')
-        .orderBy('createdAt', descending: true)
         .snapshots()
         .map((s) => s.docs.map((d) => ClientModel.fromFirestore(d)).toList())
         .listen(
@@ -80,10 +78,14 @@ class ClientService {
 
   /// One-time fetch of all clients
   Future<List<ClientModel>> getClientsList() async {
-    final snapshot = await _clientsCollection
-        .orderBy('createdAt', descending: true)
-        .get();
-    return snapshot.docs.map((doc) => ClientModel.fromFirestore(doc)).toList();
+    final snapshot = await _clientsCollection.get();
+    final list = snapshot.docs.map((doc) => ClientModel.fromFirestore(doc)).toList();
+    list.sort((a, b) {
+      final aTime = a.createdAt ?? DateTime(2000);
+      final bTime = b.createdAt ?? DateTime(2000);
+      return bTime.compareTo(aTime);
+    });
+    return list;
   }
 
   /// Add a new client

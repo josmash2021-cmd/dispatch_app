@@ -98,13 +98,18 @@ class VerificationService {
   /// Real-time stream of all verification requests
   Stream<List<VerificationRequest>> getVerificationsStream() {
     return _collection
-        .orderBy('submittedAt', descending: true)
         .snapshots()
-        .map(
-          (snap) => snap.docs
+        .map((snap) {
+          final list = snap.docs
               .map((d) => VerificationRequest.fromFirestore(d))
-              .toList(),
-        );
+              .toList();
+          list.sort((a, b) {
+            final aTime = a.submittedAt ?? DateTime(2000);
+            final bTime = b.submittedAt ?? DateTime(2000);
+            return bTime.compareTo(aTime);
+          });
+          return list;
+        });
   }
 
   /// Approve a verification request

@@ -44,7 +44,6 @@ class DriverService {
     }
 
     final sub1 = _driversCollection
-        .orderBy('isOnline', descending: true)
         .snapshots()
         .map((s) => s.docs.map((d) => DriverModel.fromFirestore(d)).toList())
         .listen((drivers) {
@@ -78,10 +77,13 @@ class DriverService {
 
   /// One-time fetch of all drivers
   Future<List<DriverModel>> getDriversList() async {
-    final snapshot = await _driversCollection
-        .orderBy('isOnline', descending: true)
-        .get();
-    return snapshot.docs.map((doc) => DriverModel.fromFirestore(doc)).toList();
+    final snapshot = await _driversCollection.get();
+    final list = snapshot.docs.map((doc) => DriverModel.fromFirestore(doc)).toList();
+    list.sort((a, b) {
+      if (a.isOnline != b.isOnline) return a.isOnline ? -1 : 1;
+      return a.fullName.compareTo(b.fullName);
+    });
+    return list;
   }
 
   /// Add a driver manually from dispatch
