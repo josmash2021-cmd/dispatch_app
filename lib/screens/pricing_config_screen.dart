@@ -358,7 +358,7 @@ class _PricingConfigScreenState extends State<PricingConfigScreen> {
             const SizedBox(width: 8),
             _buildSurgeButton('2.0x', 2.0, AppColors.error),
             const SizedBox(width: 8),
-            _buildSurgeButton('3.0x', 3.0, const Color(0xFF9C27B0)),
+            _buildSurgeButton('3.0x', 3.0, AppColors.primary),
           ],
         ),
       ],

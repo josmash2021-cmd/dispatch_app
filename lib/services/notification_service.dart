@@ -31,7 +31,7 @@ class NotificationService {
       context,
       'drivers',
       Icons.local_taxi_outlined,
-      const Color(0xFF1565C0),
+      AppColors.primary,
       'Conductor'
     );
     

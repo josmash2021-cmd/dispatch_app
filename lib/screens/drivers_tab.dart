@@ -2312,9 +2312,9 @@ class _DriverServerDocumentsWidgetState
             .join(' ');
         final status = doc['status'] as String? ?? 'pending';
         final statusColor = switch (status) {
-          'approved' => const Color(0xFF4CAF50),
-          'rejected' => const Color(0xFFE53935),
-          _ => const Color(0xFFFFA726),
+          'approved' => AppColors.primary,
+          'rejected' => AppColors.primary,
+          _ => AppColors.primary,
         };
         final filePath = doc['file_path'] as String?;
         return Container(

@@ -194,13 +194,13 @@ class _DriverDetailScreenState extends State<DriverDetailScreen> {
       width: double.infinity,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: const Color(0xFF1565C0).withOpacity(0.1),
+        color: const Color(0xFFE8C547).withOpacity(0.1),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFF1565C0).withOpacity(0.3)),
+        border: Border.all(color: const Color(0xFFE8C547).withOpacity(0.3)),
       ),
       child: Row(
         children: [
-          const Icon(Icons.directions_car, color: Color(0xFF1565C0), size: 40),
+          const Icon(Icons.directions_car, color: Color(0xFFE8C547), size: 40),
           const SizedBox(width: 16),
           Expanded(
             child: Column(

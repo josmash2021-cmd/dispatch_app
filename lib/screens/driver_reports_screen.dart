@@ -101,14 +101,14 @@ class _DriverReportsScreenState extends State<DriverReportsScreen> {
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [
-            const Color(0xFFF44336).withOpacity(0.15),
-            const Color(0xFFF44336).withOpacity(0.05),
+            AppColors.primary.withOpacity(0.15),
+            AppColors.primary.withOpacity(0.05),
           ],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFF44336).withOpacity(0.3)),
+        border: Border.all(color: AppColors.primary.withOpacity(0.3)),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceAround,
@@ -116,7 +116,7 @@ class _DriverReportsScreenState extends State<DriverReportsScreen> {
           _StatItem(
             value: '$_pendingCount',
             label: 'Pendientes',
-            color: const Color(0xFFF44336),
+            color: AppColors.primary,
           ),
           _StatItem(
             value: '$_resolvedCount',
@@ -185,22 +185,22 @@ class _ReportCard extends StatelessWidget {
     switch (type) {
       case 'app_crash':
         typeIcon = Icons.error_outline;
-        typeColor = const Color(0xFFF44336);
+        typeColor = AppColors.primary;
         typeLabel = 'App Crash';
         break;
       case 'bug':
         typeIcon = Icons.bug_report;
-        typeColor = const Color(0xFFFF9800);
+        typeColor = AppColors.primary;
         typeLabel = 'Bug / Error';
         break;
       case 'feature_request':
         typeIcon = Icons.lightbulb_outline;
-        typeColor = const Color(0xFF2196F3);
+        typeColor = AppColors.primary;
         typeLabel = 'Sugerencia';
         break;
       case 'complaint':
         typeIcon = Icons.warning_amber;
-        typeColor = const Color(0xFF9C27B0);
+        typeColor = AppColors.primary;
         typeLabel = 'Queja';
         break;
       default:
@@ -262,14 +262,14 @@ class _ReportCard extends StatelessWidget {
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
                     color: isPending 
-                        ? const Color(0xFFF44336).withOpacity(0.1) 
+                        ? AppColors.primary.withOpacity(0.1) 
                         : AppColors.success.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Text(
                     isPending ? 'PENDIENTE' : 'RESUELTO',
                     style: TextStyle(
-                      color: isPending ? const Color(0xFFF44336) : AppColors.success,
+                      color: isPending ? AppColors.primary : AppColors.success,
                       fontSize: 10,
                       fontWeight: FontWeight.w700,
                     ),

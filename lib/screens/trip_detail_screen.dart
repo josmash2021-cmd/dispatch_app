@@ -211,7 +211,7 @@ class _TripDetailScreenState extends State<TripDetailScreen>
                   'refund',
                   Icons.money_off_rounded,
                   'Process Refund',
-                  const Color(0xFF9C27B0),
+                  AppColors.primary,
                 ),
             ],
           ),

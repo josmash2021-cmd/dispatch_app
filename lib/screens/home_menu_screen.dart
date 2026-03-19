@@ -151,14 +151,14 @@ class _HomeMenuScreenState extends State<HomeMenuScreen>
                       icon: Icons.directions_car,
                       label: 'Viajes',
                       sublabel: '$_activeTrips viajes activos',
-                      color: const Color(0xFF4CAF50),
+                      color: AppColors.primary,
                       onTap: () => _navigate(1),
                     ),
                     _MenuCard(
                       icon: Icons.map,
                       label: 'Mapa Fleet',
                       sublabel: 'Ubicaciones en tiempo real',
-                      color: const Color(0xFF2196F3),
+                      color: AppColors.primary,
                       onTap: () => _navigate(2),
                     ),
                     
@@ -167,7 +167,7 @@ class _HomeMenuScreenState extends State<HomeMenuScreen>
                       icon: Icons.person,
                       label: 'Riders',
                       sublabel: '$_riderCount usuarios registrados',
-                      color: const Color(0xFF9C27B0),
+                      color: AppColors.primary,
                       badge: _riderCount > 0 ? '$_riderCount' : null,
                       onTap: () => _navigate(3),
                     ),
@@ -175,7 +175,7 @@ class _HomeMenuScreenState extends State<HomeMenuScreen>
                       icon: Icons.local_taxi,
                       label: 'Drivers',
                       sublabel: '$_driverCount conductores',
-                      color: const Color(0xFFFF9800),
+                      color: AppColors.primary,
                       badge: _driverCount > 0 ? '$_driverCount' : null,
                       onTap: () => _navigate(4),
                     ),
@@ -187,7 +187,7 @@ class _HomeMenuScreenState extends State<HomeMenuScreen>
                       sublabel: _pendingVerifications > 0 
                         ? '$_pendingVerifications cuentas pendientes'
                         : 'Sin verificaciones pendientes',
-                      color: const Color(0xFFE91E63),
+                      color: AppColors.primary,
                       badge: _pendingVerifications > 0 ? '$_pendingVerifications' : null,
                       onTap: () => _navigate(5),
                     ),
@@ -195,7 +195,7 @@ class _HomeMenuScreenState extends State<HomeMenuScreen>
                       icon: Icons.local_taxi_rounded,
                       label: 'Verificar Drivers',
                       sublabel: 'Verificación de conductores',
-                      color: const Color(0xFF00BCD4),
+                      color: AppColors.primary,
                       onTap: () => _navigate(6),
                     ),
                     
@@ -204,7 +204,7 @@ class _HomeMenuScreenState extends State<HomeMenuScreen>
                       icon: Icons.analytics,
                       label: 'Analytics',
                       sublabel: 'Estadísticas y reportes',
-                      color: const Color(0xFF3F51B5),
+                      color: AppColors.primary,
                       onTap: () => _navigate(7),
                     ),
                     _MenuCard(
@@ -213,7 +213,7 @@ class _HomeMenuScreenState extends State<HomeMenuScreen>
                       sublabel: _driverReports > 0
                         ? '$_driverReports problemas reportados'
                         : 'Sin reportes pendientes',
-                      color: const Color(0xFFF44336),
+                      color: AppColors.primary,
                       badge: _driverReports > 0 ? '$_driverReports' : null,
                       onTap: () => _navigate(8),
                     ),
@@ -225,7 +225,7 @@ class _HomeMenuScreenState extends State<HomeMenuScreen>
                       sublabel: _supportChats > 0
                         ? '$_supportChats chats nuevos'
                         : 'Soporte al cliente',
-                      color: const Color(0xFF607D8B),
+                      color: AppColors.primary,
                       badge: _supportChats > 0 ? '$_supportChats' : null,
                       onTap: () => _navigate(9),
                     ),
@@ -233,7 +233,7 @@ class _HomeMenuScreenState extends State<HomeMenuScreen>
                       icon: Icons.calendar_today,
                       label: 'Agendados',
                       sublabel: 'Viajes programados',
-                      color: const Color(0xFF009688),
+                      color: AppColors.primary,
                       onTap: () => _navigate(10),
                     ),
                   ]),
@@ -356,19 +356,19 @@ class _HomeMenuScreenState extends State<HomeMenuScreen>
             icon: Icons.directions_car,
             value: '$_activeTrips',
             label: 'Viajes Activos',
-            color: const Color(0xFF4CAF50),
+            color: AppColors.primary,
           ),
           _StatItem(
             icon: Icons.verified_user,
             value: '$_pendingVerifications',
             label: 'Verif. Pendientes',
-            color: const Color(0xFFE91E63),
+            color: AppColors.primary,
           ),
           _StatItem(
             icon: Icons.chat,
             value: '$_supportChats',
             label: 'Chats Nuevos',
-            color: const Color(0xFF2196F3),
+            color: AppColors.primary,
           ),
         ],
       ),
