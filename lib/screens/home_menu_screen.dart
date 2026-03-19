@@ -36,6 +36,7 @@ class _HomeMenuScreenState extends State<HomeMenuScreen>
   int _driverCount = 0;
   int _pendingVerifications = 0;
   int _activeTrips = 0;
+  int _scheduledTrips = 0;
   int _driverReports = 0;
   int _supportChats = 0;
   
@@ -43,6 +44,7 @@ class _HomeMenuScreenState extends State<HomeMenuScreen>
   StreamSubscription? _driversSub;
   StreamSubscription? _verifSub;
   StreamSubscription? _tripsSub;
+  StreamSubscription? _scheduledSub;
   StreamSubscription? _chatsSub;
   StreamSubscription? _driverReportsSub;
 
@@ -89,6 +91,14 @@ class _HomeMenuScreenState extends State<HomeMenuScreen>
         .snapshots()
         .listen((snap) => setState(() => _activeTrips = snap.docs.length));
     
+    // Scheduled trips (reservas) - trips with scheduledAt in the future
+    final now = DateTime.now();
+    _scheduledSub = FirebaseFirestore.instance
+        .collection('trips')
+        .where('scheduledAt', isGreaterThan: Timestamp.fromDate(now))
+        .snapshots()
+        .listen((snap) => setState(() => _scheduledTrips = snap.docs.length));
+    
     // Support chats with unread messages
     _chatsSub = FirebaseFirestore.instance
         .collection('support_chats')
@@ -111,6 +121,7 @@ class _HomeMenuScreenState extends State<HomeMenuScreen>
     _driversSub?.cancel();
     _verifSub?.cancel();
     _tripsSub?.cancel();
+    _scheduledSub?.cancel();
     _chatsSub?.cancel();
     _driverReportsSub?.cancel();
     super.dispose();
@@ -357,18 +368,21 @@ class _HomeMenuScreenState extends State<HomeMenuScreen>
             value: '$_activeTrips',
             label: 'Viajes Activos',
             color: AppColors.primary,
+            onTap: () => _navigate(1), // Viajes tab
           ),
           _StatItem(
-            icon: Icons.verified_user,
-            value: '$_pendingVerifications',
-            label: 'Verif. Pendientes',
+            icon: Icons.calendar_today,
+            value: '$_scheduledTrips',
+            label: 'Reservas',
             color: AppColors.primary,
+            onTap: () => _navigate(10), // Agendados/Reservas
           ),
           _StatItem(
             icon: Icons.chat,
             value: '$_supportChats',
             label: 'Chats Nuevos',
             color: AppColors.primary,
+            onTap: () => _navigate(9), // Soporte/Chats
           ),
         ],
       ),
@@ -513,43 +527,55 @@ class _StatItem extends StatelessWidget {
   final String value;
   final String label;
   final Color color;
+  final VoidCallback? onTap;
 
   const _StatItem({
     required this.icon,
     required this.value,
     required this.label,
     required this.color,
+    this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        Container(
-          padding: const EdgeInsets.all(10),
-          decoration: BoxDecoration(
-            color: color.withOpacity(0.15),
-            borderRadius: BorderRadius.circular(12),
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        child: Padding(
+          padding: const EdgeInsets.all(8),
+          child: Column(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: color.withOpacity(0.15),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(icon, color: color, size: 20),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                value,
+                style: TextStyle(
+                  color: AppColors.textPrimary,
+                  fontSize: 20,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+              Text(
+                label,
+                style: TextStyle(
+                  color: AppColors.textSecondary,
+                  fontSize: 11,
+                ),
+              ),
+            ],
           ),
-          child: Icon(icon, color: color, size: 20),
         ),
-        const SizedBox(height: 8),
-        Text(
-          value,
-          style: TextStyle(
-            color: AppColors.textPrimary,
-            fontSize: 20,
-            fontWeight: FontWeight.w800,
-          ),
-        ),
-        Text(
-          label,
-          style: TextStyle(
-            color: AppColors.textSecondary,
-            fontSize: 11,
-          ),
-        ),
-      ],
+      ),
     );
   }
 }
