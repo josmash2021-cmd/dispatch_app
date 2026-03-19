@@ -324,19 +324,11 @@ class _ScheduledRidesScreenState extends State<ScheduledRidesScreen> {
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: AppColors.surface,
-        appBar: AppBar(
-          backgroundColor: AppColors.background,
-          leading: IconButton(
-            icon: const Icon(Icons.arrow_back_rounded, color: AppColors.primary),
-            onPressed: () => Navigator.pop(context),
-          ),
-          elevation: 0,
-          title: const Text(
-            'Assign Driver',
-            style: TextStyle(
-              color: AppColors.textPrimary,
-              fontWeight: FontWeight.w700,
-            ),
+        title: const Text(
+          'Assign Driver',
+          style: TextStyle(
+            color: AppColors.textPrimary,
+            fontWeight: FontWeight.w700,
           ),
         ),
         content: SizedBox(

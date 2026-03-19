@@ -168,7 +168,6 @@ class _ReportsScreenState extends State<ReportsScreen> {
           onPressed: () => Navigator.pop(context),
         ),
         title: const Text('Financial Reports'),
-        backgroundColor: AppColors.background,
         actions: [
           IconButton(
             icon: const Icon(Icons.file_download_outlined, color: AppColors.primary),
