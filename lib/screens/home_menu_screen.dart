@@ -199,22 +199,35 @@ class _HomeMenuScreenState extends State<HomeMenuScreen>
             ],
           ),
         ),
-        floatingActionButton: SizedBox(
-          height: 48,
+        floatingActionButton: AnimatedSwitcher(
+          duration: const Duration(milliseconds: 200),
+          transitionBuilder: (child, animation) {
+            return ScaleTransition(
+              scale: animation,
+              child: FadeTransition(
+                opacity: animation,
+                child: child,
+              ),
+            );
+          },
           child: _currentTab == 0
-              ? FloatingActionButton.extended(
-                  onPressed: () => Navigator.push(
-                    context,
-                    slideFromRightRoute(const CreateTripScreen()),
-                  ),
-                  backgroundColor: AppColors.primary,
-                  icon: const Icon(Icons.add, size: 20),
-                  label: const Text(
-                    'Nuevo Viaje',
-                    style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
+              ? SizedBox(
+                  key: const ValueKey('dispatch_fab'),
+                  height: 48,
+                  child: FloatingActionButton.extended(
+                    onPressed: () => Navigator.push(
+                      context,
+                      slideFromRightRoute(const CreateTripScreen()),
+                    ),
+                    backgroundColor: AppColors.primary,
+                    icon: const Icon(Icons.add, size: 20),
+                    label: const Text(
+                      'Nuevo Viaje',
+                      style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
+                    ),
                   ),
                 )
-              : const SizedBox.shrink(),
+              : const SizedBox.shrink(key: ValueKey('admin_fab')),
         ),
       ),
     );
@@ -747,50 +760,58 @@ class _HomeMenuScreenState extends State<HomeMenuScreen>
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                AnimatedSwitcher(
-                  duration: const Duration(milliseconds: 300),
-                  transitionBuilder: (Widget child, Animation<double> animation) {
-                    final isEntering = child.key == ValueKey(isDispatch);
-                    final slideAnim = Tween<Offset>(
-                      begin: isEntering ? const Offset(0.3, 0) : const Offset(-0.3, 0),
-                      end: Offset.zero,
-                    ).animate(CurvedAnimation(
-                      parent: animation,
-                      curve: Curves.easeOutCubic,
-                    ));
-                    return FadeTransition(
-                      opacity: animation,
-                      child: SlideTransition(
-                        position: slideAnim,
-                        child: child,
+                Row(
+                  children: [
+                    const Text(
+                      'Dashboard ',
+                      style: TextStyle(
+                        fontSize: 22,
+                        fontWeight: FontWeight.w800,
+                        color: AppColors.textPrimary,
                       ),
-                    );
-                  },
-                  child: Text(
-                    isDispatch ? 'Dashboard Dispatch' : 'Dashboard Admin',
-                    key: ValueKey(isDispatch),
-                    style: const TextStyle(
-                      fontSize: 22,
-                      fontWeight: FontWeight.w800,
-                      color: AppColors.textPrimary,
                     ),
-                  ),
+                    AnimatedSwitcher(
+                      duration: const Duration(milliseconds: 250),
+                      transitionBuilder: (child, animation) {
+                        return FadeTransition(
+                          opacity: animation,
+                          child: SlideTransition(
+                            position: Tween<Offset>(
+                              begin: isDispatch ? const Offset(1, 0) : const Offset(-1, 0),
+                              end: Offset.zero,
+                            ).animate(CurvedAnimation(
+                              parent: animation,
+                              curve: Curves.easeOutCubic,
+                            )),
+                            child: child,
+                          ),
+                        );
+                      },
+                      child: Text(
+                        isDispatch ? 'Dispatch' : 'Admin',
+                        key: ValueKey(isDispatch ? 'dispatch' : 'admin'),
+                        style: const TextStyle(
+                          fontSize: 22,
+                          fontWeight: FontWeight.w800,
+                          color: AppColors.primary,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
                 AnimatedSwitcher(
-                  duration: const Duration(milliseconds: 300),
-                  transitionBuilder: (Widget child, Animation<double> animation) {
-                    final isEntering = child.key == ValueKey(isDispatch);
-                    final slideAnim = Tween<Offset>(
-                      begin: isEntering ? const Offset(-0.2, 0) : const Offset(0.2, 0),
-                      end: Offset.zero,
-                    ).animate(CurvedAnimation(
-                      parent: animation,
-                      curve: Curves.easeOutCubic,
-                    ));
+                  duration: const Duration(milliseconds: 250),
+                  transitionBuilder: (child, animation) {
                     return FadeTransition(
                       opacity: animation,
                       child: SlideTransition(
-                        position: slideAnim,
+                        position: Tween<Offset>(
+                          begin: isDispatch ? const Offset(-0.3, 0) : const Offset(0.3, 0),
+                          end: Offset.zero,
+                        ).animate(CurvedAnimation(
+                          parent: animation,
+                          curve: Curves.easeOutCubic,
+                        )),
                         child: child,
                       ),
                     );
