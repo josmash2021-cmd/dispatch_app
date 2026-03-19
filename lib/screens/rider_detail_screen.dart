@@ -17,7 +17,6 @@ class _RiderDetailScreenState extends State<RiderDetailScreen> {
   Map<String, dynamic>? _userData;
   List<Map<String, dynamic>> _chats = [];
   bool _loading = true;
-  bool _ssnRevealed = false;
 
   @override
   void initState() {
@@ -104,10 +103,6 @@ class _RiderDetailScreenState extends State<RiderDetailScreen> {
     final phone = u['phone'] as String?;
     final photoUrl = u['photo_url'] as String?;
     final isVerified = u['is_verified'] as bool? ?? false;
-    final ssnProvided = u['ssn_provided'] as bool? ?? false;
-    final ssnFull = u['ssn_full'] as String?;
-    final ssnMasked = u['ssn_masked'] as String?;
-    final ssnLast4 = u['ssn_last4'] as String?;
     final createdAt = u['created_at'] as String?;
 
     return SingleChildScrollView(
@@ -135,12 +130,6 @@ class _RiderDetailScreenState extends State<RiderDetailScreen> {
             if (createdAt != null)
               _buildInfoRow(Icons.calendar_today, 'Registrado', _formatDate(createdAt)),
           ]),
-          
-          const SizedBox(height: 16),
-          
-          // SSN Section
-          _buildSectionTitle('Social Security Number'),
-          _buildSSNCard(ssnProvided, ssnFull, ssnMasked, ssnLast4),
           
           const SizedBox(height: 16),
           
@@ -286,97 +275,30 @@ class _RiderDetailScreenState extends State<RiderDetailScreen> {
     );
   }
 
-  Widget _buildSSNCard(bool ssnProvided, String? ssnFull, String? ssnMasked, String? ssnLast4) {
-    return GestureDetector(
-      onTap: ssnProvided && ssnFull != null
-          ? () => setState(() => _ssnRevealed = !_ssnRevealed)
-          : null,
-      child: Container(
-        width: double.infinity,
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: ssnProvided ? AppColors.success.withOpacity(0.05) : AppColors.warning.withOpacity(0.05),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: ssnProvided ? AppColors.success.withOpacity(0.3) : AppColors.warning.withOpacity(0.3),
-          ),
-        ),
-        child: Row(
-          children: [
-            Icon(
-              Icons.security,
-              color: ssnProvided ? AppColors.success : AppColors.warning,
-              size: 24,
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      const Text(
-                        'SSN',
-                        style: TextStyle(
-                          color: AppColors.textSecondary,
-                          fontSize: 12,
-                        ),
-                      ),
-                      if (ssnProvided && ssnFull != null) ...[
-                        const SizedBox(width: 8),
-                        Text(
-                          _ssnRevealed ? '(Toca para ocultar)' : '(Toca para revelar)',
-                          style: TextStyle(
-                            color: AppColors.primary,
-                            fontSize: 10,
-                          ),
-                        ),
-                      ],
-                    ],
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    ssnProvided
-                        ? (_ssnRevealed && ssnFull != null
-                            ? ssnFull
-                            : (ssnMasked ?? '***-**-${ssnLast4 ?? "????"}'))
-                        : 'No proporcionado',
-                    style: TextStyle(
-                      color: ssnProvided ? AppColors.textPrimary : AppColors.textHint,
-                      fontSize: 16,
-                      fontWeight: FontWeight.w700,
-                      fontFamily: 'monospace',
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              decoration: BoxDecoration(
-                color: ssnProvided ? AppColors.success : AppColors.warning,
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Text(
-                ssnProvided ? 'OK' : 'FALTA',
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 10,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
 
   Widget _buildVerificationPhotos(Map<String, dynamic> u) {
-    final idPhoto = u['id_photo_url'] as String?;
-    final selfie = u['selfie_url'] as String?;
-    
-    if (idPhoto == null && selfie == null) {
+    final licenseFront = u['license_front_url'] as String?;
+    final licenseBack  = u['license_back_url']  as String?;
+    final insurance    = u['insurance_url']      as String?;
+    final idPhoto      = u['id_photo_url']       as String?;
+    final selfie       = u['selfie_url']         as String?;
+    final profilePhoto = u['photo_url']          as String?;
+
+    final photos = <Map<String, String>>[];
+    if (licenseFront != null && licenseFront.isNotEmpty)
+      photos.add({'label': 'Licencia (Frente)', 'url': licenseFront});
+    if (licenseBack != null && licenseBack.isNotEmpty)
+      photos.add({'label': 'Licencia (Atrás)', 'url': licenseBack});
+    if (insurance != null && insurance.isNotEmpty)
+      photos.add({'label': 'Seguro de Auto', 'url': insurance});
+    if (idPhoto != null && idPhoto.isNotEmpty)
+      photos.add({'label': 'ID Documento', 'url': idPhoto});
+    if (selfie != null && selfie.isNotEmpty)
+      photos.add({'label': 'Selfie', 'url': selfie});
+    if (profilePhoto != null && profilePhoto.isNotEmpty)
+      photos.add({'label': 'Foto de Perfil', 'url': profilePhoto});
+
+    if (photos.isEmpty) {
       return Container(
         width: double.infinity,
         padding: const EdgeInsets.all(16),
@@ -392,10 +314,9 @@ class _RiderDetailScreenState extends State<RiderDetailScreen> {
     }
 
     return Column(
-      children: [
-        if (idPhoto != null) _buildPhotoCard('ID Documento', idPhoto),
-        if (selfie != null) _buildPhotoCard('Selfie', selfie),
-      ],
+      children: photos
+          .map((p) => _buildPhotoCard(p['label']!, p['url']!))
+          .toList(),
     );
   }
 
