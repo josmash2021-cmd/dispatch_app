@@ -137,6 +137,7 @@ class _RiderCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isVerified = client.isVerified;
+    final photoUrl = client.photoUrl;
     
     return Card(
       margin: const EdgeInsets.only(bottom: 8),
@@ -145,13 +146,39 @@ class _RiderCard extends StatelessWidget {
       child: ListTile(
         onTap: onTap,
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        leading: CircleAvatar(
-          backgroundColor: isVerified ? AppColors.success : AppColors.warning,
-          child: Icon(
-            isVerified ? Icons.verified_user : Icons.person_outline,
-            color: Colors.white,
-            size: 20,
-          ),
+        leading: Stack(
+          children: [
+            CircleAvatar(
+              backgroundColor: photoUrl != null && photoUrl.isNotEmpty
+                  ? AppColors.surfaceHigh
+                  : (isVerified ? AppColors.success : AppColors.warning),
+              backgroundImage: photoUrl != null && photoUrl.isNotEmpty
+                  ? NetworkImage(photoUrl)
+                  : null,
+              child: photoUrl == null || photoUrl.isEmpty
+                  ? Icon(
+                      isVerified ? Icons.verified_user : Icons.person_outline,
+                      color: Colors.white,
+                      size: 20,
+                    )
+                  : null,
+            ),
+            if (isVerified)
+              Positioned(
+                right: 0,
+                bottom: 0,
+                child: Container(
+                  width: 14,
+                  height: 14,
+                  decoration: BoxDecoration(
+                    color: AppColors.success,
+                    shape: BoxShape.circle,
+                    border: Border.all(color: AppColors.surface, width: 2),
+                  ),
+                  child: const Icon(Icons.check, color: Colors.white, size: 8),
+                ),
+              ),
+          ],
         ),
         title: Text(
           client.fullName,
