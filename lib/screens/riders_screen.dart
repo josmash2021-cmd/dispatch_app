@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:provider/provider.dart';
 import '../config/app_theme.dart';
+import '../config/page_transitions.dart';
 import '../providers/client_provider.dart';
 import '../services/dispatch_api_service.dart';
 import '../widgets/shimmer_loading.dart';
@@ -101,9 +102,7 @@ class _RidersScreenState extends State<RidersScreen> {
                             client: client,
                             onTap: () => Navigator.push(
                               context,
-                              MaterialPageRoute(
-                                builder: (_) => RiderDetailScreen(sqliteId: client.sqliteId ?? 0),
-                              ),
+                              slideFromRightRoute(RiderDetailScreen(sqliteId: client.sqliteId ?? 0)),
                             ),
                           );
                         },

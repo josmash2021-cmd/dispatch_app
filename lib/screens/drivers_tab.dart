@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:timeago/timeago.dart' as timeago;
 import '../config/app_theme.dart';
+import '../config/page_transitions.dart';
 import '../models/driver_model.dart';
 import '../providers/driver_provider.dart';
 import '../services/dispatch_api_service.dart';
@@ -295,7 +296,7 @@ class _DriverCard extends StatelessWidget {
           borderRadius: BorderRadius.circular(14),
           onTap: () => Navigator.push(
             context,
-            MaterialPageRoute(builder: (_) => UserDetailPage(driver: driver)),
+            slideFromRightRoute(UserDetailPage(driver: driver)),
           ),
           onLongPress: () => _showActions(context, driver),
           child: Padding(

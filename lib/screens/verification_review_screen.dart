@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import 'package:timeago/timeago.dart' as timeago;
 import 'package:url_launcher/url_launcher.dart';
 import '../config/app_theme.dart';
+import '../config/page_transitions.dart';
 import '../providers/verification_provider.dart';
 import '../services/dispatch_api_service.dart';
 import '../services/verification_service.dart';
@@ -443,8 +444,8 @@ class _VerificationCard extends StatelessWidget {
     if (request.isPending) {
       Navigator.push(
         context,
-        MaterialPageRoute(
-          builder: (_) => _PendingVerificationDetailPage(request: request),
+        slideUpFadeRoute(
+          _PendingVerificationDetailPage(request: request),
         ),
       );
       return;

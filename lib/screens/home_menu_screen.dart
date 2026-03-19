@@ -199,20 +199,23 @@ class _HomeMenuScreenState extends State<HomeMenuScreen>
             ],
           ),
         ),
-        floatingActionButton: _currentTab == 0
-            ? FloatingActionButton.extended(
-                onPressed: () => Navigator.push(
-                  context,
-                  scaleExpandRoute(const CreateTripScreen()),
-                ),
-                backgroundColor: AppColors.primary,
-                icon: const Icon(Icons.add),
-                label: const Text(
-                  'Nuevo Viaje',
-                  style: TextStyle(fontWeight: FontWeight.w700),
-                ),
-              )
-            : null,
+        floatingActionButton: SizedBox(
+          height: 48,
+          child: _currentTab == 0
+              ? FloatingActionButton.extended(
+                  onPressed: () => Navigator.push(
+                    context,
+                    slideFromRightRoute(const CreateTripScreen()),
+                  ),
+                  backgroundColor: AppColors.primary,
+                  icon: const Icon(Icons.add, size: 20),
+                  label: const Text(
+                    'Nuevo Viaje',
+                    style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
+                  ),
+                )
+              : const SizedBox.shrink(),
+        ),
       ),
     );
   }

@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import '../config/app_theme.dart';
+import '../config/page_transitions.dart';
 import '../models/client_model.dart';
 import '../models/driver_model.dart';
 import '../services/client_service.dart';
@@ -309,9 +310,7 @@ class _DeactivatedUsersScreenState extends State<DeactivatedUsersScreen>
               tooltip: 'Ver detalles',
               onPressed: () => Navigator.push(
                 context,
-                MaterialPageRoute(
-                  builder: (_) => UserDetailPage(driver: driver),
-                ),
+                slideFromRightRoute(UserDetailPage(driver: driver)),
               ),
             ),
           ],
@@ -387,9 +386,7 @@ class _DeactivatedUsersScreenState extends State<DeactivatedUsersScreen>
               tooltip: 'Ver detalles',
               onPressed: () => Navigator.push(
                 context,
-                MaterialPageRoute(
-                  builder: (_) => UserDetailPage(client: rider),
-                ),
+                slideFromRightRoute(UserDetailPage(client: rider)),
               ),
             ),
           ],

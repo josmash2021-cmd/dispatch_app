@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../config/app_theme.dart';
+import '../config/page_transitions.dart';
 import '../services/dispatch_api_service.dart';
 import 'support_chat_detail_screen.dart';
 
@@ -422,8 +423,8 @@ class _RiderDetailScreenState extends State<RiderDetailScreen> {
             trailing: const Icon(Icons.arrow_forward_ios, size: 16, color: AppColors.textHint),
             onTap: () => Navigator.push(
               context,
-              MaterialPageRoute(
-                builder: (_) => SupportChatDetailScreen(
+              slideFromRightRoute(
+                SupportChatDetailScreen(
                   chatId: chat['id'] as int,
                   userName: '${_userData?['firstName'] ?? ''} ${_userData?['lastName'] ?? ''}'.trim(),
                   userId: widget.sqliteId,

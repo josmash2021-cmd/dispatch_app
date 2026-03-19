@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../config/app_theme.dart';
+import '../config/page_transitions.dart';
 import '../models/client_model.dart';
 import '../providers/client_provider.dart';
 import '../services/dispatch_api_service.dart';
@@ -256,7 +257,7 @@ class _ClientCard extends StatelessWidget {
           borderRadius: BorderRadius.circular(14),
           onTap: () => Navigator.push(
             context,
-            MaterialPageRoute(builder: (_) => UserDetailPage(client: client)),
+            slideFromRightRoute(UserDetailPage(client: client)),
           ),
           onLongPress: () => _showActions(context, client),
           child: Padding(

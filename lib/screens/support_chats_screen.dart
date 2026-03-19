@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import '../config/app_theme.dart';
+import '../config/page_transitions.dart';
 import '../services/dispatch_api_service.dart';
 import 'support_chat_detail_screen.dart';
 
@@ -147,8 +148,8 @@ class _SupportChatsScreenState extends State<SupportChatsScreen> {
           onTap: () async {
             await Navigator.push(
               context,
-              MaterialPageRoute(
-                builder: (_) => SupportChatDetailScreen(
+              slideFromRightRoute(
+                SupportChatDetailScreen(
                   chatId: chatId,
                   userName: name,
                   userId: userId,
