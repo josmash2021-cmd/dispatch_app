@@ -21,6 +21,11 @@ import 'support_chats_screen.dart';
 import 'scheduled_rides_screen.dart';
 import 'trip_list_screen.dart';
 import 'admin_config_screen.dart';
+import 'reports_screen.dart';
+import 'audit_logs_screen.dart';
+import 'pricing_config_screen.dart';
+import 'database_screen.dart';
+import 'driver_reports_screen.dart';
 
 class HomeMenuScreen extends StatefulWidget {
   final Function(int) onNavigate;
@@ -34,6 +39,8 @@ class _HomeMenuScreenState extends State<HomeMenuScreen>
     with TickerProviderStateMixin {
   late AnimationController _fadeController;
   late Animation<double> _fadeAnimation;
+  late TabController _tabController;
+  int _currentTab = 0; // 0 = Dispatch, 1 = Admin
   
   // Real-time counters
   int _riderCount = 0;
@@ -68,6 +75,11 @@ class _HomeMenuScreenState extends State<HomeMenuScreen>
       curve: Curves.easeOutCubic,
     );
     _fadeController.forward();
+    _tabController = TabController(length: 2, vsync: this);
+    _tabController.addListener(() {
+      if (_tabController.indexIsChanging) return;
+      setState(() => _currentTab = _tabController.index);
+    });
     
     _startRealTimeListeners();
   }
@@ -148,6 +160,7 @@ class _HomeMenuScreenState extends State<HomeMenuScreen>
   @override
   void dispose() {
     _fadeController.dispose();
+    _tabController.dispose();
     _ridersSub?.cancel();
     _driversSub?.cancel();
     _verifSub?.cancel();
@@ -167,106 +180,39 @@ class _HomeMenuScreenState extends State<HomeMenuScreen>
       child: Scaffold(
         backgroundColor: AppColors.background,
         body: SafeArea(
-          child: CustomScrollView(
-            slivers: [
-              // Header
-              SliverToBoxAdapter(
-                child: _buildHeader(),
-              ),
-              
-              // Quick Stats
-              SliverToBoxAdapter(
-                child: _buildQuickStats(),
-              ),
-              
-              // Menu Grid - Simplified with context menus
-              SliverPadding(
-                padding: const EdgeInsets.all(16),
-                sliver: SliverGrid(
-                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 2,
-                    mainAxisSpacing: 12,
-                    crossAxisSpacing: 12,
-                    childAspectRatio: 1.3,
-                  ),
-                  delegate: SliverChildListDelegate([
-                    _ContextMenuCard(
-                      icon: Icons.directions_car,
-                      label: 'Viajes',
-                      sublabel: '$_activeTrips activos',
-                      color: AppColors.primary,
-                      badge: _activeTrips > 0 ? '$_activeTrips' : null,
-                      onTap: () => _showTripsMenu(context),
-                    ),
-                    _ContextMenuCard(
-                      icon: Icons.map,
-                      label: 'Mapa Fleet',
-                      sublabel: '$_driverCount drivers',
-                      color: AppColors.primary,
-                      badge: _driverCount > 0 ? '$_driverCount' : null,
-                      onTap: () => _showFleetMenu(context),
-                    ),
-                    _ContextMenuCard(
-                      icon: Icons.person,
-                      label: 'Riders',
-                      sublabel: '$_riderCount usuarios',
-                      color: AppColors.primary,
-                      badge: _pendingVerifications > 0 ? '$_pendingVerifications' : null,
-                      onTap: () => _showRidersMenu(context),
-                    ),
-                    _ContextMenuCard(
-                      icon: Icons.local_taxi,
-                      label: 'Drivers',
-                      sublabel: '$_driverCount conductores',
-                      color: AppColors.primary,
-                      onTap: () => _showDriversMenu(context),
-                    ),
-                    _ContextMenuCard(
-                      icon: Icons.chat_bubble,
-                      label: 'Soporte',
-                      sublabel: _supportChats > 0 
-                          ? '$_supportChats mensajes nuevos' 
-                          : 'Chat con usuarios',
-                      color: AppColors.primary,
-                      badge: _supportChats > 0 ? '$_supportChats' : null,
-                      onTap: () => Navigator.push(
-                        context,
-                        slideFromRightRoute(const SupportChatsScreen()),
-                      ),
-                    ),
-                    _ContextMenuCard(
-                      icon: Icons.settings,
-                      label: 'Config',
-                      sublabel: 'Administración',
-                      color: AppColors.primary,
-                      onTap: () => Navigator.push(
-                        context,
-                        slideFromRightRoute(const AdminConfigScreen()),
-                      ),
-                    ),
-                  ]),
+          child: Column(
+            children: [
+              // Header with dynamic title
+              _buildHeader(),
+              // Tab bar: Dispatch | Admin
+              _buildTabBar(),
+              // Tab content
+              Expanded(
+                child: TabBarView(
+                  controller: _tabController,
+                  children: [
+                    _buildDispatchTab(),
+                    _buildAdminTab(),
+                  ],
                 ),
-              ),
-              
-              // Bottom spacing
-              const SliverToBoxAdapter(
-                child: SizedBox(height: 20),
               ),
             ],
           ),
         ),
-        floatingActionButton: FloatingActionButton.extended(
-          onPressed: () => Navigator.push(
-            context,
-            scaleExpandRoute(const CreateTripScreen()),
-          ),
-          backgroundColor: AppColors.primary,
-          icon: const Icon(Icons.add),
-          label: const Text(
-            'Nuevo Viaje',
-            style: TextStyle(fontWeight: FontWeight.w700),
-          ),
-        ),
+        floatingActionButton: _currentTab == 0
+            ? FloatingActionButton.extended(
+                onPressed: () => Navigator.push(
+                  context,
+                  scaleExpandRoute(const CreateTripScreen()),
+                ),
+                backgroundColor: AppColors.primary,
+                icon: const Icon(Icons.add),
+                label: const Text(
+                  'Nuevo Viaje',
+                  style: TextStyle(fontWeight: FontWeight.w700),
+                ),
+              )
+            : null,
       ),
     );
   }
@@ -275,6 +221,175 @@ class _HomeMenuScreenState extends State<HomeMenuScreen>
     widget.onNavigate(index);
   }
 
+  // ─── DISPATCH TAB ─────────────────────────────────────────────────────
+  Widget _buildDispatchTab() {
+    return CustomScrollView(
+      slivers: [
+        // Quick Stats - Dispatch
+        SliverToBoxAdapter(child: _buildDispatchQuickStats()),
+        // Dispatch Menu Grid
+        SliverPadding(
+          padding: const EdgeInsets.all(16),
+          sliver: SliverGrid(
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 2,
+              mainAxisSpacing: 12,
+              crossAxisSpacing: 12,
+              childAspectRatio: 1.3,
+            ),
+            delegate: SliverChildListDelegate([
+              _ContextMenuCard(
+                icon: Icons.directions_car,
+                label: 'Viajes',
+                sublabel: '$_activeTrips activos',
+                color: AppColors.primary,
+                badge: _activeTrips > 0 ? '$_activeTrips' : null,
+                onTap: () => _showTripsMenu(context),
+              ),
+              _ContextMenuCard(
+                icon: Icons.map,
+                label: 'Mapa Fleet',
+                sublabel: '$_onlineDrivers en línea',
+                color: AppColors.primary,
+                badge: _onlineDrivers > 0 ? '$_onlineDrivers' : null,
+                onTap: () => _showFleetMenu(context),
+              ),
+              _ContextMenuCard(
+                icon: Icons.chat_bubble,
+                label: 'Soporte',
+                sublabel: _supportChats > 0
+                    ? '$_supportChats mensajes nuevos'
+                    : 'Chat con usuarios',
+                color: AppColors.primary,
+                badge: _supportChats > 0 ? '$_supportChats' : null,
+                onTap: () => Navigator.push(
+                  context,
+                  slideFromRightRoute(const SupportChatsScreen()),
+                ),
+              ),
+              _ContextMenuCard(
+                icon: Icons.calendar_today,
+                label: 'Reservas',
+                sublabel: '$_scheduledTrips programados',
+                color: AppColors.primary,
+                badge: _scheduledTrips > 0 ? '$_scheduledTrips' : null,
+                onTap: () => Navigator.push(
+                  context,
+                  slideFromRightRoute(const ScheduledRidesScreen()),
+                ),
+              ),
+            ]),
+          ),
+        ),
+        const SliverToBoxAdapter(child: SizedBox(height: 80)),
+      ],
+    );
+  }
+
+  // ─── ADMIN TAB ────────────────────────────────────────────────────────
+  Widget _buildAdminTab() {
+    return CustomScrollView(
+      slivers: [
+        // Quick Stats - Admin
+        SliverToBoxAdapter(child: _buildAdminQuickStats()),
+        // Admin Menu Grid
+        SliverPadding(
+          padding: const EdgeInsets.all(16),
+          sliver: SliverGrid(
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 2,
+              mainAxisSpacing: 12,
+              crossAxisSpacing: 12,
+              childAspectRatio: 1.3,
+            ),
+            delegate: SliverChildListDelegate([
+              _ContextMenuCard(
+                icon: Icons.person,
+                label: 'Riders',
+                sublabel: '$_riderCount usuarios',
+                color: AppColors.primary,
+                badge: _pendingVerifications > 0 ? '$_pendingVerifications' : null,
+                onTap: () => _showRidersMenu(context),
+              ),
+              _ContextMenuCard(
+                icon: Icons.local_taxi,
+                label: 'Drivers',
+                sublabel: '$_driverCount conductores',
+                color: AppColors.primary,
+                onTap: () => _showDriversMenu(context),
+              ),
+              _ContextMenuCard(
+                icon: Icons.settings,
+                label: 'Configuración',
+                sublabel: 'Ajustes del sistema',
+                color: AppColors.primary,
+                onTap: () => Navigator.push(
+                  context,
+                  slideFromRightRoute(const AdminConfigScreen()),
+                ),
+              ),
+              _ContextMenuCard(
+                icon: Icons.attach_money,
+                label: 'Precios',
+                sublabel: 'Tarifas y pricing',
+                color: AppColors.primary,
+                onTap: () => Navigator.push(
+                  context,
+                  slideFromRightRoute(const PricingConfigScreen()),
+                ),
+              ),
+              _ContextMenuCard(
+                icon: Icons.analytics,
+                label: 'Reportes',
+                sublabel: 'Reportes financieros',
+                color: AppColors.primary,
+                onTap: () => Navigator.push(
+                  context,
+                  slideFromRightRoute(const ReportsScreen()),
+                ),
+              ),
+              _ContextMenuCard(
+                icon: Icons.security,
+                label: 'Audit Logs',
+                sublabel: 'Registro de actividad',
+                color: AppColors.primary,
+                onTap: () => Navigator.push(
+                  context,
+                  slideFromRightRoute(const AuditLogsScreen()),
+                ),
+              ),
+              _ContextMenuCard(
+                icon: Icons.storage,
+                label: 'Base de Datos',
+                sublabel: 'Gestión de datos',
+                color: AppColors.primary,
+                onTap: () => Navigator.push(
+                  context,
+                  slideFromRightRoute(const DatabaseScreen()),
+                ),
+              ),
+              _ContextMenuCard(
+                icon: Icons.report_problem,
+                label: 'Rep. Drivers',
+                sublabel: _driverReports > 0
+                    ? '$_driverReports pendientes'
+                    : 'Sin reportes',
+                color: AppColors.primary,
+                badge: _driverReports > 0 ? '$_driverReports' : null,
+                onTap: () => Navigator.push(
+                  context,
+                  slideFromRightRoute(const DriverReportsScreen()),
+                ),
+              ),
+            ]),
+          ),
+        ),
+        const SliverToBoxAdapter(child: SizedBox(height: 20)),
+      ],
+    );
+  }
+
+  // ─── CONTEXT MENUS ────────────────────────────────────────────────────
   void _showRidersMenu(BuildContext context) {
     _showContextMenu(
       context: context,
@@ -444,7 +559,7 @@ class _HomeMenuScreenState extends State<HomeMenuScreen>
         _MenuAction(
           icon: Icons.local_taxi,
           label: 'Drivers Activos',
-          badge: _driverCount > 0 ? '$_driverCount' : null,
+          badge: _onlineDrivers > 0 ? '$_onlineDrivers' : null,
           onTap: () => Navigator.push(
             context,
             slideFromRightRoute(const FleetMapScreen()),
@@ -602,55 +717,32 @@ class _HomeMenuScreenState extends State<HomeMenuScreen>
   }
 
   Widget _buildHeader() {
+    final isDispatch = _currentTab == 0;
     return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 20, 20, 16),
+      padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
       child: Row(
         children: [
-          Container(
-            width: 56,
-            height: 56,
-            decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                colors: [AppColors.primary, AppColors.primaryLight],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-              borderRadius: BorderRadius.circular(16),
-              boxShadow: [
-                BoxShadow(
-                  color: AppColors.primary.withOpacity(0.4),
-                  blurRadius: 20,
-                  offset: const Offset(0, 8),
-                ),
-              ],
-            ),
-            child: const Center(
-              child: Text(
-                'C',
-                style: TextStyle(
-                  fontSize: 28,
-                  fontWeight: FontWeight.w900,
-                  color: Color(0xFF08090C),
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(width: 16),
-          const Expanded(
+          Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  'Dashboard Dispatch & Admin',
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.w800,
-                    color: AppColors.textPrimary,
+                AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 250),
+                  child: Text(
+                    isDispatch ? 'Dashboard Dispatch' : 'Dashboard Admin',
+                    key: ValueKey(isDispatch),
+                    style: const TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.w800,
+                      color: AppColors.textPrimary,
+                    ),
                   ),
                 ),
                 Text(
-                  'Panel de Administración',
-                  style: TextStyle(
+                  isDispatch
+                      ? 'Gestión operativa de viajes'
+                      : 'Administración del sistema',
+                  style: const TextStyle(
                     fontSize: 13,
                     color: AppColors.textSecondary,
                   ),
@@ -660,14 +752,70 @@ class _HomeMenuScreenState extends State<HomeMenuScreen>
           ),
           IconButton(
             icon: const Icon(Icons.settings_outlined, color: AppColors.primary),
-            onPressed: () => _navigate(10),
+            onPressed: () => Navigator.push(
+              context,
+              slideFromRightRoute(const AdminConfigScreen()),
+            ),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildQuickStats() {
+  Widget _buildTabBar() {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+      decoration: BoxDecoration(
+        color: AppColors.surfaceHigh,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AppColors.cardBorder),
+      ),
+      child: TabBar(
+        controller: _tabController,
+        indicator: BoxDecoration(
+          color: AppColors.primary,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        indicatorSize: TabBarIndicatorSize.tab,
+        labelColor: const Color(0xFF08090C),
+        unselectedLabelColor: AppColors.textSecondary,
+        labelStyle: const TextStyle(
+          fontSize: 14,
+          fontWeight: FontWeight.w700,
+        ),
+        unselectedLabelStyle: const TextStyle(
+          fontSize: 14,
+          fontWeight: FontWeight.w500,
+        ),
+        dividerColor: Colors.transparent,
+        padding: const EdgeInsets.all(4),
+        tabs: const [
+          Tab(
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.headset_mic, size: 18),
+                SizedBox(width: 8),
+                Text('Dispatch'),
+              ],
+            ),
+          ),
+          Tab(
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.admin_panel_settings, size: 18),
+                SizedBox(width: 8),
+                Text('Admin'),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDispatchQuickStats() {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       padding: const EdgeInsets.all(16),
@@ -721,6 +869,64 @@ class _HomeMenuScreenState extends State<HomeMenuScreen>
             onTap: () => Navigator.push(
               context,
               slideFromRightRoute(const FleetMapScreen()),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAdminQuickStats() {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            const Color(0xFF1565C0).withOpacity(0.15),
+            const Color(0xFF1565C0).withOpacity(0.05),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFF1565C0).withOpacity(0.2)),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceAround,
+        children: [
+          _StatItem(
+            icon: Icons.person,
+            value: '$_riderCount',
+            label: 'Riders',
+            color: const Color(0xFF1565C0),
+            onTap: () => _showRidersMenu(context),
+          ),
+          _StatItem(
+            icon: Icons.local_taxi,
+            value: '$_driverCount',
+            label: 'Drivers',
+            color: const Color(0xFF1565C0),
+            onTap: () => _showDriversMenu(context),
+          ),
+          _StatItem(
+            icon: Icons.verified_user,
+            value: '$_pendingVerifications',
+            label: 'Verificaciones',
+            color: AppColors.warning,
+            onTap: () => Navigator.push(
+              context,
+              slideFromRightRoute(const VerificationReviewScreen()),
+            ),
+          ),
+          _StatItem(
+            icon: Icons.block,
+            value: '$_blockedUsers',
+            label: 'Bloqueados',
+            color: AppColors.error,
+            onTap: () => Navigator.push(
+              context,
+              slideFromRightRoute(const BlockedUsersScreen()),
             ),
           ),
         ],
