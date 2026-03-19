@@ -15,6 +15,8 @@ import 'riders_screen.dart';
 import 'drivers_screen.dart';
 import 'verification_review_screen.dart';
 import 'blocked_users_screen.dart';
+import 'deactivated_users_screen.dart';
+import 'account_appeals_screen.dart';
 import 'support_chats_screen.dart';
 import 'scheduled_rides_screen.dart';
 import 'trip_list_screen.dart';
@@ -42,6 +44,7 @@ class _HomeMenuScreenState extends State<HomeMenuScreen>
   int _driverReports = 0;
   int _supportChats = 0;
   int _blockedUsers = 0;
+  int _onlineDrivers = 0;
   
   StreamSubscription? _ridersSub;
   StreamSubscription? _driversSub;
@@ -51,6 +54,7 @@ class _HomeMenuScreenState extends State<HomeMenuScreen>
   StreamSubscription? _chatsSub;
   StreamSubscription? _driverReportsSub;
   StreamSubscription? _blockedSub;
+  StreamSubscription? _onlineDriversSub;
 
   @override
   void initState() {
@@ -132,6 +136,13 @@ class _HomeMenuScreenState extends State<HomeMenuScreen>
                 setState(() => _blockedUsers = blockedClients + driverSnap.docs.length);
               });
         });
+
+    // Online drivers count
+    _onlineDriversSub = FirebaseFirestore.instance
+        .collection('drivers')
+        .where('isOnline', isEqualTo: true)
+        .snapshots()
+        .listen((snap) => setState(() => _onlineDrivers = snap.docs.length));
   }
 
   @override
@@ -145,6 +156,7 @@ class _HomeMenuScreenState extends State<HomeMenuScreen>
     _chatsSub?.cancel();
     _driverReportsSub?.cancel();
     _blockedSub?.cancel();
+    _onlineDriversSub?.cancel();
     super.dispose();
   }
 
@@ -289,6 +301,14 @@ class _HomeMenuScreenState extends State<HomeMenuScreen>
           ),
         ),
         _MenuAction(
+          icon: Icons.pause_circle_filled,
+          label: 'Desactivados',
+          onTap: () => Navigator.push(
+            context,
+            slideFromRightRoute(const DeactivatedUsersScreen()),
+          ),
+        ),
+        _MenuAction(
           icon: Icons.delete_forever,
           label: 'Eliminados',
           onTap: () {
@@ -296,6 +316,14 @@ class _HomeMenuScreenState extends State<HomeMenuScreen>
               const SnackBar(content: Text('Página de eliminados - Próximamente')),
             );
           },
+        ),
+        _MenuAction(
+          icon: Icons.gavel,
+          label: 'Apelaciones',
+          onTap: () => Navigator.push(
+            context,
+            slideFromRightRoute(const AccountAppealsScreen()),
+          ),
         ),
       ],
     );
@@ -325,6 +353,14 @@ class _HomeMenuScreenState extends State<HomeMenuScreen>
           ),
         ),
         _MenuAction(
+          icon: Icons.pause_circle_filled,
+          label: 'Desactivados',
+          onTap: () => Navigator.push(
+            context,
+            slideFromRightRoute(const DeactivatedUsersScreen()),
+          ),
+        ),
+        _MenuAction(
           icon: Icons.delete_forever,
           label: 'Eliminados',
           onTap: () {
@@ -332,6 +368,14 @@ class _HomeMenuScreenState extends State<HomeMenuScreen>
               const SnackBar(content: Text('Página de eliminados - Próximamente')),
             );
           },
+        ),
+        _MenuAction(
+          icon: Icons.gavel,
+          label: 'Apelaciones',
+          onTap: () => Navigator.push(
+            context,
+            slideFromRightRoute(const AccountAppealsScreen()),
+          ),
         ),
       ],
     );
@@ -667,6 +711,16 @@ class _HomeMenuScreenState extends State<HomeMenuScreen>
             onTap: () => Navigator.push(
               context,
               slideFromRightRoute(const SupportChatsScreen()),
+            ),
+          ),
+          _StatItem(
+            icon: Icons.local_taxi,
+            value: '$_onlineDrivers',
+            label: 'Drivers Activos',
+            color: AppColors.success,
+            onTap: () => Navigator.push(
+              context,
+              slideFromRightRoute(const FleetMapScreen()),
             ),
           ),
         ],

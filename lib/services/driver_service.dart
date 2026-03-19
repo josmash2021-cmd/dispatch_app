@@ -262,6 +262,14 @@ class DriverService {
         .get();
   }
 
+  /// Get deactivated drivers
+  Future<QuerySnapshot> getDeactivatedDrivers() async {
+    return await _driversCollection
+        .where('status', isEqualTo: 'deactivated')
+        .orderBy('lastUpdated', descending: true)
+        .get();
+  }
+
   /// Get driver by ID
   Future<DriverModel?> getDriverById(String driverId) async {
     final doc = await _driversCollection.doc(driverId).get();

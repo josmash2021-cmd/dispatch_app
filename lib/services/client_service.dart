@@ -263,6 +263,14 @@ class ClientService {
         .get();
   }
 
+  /// Get deactivated clients
+  Future<QuerySnapshot> getDeactivatedClients() async {
+    return await _clientsCollection
+        .where('status', isEqualTo: 'deactivated')
+        .orderBy('lastUpdated', descending: true)
+        .get();
+  }
+
   /// Get client by ID
   Future<ClientModel?> getClientById(String clientId) async {
     final doc = await _clientsCollection.doc(clientId).get();
