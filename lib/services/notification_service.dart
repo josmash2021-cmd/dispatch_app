@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import '../config/app_theme.dart';
+import '../services/audit_service.dart';
 
 /// Service that listens for real-time changes in Firestore and shows
 /// in-app notifications for profile updates and new verifications
@@ -56,7 +57,8 @@ class NotificationService {
         .listen((snapshot) {
           for (final change in snapshot.docChanges) {
             if (change.type == DocumentChangeType.modified) {
-              _handleProfileChange(context, change.doc, icon, color, roleLabel);
+              _handleProfileChange(
+                context, change.doc, icon, color, roleLabel, collection);
             }
           }
         });
@@ -64,13 +66,14 @@ class NotificationService {
     _subscriptions.add(sub);
   }
 
-  void _handleProfileChange(
+  Future<void> _handleProfileChange(
     BuildContext context,
     DocumentSnapshot doc,
     IconData icon,
     Color color,
     String roleLabel,
-  ) {
+    String collection,
+  ) async {
     final data = doc.data() as Map<String, dynamic>?;
     if (data == null) return;
 
@@ -89,35 +92,62 @@ class NotificationService {
     final name = '$firstName $lastName'.trim();
 
     // Detect what changed
-    final changes = <String>[];
-    
+    final changedFields = <String, dynamic>{};
+    final changeLabels = <String>[];
+
     if (_fieldChanged(data, 'photoUrl') || _fieldChanged(data, 'photo_url')) {
-      changes.add('foto de perfil');
+      changedFields['photoUrl'] = data['photoUrl'] ?? data['photo_url'];
+      changeLabels.add('foto de perfil');
     }
     if (_fieldChanged(data, 'phone') || _fieldChanged(data, 'phoneNumber')) {
-      changes.add('número de teléfono');
-    }
-    if (_fieldChanged(data, 'password') || data['passwordUpdated'] == true) {
-      changes.add('contraseña');
+      changedFields['phone'] = data['phone'] ?? data['phoneNumber'];
+      changeLabels.add('teléfono');
     }
     if (_fieldChanged(data, 'email')) {
-      changes.add('email');
+      changedFields['email'] = data['email'];
+      changeLabels.add('email');
+    }
+    if (_fieldChanged(data, 'firstName') || _fieldChanged(data, 'lastName')) {
+      changedFields['name'] = name;
+      changeLabels.add('nombre');
+    }
+    if (data['passwordUpdated'] == true) {
+      changedFields['passwordUpdated'] = true;
+      changeLabels.add('contraseña');
+    }
+    if (_fieldChanged(data, 'vehicleType') || _fieldChanged(data, 'vehiclePlate')) {
+      changedFields['vehicle'] =
+          '${data['vehicleType'] ?? ''} ${data['vehiclePlate'] ?? ''}'.trim();
+      changeLabels.add('vehículo');
     }
 
-    if (changes.isEmpty) return;
+    if (changeLabels.isEmpty) return;
+
+    // Write to audit_log so the Cambios tab can show it
+    try {
+      await AuditService().logUpdate(
+        collection,
+        docId,
+        name,
+        changes: {
+          'fields': changeLabels,
+          'values': changedFields,
+          'source': 'user_self_update',
+        },
+      );
+    } catch (_) {}
 
     // Show notification
     _showNotification(
       context,
       icon: icon,
       color: color,
-      title: '📢 $roleLabel actualizó perfil',
-      message: '$name cambió: ${changes.join(', ')}',
-      actionLabel: 'Ver en Database',
-      onAction: () {
-        // Navigate to database screen - using context is tricky here
-        // The dashboard should handle this navigation
-      },
+      title: '📢 $roleLabel actualizó su perfil',
+      message: '$name cambió: ${changeLabels.join(', ')}',
+      actionLabel: 'Ver cambios',
+      userId: docId,
+      userType: collection,
+      changedFields: changeLabels,
     );
   }
 
@@ -177,10 +207,11 @@ class NotificationService {
     required String message,
     required String actionLabel,
     VoidCallback? onAction,
+    String? userId,
+    String? userType,
+    List<String>? changedFields,
     Duration duration = const Duration(seconds: 6),
   }) {
-    // Use a global key approach or callback to show snackbar
-    // For now, we'll emit an event that the dashboard can listen to
     notificationStream.add(NotificationEvent(
       icon: icon,
       color: color,
@@ -188,6 +219,9 @@ class NotificationService {
       message: message,
       actionLabel: actionLabel,
       onAction: onAction,
+      userId: userId,
+      userType: userType,
+      changedFields: changedFields,
       duration: duration,
     ));
   }
@@ -213,6 +247,12 @@ class NotificationEvent {
   final String message;
   final String actionLabel;
   final VoidCallback? onAction;
+  /// Firestore doc ID of the client/driver who changed their profile
+  final String? userId;
+  /// 'clients' or 'drivers'
+  final String? userType;
+  /// Human-readable list of changed fields
+  final List<String>? changedFields;
   final Duration duration;
 
   NotificationEvent({
@@ -222,6 +262,9 @@ class NotificationEvent {
     required this.message,
     required this.actionLabel,
     this.onAction,
+    this.userId,
+    this.userType,
+    this.changedFields,
     required this.duration,
   });
 }

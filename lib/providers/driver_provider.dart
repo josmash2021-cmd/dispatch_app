@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import '../models/driver_model.dart';
 import '../services/audit_service.dart';
 import '../services/driver_service.dart';
+import '../services/dispatch_api_service.dart';
 
 class DriverProvider extends ChangeNotifier {
   final DriverService _service = DriverService();
@@ -21,33 +22,51 @@ class DriverProvider extends ChangeNotifier {
   String get searchQuery => _searchQuery;
 
   StreamSubscription? _subscription;
+  int _retryCount = 0;
+  Timer? _retryTimer;
 
   int get totalDrivers => _drivers.length;
   int get onlineDrivers => _drivers.where((d) => d.isOnline).length;
   int get offlineDrivers => _drivers.where((d) => !d.isOnline).length;
   int get verifiedDrivers => _drivers.where((d) => d.isVerified).length;
   List<DriverModel> get filteredDrivers => _filteredDrivers;
+  List<DriverModel> get allDrivers => _drivers;
 
   /// Start listening to real-time driver updates
   void startListening() {
-    _isLoading = true;
+    _isLoading = _drivers.isEmpty;
     _errorMessage = null;
-    notifyListeners();
+    if (_isLoading) notifyListeners();
 
     _subscription?.cancel();
+    _retryTimer?.cancel();
     _subscription = _service.getDriversStream().listen(
       (drivers) {
         _drivers = drivers;
         _isLoading = false;
         _errorMessage = null;
+        _retryCount = 0;
         notifyListeners();
       },
       onError: (error) {
-        _errorMessage = 'Error loading drivers: $error';
+        debugPrint('[DriverProvider] stream error: $error');
         _isLoading = false;
+        _errorMessage = 'Error al cargar conductores';
         notifyListeners();
+        _scheduleRetry();
       },
     );
+  }
+
+  void _scheduleRetry() {
+    _retryTimer?.cancel();
+    final delay = Duration(seconds: _retryCount < 3 ? 3 * (1 << _retryCount) : 30);
+    _retryCount++;
+    debugPrint('[DriverProvider] retry in ${delay.inSeconds}s (attempt $_retryCount)');
+    _retryTimer = Timer(delay, () {
+      if (DispatchApiService.isOnline) _retryCount = 0;
+      startListening();
+    });
   }
 
   List<DriverModel> get _filteredDrivers {
@@ -142,6 +161,7 @@ class DriverProvider extends ChangeNotifier {
   @override
   void dispose() {
     _subscription?.cancel();
+    _retryTimer?.cancel();
     super.dispose();
   }
 }

@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import '../models/client_model.dart';
 import '../services/audit_service.dart';
 import '../services/client_service.dart';
+import '../services/dispatch_api_service.dart';
 
 class ClientProvider extends ChangeNotifier {
   final ClientService _service = ClientService();
@@ -21,31 +22,49 @@ class ClientProvider extends ChangeNotifier {
   String get searchQuery => _searchQuery;
 
   StreamSubscription? _subscription;
+  int _retryCount = 0;
+  Timer? _retryTimer;
 
   int get totalClients => _clients.length;
   int get verifiedClients => _clients.where((c) => c.isVerified).length;
   List<ClientModel> get filteredClients => _filteredClients;
+  List<ClientModel> get allClients => _clients;
 
   /// Start listening to real-time client updates
   void startListening() {
-    _isLoading = true;
+    _isLoading = _clients.isEmpty;
     _errorMessage = null;
-    notifyListeners();
+    if (_isLoading) notifyListeners();
 
     _subscription?.cancel();
+    _retryTimer?.cancel();
     _subscription = _service.getClientsStream().listen(
       (clients) {
         _clients = clients;
         _isLoading = false;
         _errorMessage = null;
+        _retryCount = 0;
         notifyListeners();
       },
       onError: (error) {
-        _errorMessage = 'Error loading clients: $error';
+        debugPrint('[ClientProvider] stream error: $error');
         _isLoading = false;
+        _errorMessage = 'Error al cargar clientes';
         notifyListeners();
+        _scheduleRetry();
       },
     );
+  }
+
+  void _scheduleRetry() {
+    _retryTimer?.cancel();
+    final delay = Duration(seconds: _retryCount < 3 ? 3 * (1 << _retryCount) : 30);
+    _retryCount++;
+    debugPrint('[ClientProvider] retry in ${delay.inSeconds}s (attempt $_retryCount)');
+    _retryTimer = Timer(delay, () {
+      if (DispatchApiService.isOnline) _retryCount = 0;
+      startListening();
+    });
   }
 
   List<ClientModel> get _filteredClients {
@@ -139,6 +158,7 @@ class ClientProvider extends ChangeNotifier {
   @override
   void dispose() {
     _subscription?.cancel();
+    _retryTimer?.cancel();
     super.dispose();
   }
 }

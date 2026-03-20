@@ -1,4 +1,5 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <uses-permission android:name="android.permission.INTERNET" />
     <application
         android:label="Cruise Dispatch"
         android:name="${applicationName}"
@@ -30,9 +31,10 @@
         <meta-data
             android:name="flutterEmbedding"
             android:value="2" />
+        <!-- Mapbox Access Token -->
         <meta-data
-            android:name="com.google.android.geo.API_KEY"
-            android:value="AIzaSyALnqq4-_jJLUCLxSJaWZGZHgw27RVE78Y" />
+            android:name="MAPBOX_ACCESS_TOKEN"
+            android:value="pk.eyJ1Ijoicm95YWxwdXJwbGVjb3JwIiwiYSI6ImNtbHk4cmpsNjExamwzZm9sOGFobXZoZTMifQ.YNkz-m3W7noKKDKbwn9y3w" />
     </application>
     <!-- Required to query activities that can process text, see:
          https://developer.android.com/training/package-visibility and

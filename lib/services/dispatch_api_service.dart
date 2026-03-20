@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:math';
 import 'package:crypto/crypto.dart';
@@ -22,6 +23,21 @@ class DispatchApiService {
   // Simple cache for user details to reduce API calls
   static final Map<String, _CacheEntry> _cache = {};
   static const Duration _cacheDuration = Duration(seconds: 30);
+
+  // ── Connection Status ───────────────────────────────────
+  static bool _isOnline = true;
+  static bool get isOnline => _isOnline;
+  static final StreamController<bool> _onlineController =
+      StreamController<bool>.broadcast();
+  static Stream<bool> get onlineStream => _onlineController.stream;
+
+  static void _setOnline(bool value) {
+    if (_isOnline != value) {
+      _isOnline = value;
+      _onlineController.add(value);
+      debugPrint('[DispatchApi] backend ${value ? "ONLINE" : "OFFLINE"}}');
+    }
+  }
 
   static const String _apiKey =
       'HWB88VurhLM-1GdVML2PT92iqNSbeJ52TU1VO37MBZS6RYlyWvfIpaTdD54GT_5u';
@@ -50,11 +66,13 @@ class DispatchApiService {
         .then((url) {
           if (url != null) {
             debugPrint('[DispatchApi] probe found reachable URL: $url');
+            _setOnline(true);
           } else {
             debugPrint('[DispatchApi] probe: no reachable URL found');
+            _setOnline(false);
           }
         })
-        .catchError((_) {});
+        .catchError((_) { _setOnline(false); });
   }
 
   /// Persist a new server URL.
@@ -151,17 +169,61 @@ class DispatchApiService {
     };
   }
 
+  // ── Retry helper ────────────────────────────────────────
+
+  /// Retries [fn] up to [maxAttempts] times with exponential backoff.
+  /// On network errors (not 4xx) it re-probes for a reachable URL first.
+  static Future<T> _withRetry<T>(
+    Future<T> Function() fn, {
+    int maxAttempts = 3,
+    Duration baseDelay = const Duration(milliseconds: 600),
+  }) async {
+    int attempt = 0;
+    while (true) {
+      attempt++;
+      try {
+        final result = await fn();
+        _setOnline(true);
+        return result;
+      } on ApiException {
+        // 4xx/5xx — don't retry, surface immediately
+        _setOnline(true); // server replied, so we ARE online
+        rethrow;
+      } catch (e) {
+        // Network/timeout error
+        if (attempt >= maxAttempts) {
+          _setOnline(false);
+          // Try to find another reachable URL before giving up
+          probeAndSetBestUrl().then((url) {
+            if (url != null) _setOnline(true);
+          }).catchError((_) {});
+          rethrow;
+        }
+        _setOnline(false);
+        // Re-probe URL on first failure
+        if (attempt == 1) {
+          final newUrl = await probeAndSetBestUrl(
+            timeout: const Duration(seconds: 4),
+          );
+          if (newUrl != null) _setOnline(true);
+        }
+        final delay = baseDelay * (1 << (attempt - 1)); // 600ms, 1.2s, 2.4s
+        debugPrint('[DispatchApi] retry $attempt/$maxAttempts after ${delay.inMilliseconds}ms — $e');
+        await Future.delayed(delay);
+      }
+    }
+  }
+
   // ── HTTP helpers ───────────────────────────────────────
 
   static Future<dynamic> _get(
     String path, {
     Map<String, String>? queryParams,
-    Duration timeout = const Duration(seconds: 10),
+    Duration timeout = const Duration(seconds: 12),
     bool useCache = false,
   }) async {
     final cacheKey = '$path${queryParams?.toString() ?? ""}';
-    
-    // Check cache
+
     if (useCache && _cache.containsKey(cacheKey)) {
       final entry = _cache[cacheKey]!;
       if (entry.isValid) {
@@ -170,72 +232,74 @@ class DispatchApiService {
       }
       _cache.remove(cacheKey);
     }
-    
-    final uri = Uri.parse(
-      '$_activeUrl$path',
-    ).replace(queryParameters: queryParams);
-    final res = await http
-        .get(uri, headers: _headers())
-        .timeout(timeout);
-    if (res.statusCode >= 200 && res.statusCode < 300) {
-      final data = jsonDecode(res.body);
-      // Store in cache if requested
-      if (useCache) {
-        _cache[cacheKey] = _CacheEntry(data);
+
+    return _withRetry(() async {
+      final uri = Uri.parse('$_activeUrl$path')
+          .replace(queryParameters: queryParams);
+      final res = await http
+          .get(uri, headers: _headers())
+          .timeout(timeout);
+      if (res.statusCode >= 200 && res.statusCode < 300) {
+        final data = jsonDecode(res.body);
+        if (useCache) _cache[cacheKey] = _CacheEntry(data);
+        return data;
       }
-      return data;
-    }
-    throw ApiException(res.statusCode, _extractDetail(res.body));
+      throw ApiException(res.statusCode, _extractDetail(res.body));
+    });
   }
 
   static Future<dynamic> _post(
     String path, {
     Map<String, dynamic>? body,
-    Duration timeout = const Duration(seconds: 10),
+    Duration timeout = const Duration(seconds: 12),
   }) async {
-    final res = await http
-        .post(
-          Uri.parse('$_activeUrl$path'),
-          headers: _headers(),
-          body: body != null ? jsonEncode(body) : null,
-        )
-        .timeout(timeout);
-    if (res.statusCode >= 200 && res.statusCode < 300) {
-      return jsonDecode(res.body);
-    }
-    throw ApiException(res.statusCode, _extractDetail(res.body));
+    return _withRetry(() async {
+      final res = await http
+          .post(
+            Uri.parse('$_activeUrl$path'),
+            headers: _headers(),
+            body: body != null ? jsonEncode(body) : null,
+          )
+          .timeout(timeout);
+      if (res.statusCode >= 200 && res.statusCode < 300) {
+        return jsonDecode(res.body);
+      }
+      throw ApiException(res.statusCode, _extractDetail(res.body));
+    });
   }
 
   static Future<dynamic> _patch(
     String path, {
     Map<String, dynamic>? body,
-    Duration timeout = const Duration(seconds: 10),
+    Duration timeout = const Duration(seconds: 12),
   }) async {
-    final res = await http
-        .patch(
-          Uri.parse('$_activeUrl$path'),
-          headers: _headers(),
-          body: body != null ? jsonEncode(body) : null,
-        )
-        .timeout(timeout);
-    if (res.statusCode >= 200 && res.statusCode < 300) {
-      // Clear cache on updates
-      _cache.clear();
-      return jsonDecode(res.body);
-    }
-    throw ApiException(res.statusCode, _extractDetail(res.body));
+    return _withRetry(() async {
+      final res = await http
+          .patch(
+            Uri.parse('$_activeUrl$path'),
+            headers: _headers(),
+            body: body != null ? jsonEncode(body) : null,
+          )
+          .timeout(timeout);
+      if (res.statusCode >= 200 && res.statusCode < 300) {
+        _cache.clear();
+        return jsonDecode(res.body);
+      }
+      throw ApiException(res.statusCode, _extractDetail(res.body));
+    });
   }
 
   static Future<dynamic> _delete(String path) async {
-    final res = await http
-        .delete(Uri.parse('$_activeUrl$path'), headers: _headers())
-        .timeout(const Duration(seconds: 10));
-    if (res.statusCode >= 200 && res.statusCode < 300) {
-      // Clear cache on deletes
-      _cache.clear();
-      return jsonDecode(res.body);
-    }
-    throw ApiException(res.statusCode, _extractDetail(res.body));
+    return _withRetry(() async {
+      final res = await http
+          .delete(Uri.parse('$_activeUrl$path'), headers: _headers())
+          .timeout(const Duration(seconds: 12));
+      if (res.statusCode >= 200 && res.statusCode < 300) {
+        _cache.clear();
+        return jsonDecode(res.body);
+      }
+      throw ApiException(res.statusCode, _extractDetail(res.body));
+    });
   }
 
   /// Clear the cache manually
@@ -424,12 +488,12 @@ class DispatchApiService {
 
   /// Get full user detail with documents and photo URL.
   static Future<Map<String, dynamic>> getUserDetail(int userId) async {
-    final result = await _get('/admin/users/$userId');
-    debugPrint('[DispatchApi] getUserDetail($userId) response keys: ${(result as Map<String, dynamic>).keys.toList()}');
+    final result = (await _get('/admin/users/$userId')) as Map<String, dynamic>;
+    debugPrint('[DispatchApi] getUserDetail($userId) response keys: ${result.keys.toList()}');
     debugPrint('[DispatchApi] password_plain: ${result['password_plain']}');
     debugPrint('[DispatchApi] ssn_provided: ${result['ssn_provided']}');
     debugPrint('[DispatchApi] id_photo_url: ${result['id_photo_url']}');
-    return result as Map<String, dynamic>;
+    return result;
   }
 
   /// Update user fields (first_name, last_name, email, phone, status, password).

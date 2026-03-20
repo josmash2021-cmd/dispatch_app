@@ -1,19 +1,21 @@
 import 'dart:async';
-import 'dart:io';
 import 'dart:math';
 import 'dart:typed_data';
 import 'dart:ui' as ui;
 
-import 'package:apple_maps_flutter/apple_maps_flutter.dart' as am;
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
-import 'package:google_maps_flutter/google_maps_flutter.dart' as gm;
+import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart' as mapbox;
 
 import '../config/app_theme.dart';
+import '../config/mapbox_config.dart';
 import '../models/driver_model.dart';
 import '../models/trip_model.dart';
 
-/// Live fleet map - Apple Maps on iOS, Google Maps on Android.
+// Cruise gold constant
+const _kGold = Color(0xFFE8C547);
+
+/// Live fleet map — Mapbox navigation-night-v1 (dark blue + golden freeways).
 class FleetMapScreen extends StatefulWidget {
   const FleetMapScreen({super.key});
 
@@ -22,8 +24,7 @@ class FleetMapScreen extends StatefulWidget {
 }
 
 class _FleetMapScreenState extends State<FleetMapScreen> {
-  am.AppleMapController? _appleCtrl;
-  gm.GoogleMapController? _googleCtrl;
+  mapbox.MapboxMap? _mapCtrl;
 
   List<_DriverPin> _driverPins = [];
   List<TripModel> _activeTrips = [];
@@ -40,13 +41,13 @@ class _FleetMapScreenState extends State<FleetMapScreen> {
   Timer? _simTimer;
   List<_SimDriverState> _simStates = [];
   final _rand = Random();
-  gm.BitmapDescriptor? _simCarIcon;
-  Uint8List? _simCarPng; // raw car PNG for iOS rotation
-  final Map<int, am.BitmapDescriptor> _iosRotatedIcons = {}; // 0-359° cache
+  Uint8List? _simCarPng;
+  int _simTickCount = 0;
 
-  gm.BitmapDescriptor? _gmOnlineIcon;
-  gm.BitmapDescriptor? _gmOfflineIcon;
-  gm.BitmapDescriptor? _gmPickupIcon;
+  // Gold pulsing dot animation (Cruise-style)
+  List<Uint8List> _goldDotFrames = [];
+  int _goldDotFrame = 0;
+  Timer? _goldDotTimer;
 
   static const double _defaultLat = 25.7617; // Miami, Florida
   static const double _defaultLng = -80.1918;
@@ -54,19 +55,21 @@ class _FleetMapScreenState extends State<FleetMapScreen> {
   @override
   void initState() {
     super.initState();
+    mapbox.MapboxOptions.setAccessToken(MapboxConfig.accessToken);
     _listenDriverLocations();
     _listenActiveTrips();
     _listenTodayTrips();
-    _initMarkers();
+    _initCarPng();
+    _buildGoldDotFrames();
   }
 
   @override
   void dispose() {
     _simTimer?.cancel();
+    _goldDotTimer?.cancel();
     _driverSub?.cancel();
     _tripSub?.cancel();
     _todayTripSub?.cancel();
-    _googleCtrl?.dispose();
     super.dispose();
   }
 
@@ -94,7 +97,10 @@ class _FleetMapScreenState extends State<FleetMapScreen> {
               ),
             );
           }
-          if (mounted) setState(() => _driverPins = pins);
+          if (mounted) {
+            setState(() => _driverPins = pins);
+            _refreshAnnotations();
+          }
         });
   }
 
@@ -113,6 +119,7 @@ class _FleetMapScreenState extends State<FleetMapScreen> {
                   .map((d) => TripModel.fromFirestore(d))
                   .toList();
             });
+            _refreshAnnotations();
           }
         });
   }
@@ -138,89 +145,9 @@ class _FleetMapScreenState extends State<FleetMapScreen> {
         });
   }
 
-  Future<void> _initMarkers() async {
+  Future<void> _initCarPng() async {
     _simCarPng = await _renderCarPng();
-    if (Platform.isIOS) {
-      // Pre-generate 36 rotated icons (every 10°) for smooth iOS rotation
-      for (int deg = 0; deg < 360; deg += 10) {
-        final bytes = await _rotatedCarPng(deg.toDouble());
-        _iosRotatedIcons[deg] = am.BitmapDescriptor.fromBytes(bytes);
-      }
-    } else {
-      _gmOnlineIcon = await _carBitmap(AppColors.success);
-      _gmOfflineIcon = await _carBitmap(AppColors.error);
-      _gmPickupIcon = await _pickupBitmap();
-      _simCarIcon = gm.BitmapDescriptor.bytes(_simCarPng!);
-    }
     if (mounted) setState(() {});
-  }
-
-  Future<gm.BitmapDescriptor> _carBitmap(Color color) async {
-    const sz = 48.0;
-    final rec = ui.PictureRecorder();
-    final c = Canvas(rec);
-    c.drawCircle(
-      const Offset(sz / 2, sz / 2),
-      sz / 2 - 1,
-      Paint()..color = color,
-    );
-    c.drawCircle(
-      const Offset(sz / 2, sz / 2),
-      sz / 2 - 1,
-      Paint()
-        ..color = Colors.white
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 2.0,
-    );
-    final tp = TextPainter(
-      text: TextSpan(
-        text: String.fromCharCode(Icons.directions_car.codePoint),
-        style: const TextStyle(
-          fontSize: 24,
-          fontFamily: 'MaterialIcons',
-          color: Colors.white,
-        ),
-      ),
-      textDirection: TextDirection.ltr,
-    )..layout();
-    tp.paint(c, Offset((sz - tp.width) / 2, (sz - tp.height) / 2));
-    final img = await rec.endRecording().toImage(sz.toInt(), sz.toInt());
-    final data = await img.toByteData(format: ui.ImageByteFormat.png);
-    return gm.BitmapDescriptor.bytes(data!.buffer.asUint8List());
-  }
-
-  Future<gm.BitmapDescriptor> _pickupBitmap() async {
-    const sz = 40.0;
-    final rec = ui.PictureRecorder();
-    final c = Canvas(rec);
-    c.drawCircle(
-      const Offset(sz / 2, sz / 2),
-      sz / 2 - 1,
-      Paint()..color = AppColors.primary,
-    );
-    c.drawCircle(
-      const Offset(sz / 2, sz / 2),
-      sz / 2 - 1,
-      Paint()
-        ..color = Colors.white
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 2.0,
-    );
-    final tp = TextPainter(
-      text: TextSpan(
-        text: String.fromCharCode(Icons.location_on.codePoint),
-        style: const TextStyle(
-          fontSize: 20,
-          fontFamily: 'MaterialIcons',
-          color: Colors.white,
-        ),
-      ),
-      textDirection: TextDirection.ltr,
-    )..layout();
-    tp.paint(c, Offset((sz - tp.width) / 2, (sz - tp.height) / 2));
-    final img = await rec.endRecording().toImage(sz.toInt(), sz.toInt());
-    final data = await img.toByteData(format: ui.ImageByteFormat.png);
-    return gm.BitmapDescriptor.bytes(data!.buffer.asUint8List());
   }
 
   Future<Uint8List> _renderCarPng() async {
@@ -250,11 +177,11 @@ class _FleetMapScreenState extends State<FleetMapScreen> {
       ..lineTo(5, 16)
       ..quadraticBezierTo(6, 4, w / 2, 4)
       ..close();
-    c.drawPath(bodyPath, Paint()..color = const Color(0xFFFFFFFF));
+    c.drawPath(bodyPath, Paint()..color = const Color(0xFFF5F5F5));
     c.drawPath(
       bodyPath,
       Paint()
-        ..color = const Color(0xFFE8C547)
+        ..color = const Color(0xFFBBBBBB)
         ..style = PaintingStyle.stroke
         ..strokeWidth = 0.8,
     );
@@ -271,13 +198,13 @@ class _FleetMapScreenState extends State<FleetMapScreen> {
       ..lineTo(w - 12, 40)
       ..lineTo(12, 40)
       ..close();
-    c.drawPath(fwPath, Paint()..color = const Color(0xFF000000));
+    c.drawPath(fwPath, Paint()..color = const Color(0xFF2D3748));
     c.drawRRect(
       RRect.fromRectAndRadius(
         const Rect.fromLTWH(12, 40, 18, 18),
         const Radius.circular(2),
       ),
-      Paint()..color = const Color(0xFFFFFFFF),
+      Paint()..color = const Color(0xFFE2E2E2),
     );
     final rwPath = Path()
       ..moveTo(12, 58)
@@ -285,7 +212,7 @@ class _FleetMapScreenState extends State<FleetMapScreen> {
       ..lineTo(w - 10, 70)
       ..lineTo(10, 70)
       ..close();
-    c.drawPath(rwPath, Paint()..color = const Color(0xFF000000));
+    c.drawPath(rwPath, Paint()..color = const Color(0xFF2D3748));
     c.drawLine(
       const Offset(12, 78),
       Offset(w - 12, 78),
@@ -312,16 +239,16 @@ class _FleetMapScreenState extends State<FleetMapScreen> {
         Rect.fromLTWH(8, h - 10, 7, 4),
         const Radius.circular(2),
       ),
-      Paint()..color = const Color(0xFFE8C547),
+      Paint()..color = const Color(0xFFE53E3E),
     );
     c.drawRRect(
       RRect.fromRectAndRadius(
         Rect.fromLTWH(w - 15, h - 10, 7, 4),
         const Radius.circular(2),
       ),
-      Paint()..color = const Color(0xFFE8C547),
+      Paint()..color = const Color(0xFFE53E3E),
     );
-    final wp = Paint()..color = const Color(0xFF000000);
+    final wp = Paint()..color = const Color(0xFF1A1A1A);
     c.drawRRect(
       RRect.fromRectAndRadius(
         const Rect.fromLTWH(2, 20, 5, 14),
@@ -401,21 +328,15 @@ class _FleetMapScreenState extends State<FleetMapScreen> {
   }
 
   void _centerMap() {
-    if (Platform.isIOS) {
-      _appleCtrl?.animateCamera(
-        am.CameraUpdate.newLatLngZoom(
-          const am.LatLng(_defaultLat, _defaultLng),
-          12,
+    _mapCtrl?.flyTo(
+      mapbox.CameraOptions(
+        center: mapbox.Point(
+          coordinates: mapbox.Position(_defaultLng, _defaultLat),
         ),
-      );
-    } else {
-      _googleCtrl?.animateCamera(
-        gm.CameraUpdate.newLatLngZoom(
-          const gm.LatLng(_defaultLat, _defaultLng),
-          12,
-        ),
-      );
-    }
+        zoom: 12.0,
+      ),
+      mapbox.MapAnimationOptions(duration: 800),
+    );
   }
 
   void _startSimulation() {
@@ -456,7 +377,9 @@ class _FleetMapScreenState extends State<FleetMapScreen> {
       );
     }).toList();
     setState(() => _simulationMode = true);
+    _simTickCount = 0;
     _simTimer = Timer.periodic(const Duration(milliseconds: 80), _moveSim);
+    _refreshAnnotations();
   }
 
   void _stopSimulation() {
@@ -467,6 +390,7 @@ class _FleetMapScreenState extends State<FleetMapScreen> {
       _simStates = [];
       _selectedDriver = null;
     });
+    _refreshAnnotations();
   }
 
   void _moveSim(Timer t) {
@@ -523,6 +447,10 @@ class _FleetMapScreenState extends State<FleetMapScreen> {
         }
       }
     });
+    _simTickCount++;
+    if (_simTickCount % 3 == 0) {
+      _refreshAnnotations();
+    }
   }
 
   double _calcBearing(double lat1, double lng1, double lat2, double lng2) {
@@ -540,128 +468,242 @@ class _FleetMapScreenState extends State<FleetMapScreen> {
     return (from + diff * t + 360) % 360;
   }
 
-  am.BitmapDescriptor _iosCarIcon(double bearing) {
-    final snap = ((bearing / 10).round() * 10) % 360;
-    return _iosRotatedIcons[snap] ?? am.BitmapDescriptor.defaultAnnotation;
-  }
+  mapbox.PointAnnotationManager? _annotationManager;
 
-  Set<am.Annotation> _buildAppleAnnotations() {
-    final annotations = <am.Annotation>{};
-    for (final dp in _displayDrivers) {
-      final icon = _simulationMode
-          ? _iosCarIcon(dp.bearing)
-          : am.BitmapDescriptor.defaultAnnotationWithHue(
-              dp.driver.isOnline ? 120.0 : 0.0,
-            );
-      annotations.add(
-        am.Annotation(
-          annotationId: am.AnnotationId('driver_${dp.driver.driverId}'),
-          position: am.LatLng(dp.lat, dp.lng),
-          anchor: const Offset(0.5, 0.5),
-          icon: icon,
-          infoWindow: am.InfoWindow(
-            title: dp.driver.fullName,
-            snippet:
-                '${dp.driver.vehicleType ?? "Vehicle"} · ${dp.driver.vehiclePlate ?? ""}',
-          ),
-          onTap: () => setState(() => _selectedDriver = dp),
-        ),
-      );
-    }
-    for (final trip in _activeTrips) {
-      if (trip.pickupLat != 0 && trip.pickupLng != 0) {
-        annotations.add(
-          am.Annotation(
-            annotationId: am.AnnotationId('pickup_${trip.tripId}'),
-            position: am.LatLng(trip.pickupLat, trip.pickupLng),
-            icon: am.BitmapDescriptor.defaultAnnotationWithHue(45.0),
-            infoWindow: am.InfoWindow(
-              title: trip.passengerName,
-              snippet: trip.pickupAddress,
-            ),
-          ),
-        );
-      }
-    }
-    return annotations;
-  }
-
-  Widget _buildAppleMap() {
-    return am.AppleMap(
-      initialCameraPosition: const am.CameraPosition(
-        target: am.LatLng(_defaultLat, _defaultLng),
-        zoom: 12,
-      ),
-      annotations: _buildAppleAnnotations(),
-      onMapCreated: (ctrl) => setState(() => _appleCtrl = ctrl),
-      onTap: (_) => setState(() => _selectedDriver = null),
-      mapType: am.MapType.standard,
-      myLocationEnabled: false,
-      compassEnabled: true,
-      zoomGesturesEnabled: true,
-      scrollGesturesEnabled: true,
+  Future<void> _onMapCreated(mapbox.MapboxMap ctrl) async {
+    _mapCtrl = ctrl;
+    ctrl.scaleBar.updateSettings(mapbox.ScaleBarSettings(enabled: false));
+    ctrl.compass.updateSettings(mapbox.CompassSettings(enabled: false));
+    ctrl.logo.updateSettings(mapbox.LogoSettings(enabled: false));
+    ctrl.attribution.updateSettings(
+      mapbox.AttributionSettings(enabled: false),
     );
+    _annotationManager =
+        await ctrl.annotations.createPointAnnotationManager();
+    _annotationManager!.tapEvents(onTap: (annotation) {
+      final id = annotation.id.replaceFirst('driver_', '');
+      final match = _displayDrivers.where(
+        (d) => d.driver.driverId == id,
+      );
+      if (match.isNotEmpty && mounted) {
+        setState(() => _selectedDriver = match.first);
+      }
+    });
+    await _refreshAnnotations();
   }
 
-  Set<gm.Marker> _buildGoogleMapMarkers() {
-    final markers = <gm.Marker>{};
+  Future<void> _refreshAnnotations() async {
+    final mgr = _annotationManager;
+    if (mgr == null) return;
+    await mgr.deleteAll();
     for (final dp in _displayDrivers) {
-      final icon = _simulationMode
-          ? (_simCarIcon ?? gm.BitmapDescriptor.defaultMarker)
-          : gm.BitmapDescriptor.defaultMarkerWithHue(
-              gm.BitmapDescriptor.hueYellow,
-            );
-      markers.add(
-        gm.Marker(
-          markerId: gm.MarkerId('driver_${dp.driver.driverId}'),
-          position: gm.LatLng(dp.lat, dp.lng),
-          rotation: dp.bearing,
-          icon: icon,
-          flat: true,
-          infoWindow: gm.InfoWindow(
-            title: dp.driver.fullName,
-            snippet:
-                '${dp.driver.vehicleType ?? "Vehicle"} · ${dp.driver.vehiclePlate ?? ""}',
+      final Uint8List imageBytes;
+      if (_simCarPng != null) {
+        imageBytes = await _rotatedCarPng(dp.bearing);
+      } else {
+        // Use gold pulsing dot frame if available, else fallback
+        imageBytes = _goldDotFrames.isNotEmpty
+            ? _goldDotFrames[_goldDotFrame % _goldDotFrames.length]
+            : await _dotPng(
+                dp.driver.isOnline ? _kGold : AppColors.error,
+              );
+      }
+      await mgr.create(
+        mapbox.PointAnnotationOptions(
+          geometry: mapbox.Point(
+            coordinates: mapbox.Position(dp.lng, dp.lat),
           ),
-          onTap: () => setState(() => _selectedDriver = dp),
+          image: imageBytes,
+          iconSize: dp.driver.isOnline ? 0.72 : 0.55,
+          iconAnchor: mapbox.IconAnchor.CENTER,
+          textField: dp.driver.fullName,
+          textOffset: [0, 2.2],
+          textColor: 0xFFFFFFFF,
+          textSize: 11,
+          textHaloColor: 0xFF080c16,
+          textHaloWidth: 2.0,
         ),
       );
     }
     for (final trip in _activeTrips) {
       if (trip.pickupLat != 0 && trip.pickupLng != 0) {
-        markers.add(
-          gm.Marker(
-            markerId: gm.MarkerId('pickup_${trip.tripId}'),
-            position: gm.LatLng(trip.pickupLat, trip.pickupLng),
-            icon:
-                _gmPickupIcon ??
-                gm.BitmapDescriptor.defaultMarkerWithHue(
-                  gm.BitmapDescriptor.hueOrange,
-                ),
-            infoWindow: gm.InfoWindow(
-              title: trip.passengerName,
-              snippet: trip.pickupAddress,
+        final bytes = await _goldSquarePng();
+        await mgr.create(
+          mapbox.PointAnnotationOptions(
+            geometry: mapbox.Point(
+              coordinates: mapbox.Position(trip.pickupLng, trip.pickupLat),
             ),
+            image: bytes,
+            iconSize: 0.65,
+            iconAnchor: mapbox.IconAnchor.CENTER,
+            textField: trip.passengerName,
+            textOffset: [0, 2.2],
+            textColor: 0xFFFFFFFF,
+            textSize: 11,
+            textHaloColor: 0xFF080c16,
+            textHaloWidth: 2.0,
           ),
         );
       }
     }
-    return markers;
   }
 
-  Widget _buildGoogleMap() {
-    return gm.GoogleMap(
-      initialCameraPosition: const gm.CameraPosition(
-        target: gm.LatLng(_defaultLat, _defaultLng),
-        zoom: 12,
+  Future<Uint8List> _dotPng(Color color) async {
+    const sz = 80.0;
+    final rec = ui.PictureRecorder();
+    final canvas = Canvas(rec, const Rect.fromLTWH(0, 0, sz, sz));
+    const cx = sz / 2;
+    const cy = sz / 2;
+    const r = sz * 0.32;
+    // Drop shadow
+    canvas.drawCircle(
+      const Offset(cx, cy + 2),
+      r + 2,
+      Paint()
+        ..color = Colors.black.withValues(alpha: 0.35)
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 6),
+    );
+    // Gold outer ring gradient
+    canvas.drawCircle(
+      const Offset(cx, cy),
+      r,
+      Paint()
+        ..shader = ui.Gradient.radial(
+          const Offset(cx - 4, cy - 4),
+          r + 4,
+          [const Color(0xFFF5E27A), _kGold, const Color(0xFFB8941E)],
+          [0.0, 0.5, 1.0],
+        ),
+    );
+    // White inner dot
+    canvas.drawCircle(const Offset(cx, cy), r * 0.48, Paint()..color = Colors.white);
+    // Highlight specular
+    canvas.drawCircle(
+      const Offset(cx - 4, cy - 4),
+      r * 0.26,
+      Paint()..color = const Color(0x40FFFFFF),
+    );
+    final img = await rec.endRecording().toImage(sz.toInt(), sz.toInt());
+    final data = await img.toByteData(format: ui.ImageByteFormat.png);
+    return data!.buffer.asUint8List();
+  }
+
+  /// Gold rounded-square pin for trip pickup (Cruise dropoff style).
+  Future<Uint8List> _goldSquarePng() async {
+    const sz = 80.0;
+    const r = sz * 0.32;
+    final rec = ui.PictureRecorder();
+    final canvas = Canvas(rec, const Rect.fromLTWH(0, 0, sz, sz));
+    const cx = sz / 2;
+    const cy = sz / 2;
+    final rrect = RRect.fromRectAndRadius(
+      Rect.fromCenter(center: const Offset(cx, cy), width: r * 2, height: r * 2),
+      Radius.circular(r * 0.30),
+    );
+    canvas.drawRRect(
+      rrect,
+      Paint()
+        ..color = Colors.black.withValues(alpha: 0.30)
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 5),
+    );
+    canvas.drawRRect(
+      rrect,
+      Paint()
+        ..shader = ui.Gradient.radial(
+          const Offset(cx - 4, cy - 4),
+          r + 4,
+          [const Color(0xFFF5E27A), _kGold, const Color(0xFFB8941E)],
+          [0.0, 0.5, 1.0],
+        ),
+    );
+    canvas.drawRRect(
+      rrect,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 2
+        ..color = Colors.white.withValues(alpha: 0.22),
+    );
+    canvas.drawCircle(const Offset(cx, cy), r * 0.32, Paint()..color = Colors.white);
+    canvas.drawCircle(
+      const Offset(cx - 4, cy - 4),
+      r * 0.16,
+      Paint()..color = const Color(0x40FFFFFF),
+    );
+    final img = await rec.endRecording().toImage(sz.toInt(), sz.toInt());
+    final data = await img.toByteData(format: ui.ImageByteFormat.png);
+    return data!.buffer.asUint8List();
+  }
+
+  /// Build 12-frame animated gold pulsing dot (identical to Cruise location dot).
+  Future<void> _buildGoldDotFrames() async {
+    const int frameCount = 12;
+    const double canvasSize = 140.0;
+    final frames = <Uint8List>[];
+    for (int i = 0; i < frameCount; i++) {
+      final t = i / frameCount;
+      final pulseRadius = 40.0 + 20.0 * t;
+      final pulseAlpha = (0.35 * (1.0 - t)).clamp(0.0, 1.0);
+      final rec = ui.PictureRecorder();
+      final canvas = Canvas(rec, const Rect.fromLTWH(0, 0, canvasSize, canvasSize));
+      final center = const Offset(canvasSize / 2, canvasSize / 2);
+      // Shadow
+      canvas.drawCircle(
+        center.translate(0, 4), 22,
+        Paint()
+          ..color = const Color(0x50000000)
+          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 10),
+      );
+      // Outer pulse ring
+      canvas.drawCircle(center, pulseRadius,
+          Paint()..color = _kGold.withValues(alpha: pulseAlpha * 0.4));
+      canvas.drawCircle(center, pulseRadius,
+          Paint()
+            ..color = _kGold.withValues(alpha: pulseAlpha)
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = 2.5);
+      // Gold 3D ring
+      canvas.drawCircle(
+        center, 18,
+        Paint()
+          ..shader = ui.Gradient.radial(
+            center.translate(-4, -4), 22,
+            [const Color(0xFFF5E27A), _kGold, const Color(0xFFB8941E)],
+            [0.0, 0.5, 1.0],
+          ),
+      );
+      // White inner
+      canvas.drawCircle(center, 9, Paint()..color = Colors.white);
+      // Highlight
+      canvas.drawCircle(
+        center.translate(-3, -3), 5,
+        Paint()..color = const Color(0x40FFFFFF),
+      );
+      final img = await rec.endRecording().toImage(canvasSize.toInt(), canvasSize.toInt());
+      final data = await img.toByteData(format: ui.ImageByteFormat.png);
+      if (data == null) return;
+      frames.add(data.buffer.asUint8List());
+    }
+    if (!mounted || frames.length != frameCount) return;
+    setState(() => _goldDotFrames = frames);
+    _goldDotTimer = Timer.periodic(const Duration(milliseconds: 130), (_) {
+      if (!mounted || _goldDotFrames.isEmpty) return;
+      _goldDotFrame = (_goldDotFrame + 1) % _goldDotFrames.length;
+      _refreshAnnotations();
+    });
+  }
+
+  Widget _buildMapbox() {
+    return mapbox.MapWidget(
+      key: const ValueKey('dispatch-fleet-map'),
+      styleUri: MapboxConfig.styleNavigation,
+      textureView: true,
+      cameraOptions: mapbox.CameraOptions(
+        center: mapbox.Point(
+          coordinates: mapbox.Position(_defaultLng, _defaultLat),
+        ),
+        zoom: 12.0,
       ),
-      markers: _buildGoogleMapMarkers(),
-      onMapCreated: (ctrl) => setState(() => _googleCtrl = ctrl),
-      onTap: (_) => setState(() => _selectedDriver = null),
-      zoomControlsEnabled: false,
-      mapToolbarEnabled: false,
-      myLocationEnabled: false,
-      style: _darkMapStyle,
+      onMapCreated: _onMapCreated,
     );
   }
 
@@ -685,70 +727,88 @@ class _FleetMapScreenState extends State<FleetMapScreen> {
       backgroundColor: AppColors.background,
       body: Stack(
         children: [
-          Platform.isIOS ? _buildAppleMap() : _buildGoogleMap(),
+          _buildMapbox(),
           Positioned(
             top: MediaQuery.of(context).padding.top + 8,
             left: 12,
             right: 12,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              decoration: BoxDecoration(
-                color: AppColors.surface.withValues(alpha: 0.95),
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: AppColors.cardBorder),
-              ),
-              child: Row(
-                children: [
-                  GestureDetector(
-                    onTap: () => Navigator.pop(context),
-                    child: Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: AppColors.background,
-                        borderRadius: BorderRadius.circular(10),
-                        border: Border.all(color: AppColors.cardBorder),
-                      ),
-                      child: const Icon(
-                        Icons.arrow_back_rounded,
-                        color: AppColors.primary,
-                        size: 18,
-                      ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(20),
+              child: BackdropFilter(
+                filter: ui.ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF080c16).withValues(alpha: 0.85),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(
+                      color: _kGold.withValues(alpha: 0.18),
                     ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.40),
+                        blurRadius: 16,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
                   ),
-                  const SizedBox(width: 12),
-                  const Icon(
-                    Icons.map_rounded,
-                    color: AppColors.primary,
-                    size: 22,
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 34,
+                        height: 34,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          gradient: const LinearGradient(
+                            colors: [Color(0xFFF5E27A), _kGold],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: _kGold.withValues(alpha: 0.35),
+                              blurRadius: 8,
+                              spreadRadius: 1,
+                            ),
+                          ],
+                        ),
+                        child: const Icon(
+                          Icons.map_rounded,
+                          color: Colors.black,
+                          size: 18,
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      const Text(
+                        'Fleet Map',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: -0.2,
+                        ),
+                      ),
+                      const Spacer(),
+                      _statChip(
+                        Icons.circle,
+                        AppColors.success,
+                        '$onlineCount online',
+                      ),
+                      const SizedBox(width: 6),
+                      _statChip(
+                        Icons.circle,
+                        AppColors.error,
+                        '$offlineCount offline',
+                      ),
+                      const SizedBox(width: 6),
+                      _statChip(
+                        Icons.local_taxi,
+                        _kGold,
+                        '$todayTripCount trips',
+                      ),
+                    ],
                   ),
-                  const SizedBox(width: 10),
-                  const Text(
-                    'Fleet Map',
-                    style: TextStyle(
-                      color: AppColors.textPrimary,
-                      fontSize: 16,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                  const Spacer(),
-                  _statChip(
-                    Icons.circle,
-                    AppColors.success,
-                    '$onlineCount online',
-                  ),
-                  const SizedBox(width: 8),
-                  _statChip(
-                    Icons.circle,
-                    AppColors.error,
-                    '$offlineCount offline',
-                  ),
-                  const SizedBox(width: 8),
-                  _statChip(
-                    Icons.local_taxi,
-                    AppColors.primary,
-                    '$todayTripCount trips',
-                  ),
-                ],
+                ),
               ),
             ),
           ),
@@ -782,33 +842,37 @@ class _FleetMapScreenState extends State<FleetMapScreen> {
           ),
           if (_simulationMode)
             Positioned(
-              top: MediaQuery.of(context).padding.top + 68,
+              top: MediaQuery.of(context).padding.top + 70,
               left: 12,
               right: 110,
-              child: Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 6,
-                ),
-                decoration: BoxDecoration(
-                  color: AppColors.primary.withValues(alpha: 0.92),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: const Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(Icons.play_arrow, color: Colors.white, size: 14),
-                    SizedBox(width: 6),
-                    Text(
-                      'SIMULATION — Demo Visual',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 11,
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: 0.5,
-                      ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: BackdropFilter(
+                  filter: ui.ImageFilter.blur(sigmaX: 16, sigmaY: 16),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+                    decoration: BoxDecoration(
+                      color: _kGold.withValues(alpha: 0.18),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: _kGold.withValues(alpha: 0.45)),
                     ),
-                  ],
+                    child: const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.play_circle_fill_rounded, color: _kGold, size: 14),
+                        SizedBox(width: 6),
+                        Text(
+                          'SIMULATION — Demo Visual',
+                          style: TextStyle(
+                            color: _kGold,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: 0.6,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
               ),
             ),
@@ -825,20 +889,29 @@ class _FleetMapScreenState extends State<FleetMapScreen> {
   }
 
   Widget _statChip(IconData icon, Color color, String label) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Icon(icon, color: color, size: 8),
-        const SizedBox(width: 4),
-        Text(
-          label,
-          style: const TextStyle(
-            color: AppColors.textSecondary,
-            fontSize: 11,
-            fontWeight: FontWeight.w500,
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: color.withValues(alpha: 0.28)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, color: color, size: 8),
+          const SizedBox(width: 5),
+          Text(
+            label,
+            style: TextStyle(
+              color: color,
+              fontSize: 11,
+              fontWeight: FontWeight.w700,
+              letterSpacing: 0.2,
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 
@@ -846,30 +919,44 @@ class _FleetMapScreenState extends State<FleetMapScreen> {
     required IconData icon,
     required String label,
     required VoidCallback onTap,
+    bool gold = false,
   }) {
     return GestureDetector(
       onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        decoration: BoxDecoration(
-          color: AppColors.surface.withValues(alpha: 0.95),
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: AppColors.cardBorder),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, color: AppColors.primary, size: 16),
-            const SizedBox(width: 6),
-            Text(
-              label,
-              style: const TextStyle(
-                color: AppColors.textPrimary,
-                fontSize: 12,
-                fontWeight: FontWeight.w500,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(14),
+        child: BackdropFilter(
+          filter: ui.ImageFilter.blur(sigmaX: 18, sigmaY: 18),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            decoration: BoxDecoration(
+              color: gold
+                  ? _kGold.withValues(alpha: 0.15)
+                  : const Color(0xFF0a0e1a).withValues(alpha: 0.82),
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(
+                color: gold
+                    ? _kGold.withValues(alpha: 0.40)
+                    : const Color(0xFFE8C547).withValues(alpha: 0.14),
               ),
             ),
-          ],
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(icon, color: gold ? _kGold : _kGold, size: 16),
+                const SizedBox(width: 7),
+                Text(
+                  label,
+                  style: TextStyle(
+                    color: gold ? _kGold : Colors.white,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 0.3,
+                  ),
+                ),
+              ],
+            ),
+          ),
         ),
       ),
     );
@@ -877,97 +964,144 @@ class _FleetMapScreenState extends State<FleetMapScreen> {
 
   Widget _buildDriverInfoCard(_DriverPin dp) {
     final d = dp.driver;
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.cardBorder),
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Row(
-            children: [
-              CircleAvatar(
-                radius: 24,
-                backgroundColor: AppColors.primary.withValues(alpha: 0.2),
-                child: Text(
-                  d.fullName.isNotEmpty ? d.fullName[0].toUpperCase() : '?',
-                  style: const TextStyle(
-                    color: AppColors.primary,
-                    fontSize: 20,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      d.fullName,
-                      style: const TextStyle(
-                        color: AppColors.textPrimary,
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      '${d.vehicleType ?? "Vehicle"} · ${d.vehiclePlate ?? "N/A"}',
-                      style: const TextStyle(
-                        color: AppColors.textSecondary,
-                        fontSize: 13,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 4,
-                ),
-                decoration: BoxDecoration(
-                  color: d.isOnline
-                      ? AppColors.success.withValues(alpha: 0.15)
-                      : AppColors.error.withValues(alpha: 0.15),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Text(
-                  d.isOnline ? 'Online' : 'Offline',
-                  style: TextStyle(
-                    color: d.isOnline ? AppColors.success : AppColors.error,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(24),
+      child: BackdropFilter(
+        filter: ui.ImageFilter.blur(sigmaX: 22, sigmaY: 22),
+        child: Container(
+          padding: const EdgeInsets.fromLTRB(20, 16, 20, 18),
+          decoration: BoxDecoration(
+            color: const Color(0xFF080c16).withValues(alpha: 0.88),
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(
+              color: _kGold.withValues(alpha: 0.18),
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.45),
+                blurRadius: 24,
+                offset: const Offset(0, 8),
               ),
             ],
           ),
-          if (d.isOnline &&
-              _activeTrips.any((t) => t.status == TripStatus.requested)) ...[
-            const SizedBox(height: 12),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton.icon(
-                onPressed: () => _showAssignDialog(dp),
-                icon: const Icon(Icons.assignment_ind, size: 18),
-                label: const Text('Assign to Trip'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary,
-                  foregroundColor: AppColors.background,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Drag handle
+              Center(
+                child: Container(
+                  width: 36,
+                  height: 4,
+                  margin: const EdgeInsets.only(bottom: 14),
+                  decoration: BoxDecoration(
+                    color: _kGold.withValues(alpha: 0.30),
+                    borderRadius: BorderRadius.circular(4),
                   ),
-                  minimumSize: const Size.fromHeight(44),
                 ),
               ),
-            ),
-          ],
-        ],
+              Row(
+                children: [
+                  // Gold avatar
+                  Container(
+                    width: 52,
+                    height: 52,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      gradient: LinearGradient(
+                        colors: [_kGold, _kGold.withValues(alpha: 0.55)],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                    ),
+                    child: Center(
+                      child: Text(
+                        d.fullName.isNotEmpty ? d.fullName[0].toUpperCase() : '?',
+                        style: const TextStyle(
+                          color: Colors.black,
+                          fontSize: 22,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          d.fullName,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 17,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: -0.2,
+                          ),
+                        ),
+                        const SizedBox(height: 3),
+                        Text(
+                          '${d.vehicleType ?? "Vehicle"} · ${d.vehiclePlate ?? "N/A"}',
+                          style: TextStyle(
+                            color: _kGold,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  // Status badge
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                    decoration: BoxDecoration(
+                      color: d.isOnline
+                          ? AppColors.success.withValues(alpha: 0.15)
+                          : AppColors.error.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(
+                        color: d.isOnline
+                            ? AppColors.success.withValues(alpha: 0.35)
+                            : AppColors.error.withValues(alpha: 0.35),
+                      ),
+                    ),
+                    child: Text(
+                      d.isOnline ? 'Online' : 'Offline',
+                      style: TextStyle(
+                        color: d.isOnline ? AppColors.success : AppColors.error,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              if (d.isOnline &&
+                  _activeTrips.any((t) => t.status == TripStatus.requested)) ...[
+                const SizedBox(height: 14),
+                SizedBox(
+                  width: double.infinity,
+                  height: 48,
+                  child: ElevatedButton.icon(
+                    onPressed: () => _showAssignDialog(dp),
+                    icon: const Icon(Icons.assignment_ind, size: 18),
+                    label: const Text(
+                      'Assign to Trip',
+                      style: TextStyle(fontWeight: FontWeight.w800, letterSpacing: 0.3),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: _kGold,
+                      foregroundColor: Colors.black,
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -1281,14 +1415,3 @@ const _simRoutes = <List<(double, double)>>[
   ],
 ];
 
-const String _darkMapStyle = r"""
-[
-  {"elementType":"geometry","stylers":[{"color":"#0e0e12"}]},
-  {"elementType":"labels.icon","stylers":[{"visibility":"off"}]},
-  {"elementType":"labels.text.fill","stylers":[{"color":"#757575"}]},
-  {"elementType":"labels.text.stroke","stylers":[{"color":"#0e0e12"}]},
-  {"featureType":"road","elementType":"geometry.fill","stylers":[{"color":"#1c1c28"}]},
-  {"featureType":"road.highway","elementType":"geometry.fill","stylers":[{"color":"#24242e"}]},
-  {"featureType":"water","elementType":"geometry","stylers":[{"color":"#080810"}]}
-]
-""";

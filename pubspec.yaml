@@ -27,9 +27,8 @@ dependencies:
   google_fonts: ^6.2.1
   shimmer: ^3.0.0
 
-  # Maps — native per platform
-  google_maps_flutter: ^2.10.0  # Android (never instantiated on iOS)
-  apple_maps_flutter: ^1.4.0   # iOS (MapKit, no API key needed)
+  # Maps — Mapbox (cross-platform, same style as Cruise app)
+  mapbox_maps_flutter: ^2.5.0
 
   # HTTP & Security
   http: ^1.2.2

@@ -23,9 +23,18 @@ import '../widgets/re_auth_dialog.dart';
 class UserDetailPage extends StatefulWidget {
   final DriverModel? driver;
   final ClientModel? client;
+  /// 0=Info, 1=Fotos&Docs, 2=Pagos, 3=Detalles, 4=Cambios
+  final int initialTab;
+  /// Fields to highlight in the Cambios tab (e.g. from a notification)
+  final List<String>? highlightedChanges;
 
-  const UserDetailPage({this.driver, this.client, super.key})
-    : assert(
+  const UserDetailPage({
+    this.driver,
+    this.client,
+    this.initialTab = 0,
+    this.highlightedChanges,
+    super.key,
+  }) : assert(
         driver != null || client != null,
         'Provide either driver or client',
       );
@@ -125,7 +134,11 @@ class _UserDetailPageState extends State<UserDetailPage>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 4, vsync: this);
+    _tabController = TabController(
+      length: 5,
+      vsync: this,
+      initialIndex: widget.initialTab.clamp(0, 4),
+    );
   }
 
   @override
@@ -787,7 +800,9 @@ class _UserDetailPageState extends State<UserDetailPage>
                   Tab(text: 'Fotos & Docs'),
                   Tab(text: 'Pagos'),
                   Tab(text: 'Detalles'),
+                  Tab(text: 'Cambios'),
                 ],
+                isScrollable: true,
               ),
             ),
             pinned: true,
@@ -800,6 +815,7 @@ class _UserDetailPageState extends State<UserDetailPage>
             _buildPhotosTab(),
             _buildPaymentsTab(),
             _buildDetailsTab(),
+            _buildCambiosTab(),
           ],
         ),
       ),
@@ -1541,6 +1557,363 @@ class _UserDetailPageState extends State<UserDetailPage>
       ),
     );
   }
+
+  // ── Tab 5: Cambios ────────────────────────────────────────────────────────
+
+  Widget _buildCambiosTab() {
+    final collection = _isDriver ? 'drivers' : 'clients';
+    return StreamBuilder<QuerySnapshot>(
+      stream: FirebaseFirestore.instance
+          .collection('audit_log')
+          .where('targetCollection', isEqualTo: collection)
+          .where('targetId', isEqualTo: _userId)
+          .orderBy('timestamp', descending: true)
+          .limit(50)
+          .snapshots(),
+      builder: (context, snap) {
+        if (snap.connectionState == ConnectionState.waiting) {
+          return const Center(
+            child: CircularProgressIndicator(color: AppColors.primary),
+          );
+        }
+        if (snap.hasError) {
+          return Center(
+            child: Text(
+              'Error: ${snap.error}',
+              style: const TextStyle(color: AppColors.textSecondary),
+            ),
+          );
+        }
+        final docs = snap.data?.docs ?? [];
+        if (docs.isEmpty) {
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.history_rounded,
+                  size: 56,
+                  color: AppColors.textHint.withValues(alpha: 0.5),
+                ),
+                const SizedBox(height: 12),
+                const Text(
+                  'Sin historial de cambios',
+                  style: TextStyle(
+                    color: AppColors.textSecondary,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                const Text(
+                  'Los cambios de perfil aparecerán aquí',
+                  style: TextStyle(color: AppColors.textHint, fontSize: 13),
+                ),
+              ],
+            ),
+          );
+        }
+
+        final highlighted = widget.highlightedChanges ?? [];
+
+        return ListView.builder(
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
+          itemCount: docs.length,
+          itemBuilder: (context, i) {
+            final data = docs[i].data() as Map<String, dynamic>;
+            final action = data['action'] as String? ?? 'update';
+            final ts = data['timestamp'];
+            final DateTime? time = ts is Timestamp ? ts.toDate() : null;
+            final details = data['details'] as Map<String, dynamic>?;
+            final fields = details != null
+                ? (details['fields'] as List?)
+                          ?.map((e) => e.toString())
+                          .toList() ??
+                      []
+                : <String>[];
+            final values = details != null
+                ? (details['values'] as Map<String, dynamic>?) ?? {}
+                : <String, dynamic>{};
+            final source = details?['source'] as String?;
+            final performedBy = data['performedByEmail'] as String? ?? '';
+            final isHighlighted = i == 0 && highlighted.isNotEmpty;
+            final isUserSelf = source == 'user_self_update';
+
+            final actionColor = action == 'delete'
+                ? AppColors.error
+                : action == 'create'
+                ? AppColors.success
+                : isUserSelf
+                ? AppColors.warning
+                : AppColors.primary;
+            final actionIcon = action == 'delete'
+                ? Icons.delete_outline_rounded
+                : action == 'create'
+                ? Icons.person_add_alt_1_rounded
+                : isUserSelf
+                ? Icons.smartphone_rounded
+                : Icons.edit_rounded;
+            final actionLabel = action == 'delete'
+                ? 'Eliminado'
+                : action == 'create'
+                ? 'Creado'
+                : isUserSelf
+                ? 'Cambio por el usuario'
+                : 'Editado por admin';
+
+            return Container(
+              margin: const EdgeInsets.only(bottom: 12),
+              decoration: BoxDecoration(
+                color: isHighlighted
+                    ? AppColors.warning.withValues(alpha: 0.08)
+                    : AppColors.surface,
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(
+                  color: isHighlighted
+                      ? AppColors.warning.withValues(alpha: 0.45)
+                      : AppColors.cardBorder,
+                  width: isHighlighted ? 1.5 : 1,
+                ),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(14),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Container(
+                          width: 36,
+                          height: 36,
+                          decoration: BoxDecoration(
+                            color: actionColor.withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Icon(actionIcon, color: actionColor, size: 20),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Text(
+                                    actionLabel,
+                                    style: TextStyle(
+                                      color: actionColor,
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                  if (isHighlighted) ...[
+                                    const SizedBox(width: 6),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 7,
+                                        vertical: 2,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: AppColors.warning,
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                      child: const Text(
+                                        'NUEVO',
+                                        style: TextStyle(
+                                          color: Colors.black,
+                                          fontSize: 9,
+                                          fontWeight: FontWeight.w800,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ],
+                              ),
+                              if (time != null)
+                                Text(
+                                  _formatAuditTime(time),
+                                  style: const TextStyle(
+                                    color: AppColors.textHint,
+                                    fontSize: 11,
+                                  ),
+                                ),
+                            ],
+                          ),
+                        ),
+                        if (!isUserSelf && performedBy.isNotEmpty)
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 3,
+                            ),
+                            decoration: BoxDecoration(
+                              color: AppColors.primary.withValues(alpha: 0.10),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: const Text(
+                              'Admin',
+                              style: TextStyle(
+                                color: AppColors.primary,
+                                fontSize: 10,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                    if (fields.isNotEmpty) ...[
+                      const SizedBox(height: 10),
+                      const Divider(color: AppColors.cardBorder, height: 1),
+                      const SizedBox(height: 10),
+                      Wrap(
+                        spacing: 6,
+                        runSpacing: 6,
+                        children: fields.map((f) {
+                          final isNew = highlighted.contains(f);
+                          return Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 9,
+                              vertical: 4,
+                            ),
+                            decoration: BoxDecoration(
+                              color: isNew
+                                  ? AppColors.warning.withValues(alpha: 0.15)
+                                  : AppColors.surfaceHigh,
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(
+                                color: isNew
+                                    ? AppColors.warning.withValues(alpha: 0.4)
+                                    : AppColors.cardBorder,
+                              ),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  _auditFieldIcon(f),
+                                  size: 12,
+                                  color: isNew
+                                      ? AppColors.warning
+                                      : AppColors.textHint,
+                                ),
+                                const SizedBox(width: 4),
+                                Text(
+                                  f,
+                                  style: TextStyle(
+                                    color: isNew
+                                        ? AppColors.warning
+                                        : AppColors.textSecondary,
+                                    fontSize: 12,
+                                    fontWeight: isNew
+                                        ? FontWeight.w700
+                                        : FontWeight.w500,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          );
+                        }).toList(),
+                      ),
+                      if (isHighlighted && values.isNotEmpty) ...[
+                        const SizedBox(height: 10),
+                        ...values.entries
+                            .where((e) => e.key != 'passwordUpdated')
+                            .map(
+                              (e) => Padding(
+                                padding: const EdgeInsets.only(bottom: 4),
+                                child: Row(
+                                  children: [
+                                    const SizedBox(width: 4),
+                                    Icon(
+                                      _auditFieldIcon(e.key),
+                                      size: 13,
+                                      color: AppColors.textHint,
+                                    ),
+                                    const SizedBox(width: 6),
+                                    Text(
+                                      '${_auditFieldLabel(e.key)}: ',
+                                      style: const TextStyle(
+                                        color: AppColors.textHint,
+                                        fontSize: 12,
+                                      ),
+                                    ),
+                                    Expanded(
+                                      child: Text(
+                                        '${e.value}',
+                                        style: const TextStyle(
+                                          color: AppColors.textPrimary,
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                      ],
+                    ],
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  String _formatAuditTime(DateTime t) {
+    final now = DateTime.now();
+    final diff = now.difference(t);
+    if (diff.inMinutes < 1) return 'Hace un momento';
+    if (diff.inMinutes < 60) return 'Hace ${diff.inMinutes} min';
+    if (diff.inHours < 24) return 'Hace ${diff.inHours} h';
+    if (diff.inDays < 7) return 'Hace ${diff.inDays} días';
+    return DateFormat('dd/MM/yyyy · HH:mm').format(t);
+  }
+
+  IconData _auditFieldIcon(String field) {
+    switch (field) {
+      case 'foto de perfil':
+      case 'photoUrl':
+        return Icons.photo_camera_outlined;
+      case 'teléfono':
+      case 'phone':
+        return Icons.phone_outlined;
+      case 'email':
+        return Icons.email_outlined;
+      case 'nombre':
+      case 'name':
+        return Icons.person_outline;
+      case 'contraseña':
+      case 'passwordUpdated':
+        return Icons.lock_outline;
+      case 'vehículo':
+      case 'vehicle':
+        return Icons.directions_car_outlined;
+      default:
+        return Icons.edit_outlined;
+    }
+  }
+
+  String _auditFieldLabel(String key) {
+    switch (key) {
+      case 'photoUrl':
+        return 'Foto';
+      case 'phone':
+        return 'Teléfono';
+      case 'email':
+        return 'Email';
+      case 'name':
+        return 'Nombre';
+      case 'vehicle':
+        return 'Vehículo';
+      default:
+        return key;
+    }
+  }
 }
 
 // ─── Sticky TabBar delegate ───────────────────────────────────────────────────
@@ -2088,6 +2461,7 @@ class _UDServerDocsWidgetState extends State<_UDServerDocsWidget> {
       }).toList(),
     );
   }
+
 }
 
 // ─── Password Widget ──────────────────────────────────────────────────────────
