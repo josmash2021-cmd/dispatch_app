@@ -825,7 +825,7 @@ class _UserDetailPageState extends State<UserDetailPage>
   SliverAppBar _buildSliverHeader() {
     final rawPhoto = _photoUrl;
     final effectivePhotoUrl = rawPhoto != null && rawPhoto.isNotEmpty
-        ? DispatchApiService.signedFullUrl(rawPhoto)
+        ? DispatchApiService.fullUrl(rawPhoto)
         : null;
     final isOnline = _isDriver
         ? (widget.driver?.isOnline ?? false)
@@ -880,11 +880,26 @@ class _UserDetailPageState extends State<UserDetailPage>
                           backgroundColor: AppColors.primary.withValues(
                             alpha: 0.15,
                           ),
-                          backgroundImage: effectivePhotoUrl != null
-                              ? NetworkImage(effectivePhotoUrl)
-                              : null,
-                          child: effectivePhotoUrl == null
-                              ? Text(
+                          child: effectivePhotoUrl != null
+                              ? ClipOval(
+                                  child: Image.network(
+                                    DispatchApiService.normalizeUrl(effectivePhotoUrl),
+                                    width: 88,
+                                    height: 88,
+                                    fit: BoxFit.cover,
+                                    errorBuilder: (_, _, _) => Text(
+                                      _fullName.isNotEmpty
+                                          ? _fullName[0].toUpperCase()
+                                          : '?',
+                                      style: const TextStyle(
+                                        color: AppColors.primary,
+                                        fontSize: 32,
+                                        fontWeight: FontWeight.w700,
+                                      ),
+                                    ),
+                                  ),
+                                )
+                              : Text(
                                   _fullName.isNotEmpty
                                       ? _fullName[0].toUpperCase()
                                       : '?',
@@ -893,8 +908,7 @@ class _UserDetailPageState extends State<UserDetailPage>
                                     fontSize: 32,
                                     fontWeight: FontWeight.w700,
                                   ),
-                                )
-                              : null,
+                                ),
                         ),
                       ),
                       // Account status dot (bottom-right)
@@ -1130,9 +1144,9 @@ class _UserDetailPageState extends State<UserDetailPage>
         if (_licenseUrl != null || _documentUrl != null) ...[
           _sectionCard('Documentos (Firestore)', Icons.folder_rounded, [
             if (_licenseUrl != null)
-              _photoTileWithDownload('Licencia', DispatchApiService.signedFullUrl(_licenseUrl!)),
+              _photoTileWithDownload('Licencia', DispatchApiService.fullUrl(_licenseUrl!)),
             if (_documentUrl != null)
-              _photoTileWithDownload('Documento', DispatchApiService.signedFullUrl(_documentUrl!)),
+              _photoTileWithDownload('Documento', DispatchApiService.fullUrl(_documentUrl!)),
           ]),
           const SizedBox(height: 12),
         ],
@@ -1166,7 +1180,8 @@ class _UserDetailPageState extends State<UserDetailPage>
     );
   }
 
-  Widget _photoTileWithDownload(String label, String url) {
+  Widget _photoTileWithDownload(String label, String rawUrl) {
+    final url = DispatchApiService.normalizeUrl(rawUrl);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -2217,10 +2232,9 @@ class _UDVerifPhotosWidgetState extends State<_UDVerifPhotosWidget> {
   }
 
   Widget _verifPhotoTile(String label, String rawUrl) {
-    // Use signed URL for backend photos (with HMAC authentication)
-    final url = rawUrl.startsWith('http')
-        ? rawUrl
-        : DispatchApiService.signedFullUrl(rawUrl);
+    final url = DispatchApiService.normalizeUrl(
+      rawUrl.startsWith('http') ? rawUrl : DispatchApiService.fullUrl(rawUrl),
+    );
     
     // Detectar si es un video
     final isVideo = url.toLowerCase().endsWith('.mp4') ||
@@ -2373,7 +2387,7 @@ class _UDServerDocsWidgetState extends State<_UDServerDocsWidget> {
             ? AppColors.error
             : AppColors.warning;
         final fileUrl = filePath != null
-            ? DispatchApiService.signedDocumentUrl(filePath)
+            ? DispatchApiService.documentUrl(filePath)
             : null;
 
         return Column(
