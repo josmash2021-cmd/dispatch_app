@@ -11,9 +11,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 class DispatchApiService {
   static const String _defaultTunnelUrl =
       'https://cruiseapp2-production.up.railway.app';
-  static const String _localNetworkUrl = 'http://172.20.11.24:8000';
-  static const String _localUrl = 'http://10.0.2.2:8000';
-  static const String _adbUrl = 'http://localhost:8000';
 
   static const String _serverUrlPrefKey = 'dispatch_server_url';
 
@@ -46,29 +43,18 @@ class DispatchApiService {
 
   /// Load persisted server URL. Call once before runApp().
   static Future<void> init() async {
+    _activeUrl = _defaultTunnelUrl;
     final prefs = await SharedPreferences.getInstance();
-    final saved = prefs.getString(_serverUrlPrefKey);
-    // Always use Railway URL as default — clear any stale tunnel URL
-    if (saved != null && saved.isNotEmpty &&
-        !saved.contains('cruiseinride') &&
-        !saved.contains('ngrok') &&
-        !saved.contains('localhost') &&
-        !saved.contains('10.0.2.2') &&
-        !saved.contains('172.20')) {
-      _activeUrl = saved;
-    } else {
-      _activeUrl = _defaultTunnelUrl;
-      await prefs.setString(_serverUrlPrefKey, _activeUrl);
-    }
+    await prefs.setString(_serverUrlPrefKey, _activeUrl);
     debugPrint('[DispatchApi] active URL: $_activeUrl');
-    // Always probe in background so a stale tunnel URL gets refreshed
+    // Probe Railway in background to confirm connectivity
     probeAndSetBestUrl()
         .then((url) {
           if (url != null) {
-            debugPrint('[DispatchApi] probe found reachable URL: $url');
+            debugPrint('[DispatchApi] probe reachable: $url');
             _setOnline(true);
           } else {
-            debugPrint('[DispatchApi] probe: no reachable URL found');
+            debugPrint('[DispatchApi] probe: Railway unreachable');
             _setOnline(false);
           }
         })
@@ -83,58 +69,22 @@ class DispatchApiService {
     debugPrint('[DispatchApi] server URL updated → $_activeUrl');
   }
 
-  /// Auto-detect reachable backend URL.
+  /// Probe Railway to confirm it is reachable.
   static Future<String?> probeAndSetBestUrl({
     Duration timeout = const Duration(seconds: 6),
   }) async {
-    final urls = [
-      _activeUrl,
-      _defaultTunnelUrl,
-      _adbUrl,
-      _localNetworkUrl,
-      _localUrl,
-    ];
-    for (final url in urls) {
-      try {
-        final res = await http
-            .get(
-              Uri.parse('$url/health'),
-              headers: {'Accept': 'application/json'},
-            )
-            .timeout(timeout);
-        if (res.statusCode == 200) {
-          await setServerUrl(url);
-          return url;
-        }
-      } catch (_) {}
-    }
-    // Try discovering tunnel URL via local backend
-    for (final base in [_localNetworkUrl, _localUrl]) {
-      try {
-        final disc = await http
-            .get(
-              Uri.parse('$base/tunnel-url'),
-              headers: {'Accept': 'application/json'},
-            )
-            .timeout(timeout);
-        if (disc.statusCode == 200) {
-          final body = jsonDecode(disc.body);
-          final tunnelUrl = body['tunnel_url'] as String?;
-          if (tunnelUrl != null && tunnelUrl.isNotEmpty) {
-            final check = await http
-                .get(
-                  Uri.parse('$tunnelUrl/health'),
-                  headers: {'Accept': 'application/json'},
-                )
-                .timeout(timeout);
-            if (check.statusCode == 200) {
-              await setServerUrl(tunnelUrl);
-              return tunnelUrl;
-            }
-          }
-        }
-      } catch (_) {}
-    }
+    try {
+      final res = await http
+          .get(
+            Uri.parse('$_defaultTunnelUrl/health'),
+            headers: {'Accept': 'application/json'},
+          )
+          .timeout(timeout);
+      if (res.statusCode == 200) {
+        await setServerUrl(_defaultTunnelUrl);
+        return _defaultTunnelUrl;
+      }
+    } catch (_) {}
     return null;
   }
 
