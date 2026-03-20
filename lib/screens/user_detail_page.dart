@@ -825,7 +825,7 @@ class _UserDetailPageState extends State<UserDetailPage>
   SliverAppBar _buildSliverHeader() {
     final rawPhoto = _photoUrl;
     final effectivePhotoUrl = rawPhoto != null && rawPhoto.isNotEmpty
-        ? DispatchApiService.fullUrl(rawPhoto)
+        ? DispatchApiService.signedFullUrl(rawPhoto)
         : null;
     final isOnline = _isDriver
         ? (widget.driver?.isOnline ?? false)
@@ -1130,9 +1130,9 @@ class _UserDetailPageState extends State<UserDetailPage>
         if (_licenseUrl != null || _documentUrl != null) ...[
           _sectionCard('Documentos (Firestore)', Icons.folder_rounded, [
             if (_licenseUrl != null)
-              _photoTileWithDownload('Licencia', DispatchApiService.fullUrl(_licenseUrl!)),
+              _photoTileWithDownload('Licencia', DispatchApiService.signedFullUrl(_licenseUrl!)),
             if (_documentUrl != null)
-              _photoTileWithDownload('Documento', DispatchApiService.fullUrl(_documentUrl!)),
+              _photoTileWithDownload('Documento', DispatchApiService.signedFullUrl(_documentUrl!)),
           ]),
           const SizedBox(height: 12),
         ],
@@ -2217,9 +2217,10 @@ class _UDVerifPhotosWidgetState extends State<_UDVerifPhotosWidget> {
   }
 
   Widget _verifPhotoTile(String label, String rawUrl) {
+    // Use signed URL for backend photos (with HMAC authentication)
     final url = rawUrl.startsWith('http')
         ? rawUrl
-        : DispatchApiService.fullUrl(rawUrl);
+        : DispatchApiService.signedFullUrl(rawUrl);
     
     // Detectar si es un video
     final isVideo = url.toLowerCase().endsWith('.mp4') ||
@@ -2372,7 +2373,7 @@ class _UDServerDocsWidgetState extends State<_UDServerDocsWidget> {
             ? AppColors.error
             : AppColors.warning;
         final fileUrl = filePath != null
-            ? DispatchApiService.documentUrl(filePath)
+            ? DispatchApiService.signedDocumentUrl(filePath)
             : null;
 
         return Column(

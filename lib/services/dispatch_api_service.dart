@@ -546,24 +546,37 @@ class DispatchApiService {
     return '$_activeUrl$filePath';
   }
 
-  /// Build full URL for a user's photo from the backend.
-  /// Tries both .jpg and .png extensions.
-  static String photoUrl(int userId) {
-    return '$_activeUrl/photos/user_$userId.jpg';
+  /// Build SIGNED URL for a document/photo with HMAC authentication.
+  /// Backend must support ?ts=...&nonce=...&sig=... query params for file access.
+  static String signedDocumentUrl(String filePath) {
+    // Remove leading slash if present to avoid double slashes
+    final cleanPath = filePath.startsWith('/') ? filePath.substring(1) : filePath;
+    final timestamp = (DateTime.now().millisecondsSinceEpoch ~/ 1000).toString();
+    final nonce = _generateNonce();
+    final signature = _computeSignature(timestamp, nonce);
+    final separator = filePath.contains('?') ? '&' : '?';
+    return '$_activeUrl/$cleanPath${separator}ts=$timestamp&nonce=$nonce&sig=$signature';
   }
 
-  /// Build full URL for a user's photo with fallback for PNG.
-  static String photoUrlPng(int userId) {
-    return '$_activeUrl/photos/user_$userId.png';
+  /// Build full URL for a user's photo from the backend with HMAC signature.
+  static String signedPhotoUrl(int userId, {String? ext}) {
+    final timestamp = (DateTime.now().millisecondsSinceEpoch ~/ 1000).toString();
+    final nonce = _generateNonce();
+    final signature = _computeSignature(timestamp, nonce);
+    final extension = ext ?? 'jpg';
+    return '$_activeUrl/photos/user_$userId.$extension?ts=$timestamp&nonce=$nonce&sig=$signature';
   }
 
-  /// Build full URL from a relative path (e.g. /uploads/documents/...).
-  /// If already absolute (starts with http), returns as-is.
-  static String fullUrl(String path) {
+  /// Build full URL from a relative path with HMAC signature for authenticated access.
+  static String signedFullUrl(String path) {
     if (path.startsWith('http://') || path.startsWith('https://')) {
-      return path;
+      return path; // Already absolute, can't sign
     }
-    return '$_activeUrl$path';
+    final timestamp = (DateTime.now().millisecondsSinceEpoch ~/ 1000).toString();
+    final nonce = _generateNonce();
+    final signature = _computeSignature(timestamp, nonce);
+    final separator = path.startsWith('/') ? '' : '/';
+    return '$_activeUrl$separator$path?ts=$timestamp&nonce=$nonce&sig=$signature';
   }
 
   // ═══════════════════════════════════════════════════════
