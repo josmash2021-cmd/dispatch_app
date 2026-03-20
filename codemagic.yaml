@@ -361,6 +361,7 @@ workflows:
     instance_type: linux_x2
     environment:
       flutter: stable
+      java: 17
       groups:
         - firebase_credentials
         - google_maps
@@ -371,6 +372,40 @@ workflows:
         - pattern: "master"
           include: true
     scripts:
+      - name: Write android/local.properties
+        script: |
+          echo "sdk.dir=$ANDROID_SDK_ROOT" >> android/local.properties
+
+      - name: Write google-services.json
+        script: |
+          cat > "$CM_BUILD_DIR/android/app/google-services.json" << 'GSEOF'
+          {
+            "project_info": {
+              "project_number": "56054738352",
+              "project_id": "cruise-af9f1",
+              "storage_bucket": "cruise-af9f1.firebasestorage.app"
+            },
+            "client": [
+              {
+                "client_info": {
+                  "mobilesdk_app_id": "1:56054738352:android:e37930a44e5476e1c1ba75",
+                  "android_client_info": {
+                    "package_name": "com.uberclone.dispatch.dispatch_app"
+                  }
+                },
+                "api_key": [{"current_key": "AIzaSyA17wn7sSLxa7WInC8Z8FCA-Pjkb-a2eIw"}],
+                "services": {
+                  "appinvite_service": {
+                    "other_platform_oauth_client": []
+                  }
+                }
+              }
+            ],
+            "configuration_version": "1"
+          }
+          GSEOF
+          echo "google-services.json written"
+
       - name: Generate env.dart
         script: |
           mkdir -p "$CM_BUILD_DIR/lib/config"
@@ -418,6 +453,40 @@ workflows:
         - pattern: "master"
           include: true
     scripts:
+      - name: Write android/local.properties
+        script: |
+          echo "sdk.dir=$ANDROID_SDK_ROOT" >> android/local.properties
+
+      - name: Write google-services.json
+        script: |
+          cat > "$CM_BUILD_DIR/android/app/google-services.json" << 'GSEOF'
+          {
+            "project_info": {
+              "project_number": "56054738352",
+              "project_id": "cruise-af9f1",
+              "storage_bucket": "cruise-af9f1.firebasestorage.app"
+            },
+            "client": [
+              {
+                "client_info": {
+                  "mobilesdk_app_id": "1:56054738352:android:e37930a44e5476e1c1ba75",
+                  "android_client_info": {
+                    "package_name": "com.uberclone.dispatch.dispatch_app"
+                  }
+                },
+                "api_key": [{"current_key": "AIzaSyA17wn7sSLxa7WInC8Z8FCA-Pjkb-a2eIw"}],
+                "services": {
+                  "appinvite_service": {
+                    "other_platform_oauth_client": []
+                  }
+                }
+              }
+            ],
+            "configuration_version": "1"
+          }
+          GSEOF
+          echo "google-services.json written"
+
       - name: Generate env.dart
         script: |
           mkdir -p "$CM_BUILD_DIR/lib/config"

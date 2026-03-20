@@ -1101,28 +1101,35 @@ class _VerifPhotosWidget extends StatefulWidget {
 class _VerifPhotosWidgetState extends State<_VerifPhotosWidget> {
   Map<String, dynamic>? _data;
   bool _loading = true;
+  StreamSubscription<DocumentSnapshot>? _sub;
 
   @override
   void initState() {
     super.initState();
-    _load();
+    _listen();
   }
 
-  Future<void> _load() async {
-    try {
-      final doc = await FirebaseFirestore.instance
-          .collection('verifications')
-          .doc('sql_${widget.sqliteId}')
-          .get();
+  @override
+  void dispose() {
+    _sub?.cancel();
+    super.dispose();
+  }
+
+  void _listen() {
+    _sub = FirebaseFirestore.instance
+        .collection('verifications')
+        .doc('sql_${widget.sqliteId}')
+        .snapshots()
+        .listen((doc) {
       if (mounted) {
         setState(() {
           _data = doc.exists ? doc.data() : null;
           _loading = false;
         });
       }
-    } catch (e) {
+    }, onError: (_) {
       if (mounted) setState(() => _loading = false);
-    }
+    });
   }
 
   Widget _photoTile(String label, String? url) {
