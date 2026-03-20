@@ -1,9 +1,11 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 import 'dart:math';
 import 'package:crypto/crypto.dart';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
+import 'package:http/io_client.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// HTTP client for the Cruise FastAPI backend with API-key + HMAC signing.
@@ -16,6 +18,16 @@ class DispatchApiService {
 
   static String _activeUrl = _defaultTunnelUrl;
   static String get activeServerUrl => _activeUrl;
+
+  /// Persistent IOClient with keep-alive and auto-decompress for fast API calls.
+  static final http.Client _client = () {
+    final inner = HttpClient()
+      ..autoUncompress = true
+      ..connectionTimeout = const Duration(seconds: 10)
+      ..idleTimeout = const Duration(seconds: 90)
+      ..maxConnectionsPerHost = 4;
+    return IOClient(inner);
+  }();
 
   // Simple cache for user details to reduce API calls
   static final Map<String, _CacheEntry> _cache = {};
@@ -74,7 +86,7 @@ class DispatchApiService {
     Duration timeout = const Duration(seconds: 6),
   }) async {
     try {
-      final res = await http
+      final res = await _client
           .get(
             Uri.parse('$_defaultTunnelUrl/health'),
             headers: {'Accept': 'application/json'},
@@ -186,7 +198,7 @@ class DispatchApiService {
     return _withRetry(() async {
       final uri = Uri.parse('$_activeUrl$path')
           .replace(queryParameters: queryParams);
-      final res = await http
+      final res = await _client
           .get(uri, headers: _headers())
           .timeout(timeout);
       if (res.statusCode >= 200 && res.statusCode < 300) {
@@ -204,7 +216,7 @@ class DispatchApiService {
     Duration timeout = const Duration(seconds: 12),
   }) async {
     return _withRetry(() async {
-      final res = await http
+      final res = await _client
           .post(
             Uri.parse('$_activeUrl$path'),
             headers: _headers(),
@@ -224,7 +236,7 @@ class DispatchApiService {
     Duration timeout = const Duration(seconds: 12),
   }) async {
     return _withRetry(() async {
-      final res = await http
+      final res = await _client
           .patch(
             Uri.parse('$_activeUrl$path'),
             headers: _headers(),
@@ -241,7 +253,7 @@ class DispatchApiService {
 
   static Future<dynamic> _delete(String path) async {
     return _withRetry(() async {
-      final res = await http
+      final res = await _client
           .delete(Uri.parse('$_activeUrl$path'), headers: _headers())
           .timeout(const Duration(seconds: 12));
       if (res.statusCode >= 200 && res.statusCode < 300) {
