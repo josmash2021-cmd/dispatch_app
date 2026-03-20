@@ -1,13 +1,7 @@
 import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 import '../config/app_theme.dart';
-import '../providers/client_provider.dart';
-import '../providers/dashboard_provider.dart';
-import '../providers/driver_provider.dart';
-import '../providers/trip_provider.dart';
-import '../providers/verification_provider.dart';
 import '../config/page_transitions.dart';
 import 'create_trip_screen.dart';
 import 'fleet_map_screen.dart';
@@ -231,10 +225,6 @@ class _HomeMenuScreenState extends State<HomeMenuScreen>
         ),
       ),
     );
-  }
-
-  void _navigate(int index) {
-    widget.onNavigate(index);
   }
 
   // ─── DISPATCH TAB ─────────────────────────────────────────────────────

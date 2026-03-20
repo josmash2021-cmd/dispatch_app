@@ -96,15 +96,6 @@ class _AuditLogsScreenState extends State<AuditLogsScreen> {
     }
   }
 
-  void _clearFilters() {
-    setState(() {
-      _selectedAction = null;
-      _startDate = null;
-      _endDate = null;
-    });
-    _refresh();
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(

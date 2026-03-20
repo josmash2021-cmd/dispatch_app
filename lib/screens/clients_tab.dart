@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -848,7 +850,7 @@ class _ClientCard extends StatelessWidget {
         .doc(client.clientId)
         .get()
         .then((doc) {
-      final data = doc.data() as Map<String, dynamic>? ?? {};
+      final data = doc.data() ?? {};
       final sqliteId = data['sqliteId'] as int?;
       
       if (sqliteId == null) {

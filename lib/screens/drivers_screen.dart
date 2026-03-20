@@ -3,7 +3,6 @@ import 'package:provider/provider.dart';
 import '../config/app_theme.dart';
 import '../config/page_transitions.dart';
 import '../providers/driver_provider.dart';
-import '../services/dispatch_api_service.dart';
 import '../widgets/shimmer_loading.dart'; // ShimmerPersonCard
 import 'driver_detail_screen.dart';
 

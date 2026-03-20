@@ -20,10 +20,8 @@ import 'driver_reports_screen.dart';
 import 'home_menu_screen.dart';
 import 'trip_list_screen.dart';
 import 'create_trip_screen.dart';
-import 'database_screen.dart';
 import 'admin_config_screen.dart';
 import 'fleet_map_screen.dart';
-import 'reports_screen.dart';
 import 'scheduled_rides_screen.dart';
 import 'support_chats_screen.dart';
 import 'verification_review_screen.dart';
@@ -134,12 +132,6 @@ class _DashboardScreenState extends State<DashboardScreen>
               if (data == null) continue;
               final type = data['type'] as String? ?? '';
               final message = data['message'] as String? ?? '';
-              final userName =
-                  data['userName'] as String? ??
-                  ''; // ignore: unused_local_variable
-              final chatId =
-                  data['chatId'] as int? ?? 0; // ignore: unused_local_variable
-
               // Show in-app notification
               if (mounted) {
                 final isEscalation = type == 'escalation';
@@ -507,8 +499,7 @@ class _NavItem {
   const _NavItem(this.icon, this.selectedIcon, this.label);
 }
 
-// ─── Drawer ──────────────────────────────────────────────────────────────────
-
+// ignore: unused_element
 class _AppDrawer extends StatelessWidget {
   final int currentIndex;
   final int pendingVerifications;

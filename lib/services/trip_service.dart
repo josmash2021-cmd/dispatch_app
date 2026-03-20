@@ -19,8 +19,8 @@ class TripService {
         list = list.where((t) => t.status == statusFilter).toList();
       }
       list.sort((a, b) {
-        final aTime = a.createdAt ?? DateTime(2000);
-        final bTime = b.createdAt ?? DateTime(2000);
+        final aTime = a.createdAt;
+        final bTime = b.createdAt;
         return bTime.compareTo(aTime);
       });
       if (limit != null && list.length > limit) {
