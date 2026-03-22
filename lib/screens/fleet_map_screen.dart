@@ -8,6 +8,7 @@ import 'package:flutter/material.dart';
 import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart' as mapbox;
 
 import '../config/app_theme.dart';
+import '../config/map_theme.dart';
 import '../config/mapbox_config.dart';
 import '../models/driver_model.dart';
 import '../models/trip_model.dart';
@@ -704,6 +705,9 @@ class _FleetMapScreenState extends State<FleetMapScreen> {
         zoom: 12.0,
       ),
       onMapCreated: _onMapCreated,
+      onStyleLoadedListener: (_) async {
+        if (_mapCtrl != null) await MapTheme.applyNavyGold(_mapCtrl!);
+      },
     );
   }
 
