@@ -2,6 +2,16 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
 import 'dispatch_api_service.dart';
 
+/// Thrown when Firestore update succeeds but SQLite backend sync fails.
+/// Non-critical — the verification status IS saved in Firestore/Firebase.
+class VerificationSyncWarning implements Exception {
+  final String operation;
+  final Object cause;
+  const VerificationSyncWarning(this.operation, this.cause);
+  @override
+  String toString() => 'Sync al servidor falló ($operation): $cause';
+}
+
 class VerificationRequest {
   final String docId;
   final int userId;
@@ -126,19 +136,34 @@ class VerificationService {
       final role = data['role'] as String? ?? 'rider';
       final userId = (data['userId'] as num?)?.toInt() ?? 0;
       final col = role == 'driver' ? 'drivers' : 'clients';
-      await _firestore.collection(col).doc(docId).set({
+      // For riders: propagate selfie as profile photo
+      final selfieUrl = data['selfieUrl'] as String?;
+      final profilePhotoUrl = data['profilePhotoUrl'] as String? ?? selfieUrl;
+      final clientUpdate = <String, dynamic>{
         'isVerified': true,
         'verificationStatus': 'approved',
         'verificationReason': null,
         'lastUpdated': FieldValue.serverTimestamp(),
-      }, SetOptions(merge: true));
+        if (profilePhotoUrl != null && profilePhotoUrl.isNotEmpty)
+          'profilePhotoUrl': profilePhotoUrl,
+      };
+      await _firestore.collection(col).doc(docId).set(
+        clientUpdate,
+        SetOptions(merge: true),
+      );
       // Also update in users collection
-      await _firestore.collection('users').doc(docId).set({
+      final userUpdate = <String, dynamic>{
         'isVerified': true,
         'verificationStatus': 'approved',
         'verificationReason': null,
         'lastUpdated': FieldValue.serverTimestamp(),
-      }, SetOptions(merge: true));
+        if (profilePhotoUrl != null && profilePhotoUrl.isNotEmpty)
+          'profilePhotoUrl': profilePhotoUrl,
+      };
+      await _firestore.collection('users').doc(docId).set(
+        userUpdate,
+        SetOptions(merge: true),
+      );
       // Sync to backend SQLite
       if (userId > 0) {
         try {
@@ -152,6 +177,8 @@ class VerificationService {
           }
         } catch (e) {
           debugPrint('[Verification] Backend approve sync failed: $e');
+          // Fix H8: re-throw as non-critical warning so UI can surface it
+          throw VerificationSyncWarning('approve', e);
         }
       }
     }
@@ -197,6 +224,8 @@ class VerificationService {
           }
         } catch (e) {
           debugPrint('[Verification] Backend reject sync failed: $e');
+          // Fix H8: re-throw as non-critical warning so UI can surface it
+          throw VerificationSyncWarning('reject', e);
         }
       }
     }
