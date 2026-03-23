@@ -139,8 +139,9 @@ class VerificationService {
       // For riders: propagate selfie as profile photo
       final selfieUrl = data['selfieUrl'] as String?;
       final profilePhotoUrl = data['profilePhotoUrl'] as String? ?? selfieUrl;
-      final clientUpdate = <String, dynamic>{
+      final update = <String, dynamic>{
         'isVerified': true,
+        'isApproved': true,
         'verificationStatus': 'approved',
         'verificationReason': null,
         'lastUpdated': FieldValue.serverTimestamp(),
@@ -148,20 +149,12 @@ class VerificationService {
           'profilePhotoUrl': profilePhotoUrl,
       };
       await _firestore.collection(col).doc(docId).set(
-        clientUpdate,
+        update,
         SetOptions(merge: true),
       );
       // Also update in users collection
-      final userUpdate = <String, dynamic>{
-        'isVerified': true,
-        'verificationStatus': 'approved',
-        'verificationReason': null,
-        'lastUpdated': FieldValue.serverTimestamp(),
-        if (profilePhotoUrl != null && profilePhotoUrl.isNotEmpty)
-          'profilePhotoUrl': profilePhotoUrl,
-      };
       await _firestore.collection('users').doc(docId).set(
-        userUpdate,
+        update,
         SetOptions(merge: true),
       );
       // Sync to backend SQLite
@@ -177,7 +170,7 @@ class VerificationService {
           }
         } catch (e) {
           debugPrint('[Verification] Backend approve sync failed: $e');
-          // Fix H8: re-throw as non-critical warning so UI can surface it
+          // Non-critical — Firestore is already updated, polling will pick it up
           throw VerificationSyncWarning('approve', e);
         }
       }
@@ -198,18 +191,21 @@ class VerificationService {
       final role = data['role'] as String? ?? 'rider';
       final userId = (data['userId'] as num?)?.toInt() ?? 0;
       final col = role == 'driver' ? 'drivers' : 'clients';
-      await _firestore.collection(col).doc(docId).set({
+      final rejectUpdate = <String, dynamic>{
         'isVerified': false,
+        'isApproved': false,
         'verificationStatus': 'rejected',
         'verificationReason': reason,
         'lastUpdated': FieldValue.serverTimestamp(),
-      }, SetOptions(merge: true));
-      await _firestore.collection('users').doc(docId).set({
-        'isVerified': false,
-        'verificationStatus': 'rejected',
-        'verificationReason': reason,
-        'lastUpdated': FieldValue.serverTimestamp(),
-      }, SetOptions(merge: true));
+      };
+      await _firestore.collection(col).doc(docId).set(
+        rejectUpdate,
+        SetOptions(merge: true),
+      );
+      await _firestore.collection('users').doc(docId).set(
+        rejectUpdate,
+        SetOptions(merge: true),
+      );
       // Sync to backend SQLite
       if (userId > 0) {
         try {
