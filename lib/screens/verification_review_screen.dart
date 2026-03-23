@@ -1,8 +1,16 @@
+import 'dart:io';
+import 'dart:typed_data';
+
+import 'package:chewie/chewie.dart';
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
+import 'package:image_gallery_saver/image_gallery_saver.dart';
 import 'package:intl/intl.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:provider/provider.dart';
 import 'package:timeago/timeago.dart' as timeago;
-import 'package:url_launcher/url_launcher.dart';
+import 'package:video_player/video_player.dart';
 import '../config/app_theme.dart';
 import '../config/page_transitions.dart';
 import '../providers/verification_provider.dart';
@@ -1230,6 +1238,11 @@ class _VerificationCard extends StatelessWidget {
                     ),
                   ),
                   IconButton(
+                    icon: const Icon(Icons.save_alt_rounded, color: AppColors.primary),
+                    tooltip: 'Save to gallery',
+                    onPressed: () => _saveMediaToGallery(ctx, url, isVideo: false),
+                  ),
+                  IconButton(
                     icon: const Icon(Icons.close_rounded, color: Colors.white),
                     onPressed: () => Navigator.pop(ctx),
                   ),
@@ -1272,12 +1285,7 @@ class _VerificationCard extends StatelessWidget {
         ),
         const SizedBox(height: 6),
         GestureDetector(
-          onTap: () async {
-            final uri = Uri.parse(url);
-            if (await canLaunchUrl(uri)) {
-              await launchUrl(uri, mode: LaunchMode.inAppBrowserView);
-            }
-          },
+          onTap: () => _showVideoPlayer(context, label, url),
           child: Container(
             height: 120,
             width: double.infinity,
@@ -1309,6 +1317,13 @@ class _VerificationCard extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+
+  void _showVideoPlayer(BuildContext context, String label, String url) {
+    showDialog(
+      context: context,
+      builder: (_) => _VideoPlayerDialog(label: label, videoUrl: url),
     );
   }
 }
@@ -1954,12 +1969,7 @@ class _PendingVerificationDetailPageState
         ),
         const SizedBox(height: 6),
         GestureDetector(
-          onTap: () async {
-            final uri = Uri.parse(url);
-            if (await canLaunchUrl(uri)) {
-              await launchUrl(uri, mode: LaunchMode.inAppBrowserView);
-            }
-          },
+          onTap: () => _showVideoPlayer(context, label, url),
           child: Container(
             height: 120,
             width: double.infinity,
@@ -2019,6 +2029,11 @@ class _PendingVerificationDetailPageState
                     ),
                   ),
                   IconButton(
+                    icon: const Icon(Icons.save_alt_rounded, color: AppColors.primary),
+                    tooltip: 'Save to gallery',
+                    onPressed: () => _saveMediaToGallery(ctx, url, isVideo: false),
+                  ),
+                  IconButton(
                     icon: const Icon(Icons.close_rounded, color: Colors.white),
                     onPressed: () => Navigator.pop(ctx),
                   ),
@@ -2044,6 +2059,13 @@ class _PendingVerificationDetailPageState
           ],
         ),
       ),
+    );
+  }
+
+  void _showVideoPlayer(BuildContext context, String label, String url) {
+    showDialog(
+      context: context,
+      builder: (_) => _VideoPlayerDialog(label: label, videoUrl: url),
     );
   }
 
@@ -2668,6 +2690,11 @@ class _UserDetailWidgetState extends State<_UserDetailWidget> {
                     ),
                   ),
                   IconButton(
+                    icon: const Icon(Icons.save_alt_rounded, color: AppColors.primary),
+                    tooltip: 'Save to gallery',
+                    onPressed: () => _saveMediaToGallery(ctx, url, isVideo: false),
+                  ),
+                  IconButton(
                     icon: const Icon(Icons.close_rounded, color: Colors.white),
                     onPressed: () => Navigator.pop(ctx),
                   ),
@@ -2694,6 +2721,227 @@ class _UserDetailWidgetState extends State<_UserDetailWidget> {
         ),
       ),
     );
+  }
+}
+
+// ─── Video Player Dialog ────────────────────────────────────────────────────
+
+class _VideoPlayerDialog extends StatefulWidget {
+  final String label;
+  final String videoUrl;
+
+  const _VideoPlayerDialog({required this.label, required this.videoUrl});
+
+  @override
+  State<_VideoPlayerDialog> createState() => _VideoPlayerDialogState();
+}
+
+class _VideoPlayerDialogState extends State<_VideoPlayerDialog> {
+  late VideoPlayerController _videoController;
+  ChewieController? _chewieController;
+  bool _hasError = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _initPlayer();
+  }
+
+  Future<void> _initPlayer() async {
+    _videoController =
+        VideoPlayerController.networkUrl(Uri.parse(widget.videoUrl));
+    try {
+      await _videoController.initialize();
+      if (!mounted) return;
+      _chewieController = ChewieController(
+        videoPlayerController: _videoController,
+        autoPlay: true,
+        looping: false,
+        showControls: true,
+        materialProgressColors: ChewieProgressColors(
+          playedColor: AppColors.primary,
+          handleColor: AppColors.primary,
+          bufferedColor: AppColors.primary.withValues(alpha: 0.3),
+          backgroundColor: Colors.white24,
+        ),
+        errorBuilder: (_, errorMessage) => Center(
+          child: Text(
+            errorMessage,
+            style: const TextStyle(color: Colors.white),
+          ),
+        ),
+      );
+      setState(() {});
+    } catch (_) {
+      if (mounted) setState(() => _hasError = true);
+    }
+  }
+
+  @override
+  void dispose() {
+    _chewieController?.dispose();
+    _videoController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      backgroundColor: Colors.black,
+      insetPadding: const EdgeInsets.all(16),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(12),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    widget.label,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+                IconButton(
+                  icon: const Icon(
+                      Icons.save_alt_rounded, color: AppColors.primary),
+                  tooltip: 'Save to gallery',
+                  onPressed: () => _saveMediaToGallery(
+                      context, widget.videoUrl,
+                      isVideo: true),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.close_rounded, color: Colors.white),
+                  onPressed: () => Navigator.pop(context),
+                ),
+              ],
+            ),
+          ),
+          if (_hasError)
+            const SizedBox(
+              height: 220,
+              child: Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.error_outline_rounded,
+                        color: AppColors.error, size: 48),
+                    SizedBox(height: 8),
+                    Text('Could not load video',
+                        style: TextStyle(color: Colors.white70)),
+                  ],
+                ),
+              ),
+            )
+          else if (_chewieController != null)
+            AspectRatio(
+              aspectRatio: _videoController.value.aspectRatio,
+              child: Chewie(controller: _chewieController!),
+            )
+          else
+            const SizedBox(
+              height: 220,
+              child: Center(
+                child:
+                    CircularProgressIndicator(color: AppColors.primary),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+// ─── Save Media Helper ─────────────────────────────────────────────────────
+
+Future<void> _saveMediaToGallery(
+  BuildContext context,
+  String url, {
+  required bool isVideo,
+}) async {
+  // Request permission
+  PermissionStatus status;
+  if (Platform.isAndroid) {
+    // Try granular media permissions first (Android 13+), fall back to storage
+    status = isVideo
+        ? await Permission.videos.request()
+        : await Permission.photos.request();
+    if (!status.isGranted) {
+      status = await Permission.storage.request();
+    }
+  } else {
+    status = await Permission.photosAddOnly.request();
+  }
+
+  if (!context.mounted) return;
+
+  if (!status.isGranted) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Storage permission denied'),
+        backgroundColor: AppColors.error,
+      ),
+    );
+    return;
+  }
+
+  ScaffoldMessenger.of(context).showSnackBar(
+    SnackBar(
+      content: Text('Saving ${isVideo ? "video" : "photo"}…'),
+      backgroundColor: AppColors.surfaceHigh,
+      duration: const Duration(seconds: 1),
+    ),
+  );
+
+  try {
+    if (isVideo) {
+      final tempDir = await getTemporaryDirectory();
+      final filePath =
+          '${tempDir.path}/cruise_${DateTime.now().millisecondsSinceEpoch}.mp4';
+      await Dio().download(url, filePath);
+      final result = await ImageGallerySaver.saveFile(filePath);
+      if (context.mounted) {
+        final ok = result['isSuccess'] == true;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(ok ? 'Video saved to gallery' : 'Failed to save video'),
+            backgroundColor: ok ? AppColors.success : AppColors.error,
+          ),
+        );
+      }
+    } else {
+      final response = await Dio().get<List<int>>(
+        url,
+        options: Options(responseType: ResponseType.bytes),
+      );
+      final result = await ImageGallerySaver.saveImage(
+        Uint8List.fromList(response.data!),
+        quality: 100,
+        name: 'cruise_${DateTime.now().millisecondsSinceEpoch}',
+      );
+      if (context.mounted) {
+        final ok = result['isSuccess'] == true;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(ok ? 'Photo saved to gallery' : 'Failed to save photo'),
+            backgroundColor: ok ? AppColors.success : AppColors.error,
+          ),
+        );
+      }
+    }
+  } catch (e) {
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error saving: $e'),
+          backgroundColor: AppColors.error,
+        ),
+      );
+    }
   }
 }
 

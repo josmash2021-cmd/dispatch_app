@@ -7,6 +7,7 @@ import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/io_client.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../config/env.dart';
 
 /// HTTP client for the Cruise FastAPI backend with API-key + HMAC signing.
 /// Used by the dispatch admin panel to sync operations with the backend.
@@ -44,33 +45,22 @@ class DispatchApiService {
     if (_isOnline != value) {
       _isOnline = value;
       _onlineController.add(value);
-      debugPrint('[DispatchApi] backend ${value ? "ONLINE" : "OFFLINE"}}');
+      debugPrint('[DispatchApi] backend ${value ? "ONLINE" : "OFFLINE"}');
     }
   }
 
-  static const String _apiKey =
-      'HWB88VurhLM-1GdVML2PT92iqNSbeJ52TU1VO37MBZS6RYlyWvfIpaTdD54GT_5u';
-  static const String _hmacSecret =
-      'qUDmTNu1Dxxg_xo7kaUfRba4XiU_5H1ZhkUMDuVrD2dLQ2ImT8JXZ5FgUyXpSJ5h';
+  static String get _apiKey => Env.apiKey;
+  static String get _hmacSecret => Env.hmacSecret;
 
   /// Load persisted server URL. Call once before runApp().
   static Future<void> init() async {
     _activeUrl = _defaultTunnelUrl;
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_serverUrlPrefKey, _activeUrl);
+    final stored = prefs.getString(_serverUrlPrefKey);
+    if (stored != null && stored.isNotEmpty) {
+      _activeUrl = stored;
+    }
     debugPrint('[DispatchApi] active URL: $_activeUrl');
-    // Probe Railway in background to confirm connectivity
-    probeAndSetBestUrl()
-        .then((url) {
-          if (url != null) {
-            debugPrint('[DispatchApi] probe reachable: $url');
-            _setOnline(true);
-          } else {
-            debugPrint('[DispatchApi] probe: Railway unreachable');
-            _setOnline(false);
-          }
-        })
-        .catchError((_) { _setOnline(false); });
   }
 
   /// Persist a new server URL.

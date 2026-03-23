@@ -127,19 +127,23 @@ class _HomeMenuScreenState extends State<HomeMenuScreen>
         .snapshots()
         .listen((snap) => setState(() => _driverReports = snap.docs.length));
 
-    // Blocked users count
+    // Blocked users count — listen to blocked drivers separately
+    StreamSubscription? blockedDriversSub;
     _blockedSub = FirebaseFirestore.instance
         .collection('clients')
         .where('status', isEqualTo: 'blocked')
         .snapshots()
         .listen((snap) {
           final blockedClients = snap.docs.length;
-          FirebaseFirestore.instance
+          blockedDriversSub?.cancel();
+          blockedDriversSub = FirebaseFirestore.instance
               .collection('drivers')
               .where('status', isEqualTo: 'blocked')
               .snapshots()
               .listen((driverSnap) {
-                setState(() => _blockedUsers = blockedClients + driverSnap.docs.length);
+                if (mounted) {
+                  setState(() => _blockedUsers = blockedClients + driverSnap.docs.length);
+                }
               });
         });
 

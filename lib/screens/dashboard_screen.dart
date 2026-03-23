@@ -49,6 +49,8 @@ class _DashboardScreenState extends State<DashboardScreen>
 
   StreamSubscription<QuerySnapshot>? _notifSub;
   StreamSubscription<NotificationEvent>? _notificationStreamSub;
+  StreamSubscription? _clientProfileSub;
+  StreamSubscription? _driverProfileSub;
 
   static const _navItems = [
     _NavItem(Icons.home_outlined, Icons.home, 'Inicio'),
@@ -196,7 +198,7 @@ class _DashboardScreenState extends State<DashboardScreen>
 
   void _startProfileChangeListener() {
     // Listen for client profile changes (photo, phone, password updates)
-    FirebaseFirestore.instance
+    _clientProfileSub = FirebaseFirestore.instance
         .collection('clients')
         .where('lastUpdated', isGreaterThan: Timestamp.fromDate(
           DateTime.now().subtract(const Duration(minutes: 1))
@@ -246,7 +248,7 @@ class _DashboardScreenState extends State<DashboardScreen>
         });
     
     // Listen for driver profile changes
-    FirebaseFirestore.instance
+    _driverProfileSub = FirebaseFirestore.instance
         .collection('drivers')
         .where('lastUpdated', isGreaterThan: Timestamp.fromDate(
           DateTime.now().subtract(const Duration(minutes: 1))
@@ -362,6 +364,8 @@ class _DashboardScreenState extends State<DashboardScreen>
   void dispose() {
     _notifSub?.cancel();
     _notificationStreamSub?.cancel();
+    _clientProfileSub?.cancel();
+    _driverProfileSub?.cancel();
     NotificationService().stop();
     _fadeCtrl.dispose();
     _fabCtrl.dispose();

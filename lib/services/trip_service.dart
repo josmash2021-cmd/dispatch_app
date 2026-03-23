@@ -8,25 +8,24 @@ class TripService {
 
   CollectionReference get _tripsCollection => _firestore.collection('trips');
 
-  /// Stream de todos los viajes en tiempo real, ordenados por fecha de creación
+  /// Stream de todos los viajes en tiempo real, ordenados por fecha de creación.
+  /// Uses Firestore query-level filtering for efficiency.
   Stream<List<TripModel>> getTripsStream({
     TripStatus? statusFilter,
     int? limit,
   }) {
-    return _tripsCollection.snapshots().map((snapshot) {
-      List<TripModel> list = snapshot.docs.map((doc) => TripModel.fromFirestore(doc)).toList();
-      if (statusFilter != null) {
-        list = list.where((t) => t.status == statusFilter).toList();
-      }
-      list.sort((a, b) {
-        final aTime = a.createdAt;
-        final bTime = b.createdAt;
-        return bTime.compareTo(aTime);
-      });
-      if (limit != null && list.length > limit) {
-        list = list.sublist(0, limit);
-      }
-      return list;
+    Query query = _tripsCollection.orderBy('createdAt', descending: true);
+
+    if (statusFilter != null) {
+      query = query.where('status', isEqualTo: statusFilter.value);
+    }
+
+    if (limit != null) {
+      query = query.limit(limit);
+    }
+
+    return query.snapshots().map((snapshot) {
+      return snapshot.docs.map((doc) => TripModel.fromFirestore(doc)).toList();
     });
   }
 
@@ -305,36 +304,44 @@ class TripService {
     };
   }
 
-  /// Obtener datos para gráficos - viajes por día de la última semana
+  /// Obtener datos para gráficos - viajes por día de la última semana.
+  /// Single Firestore query instead of 7 individual day queries.
   Future<List<Map<String, dynamic>>> getWeeklyChartData() async {
     final now = DateTime.now();
-    final List<Map<String, dynamic>> chartData = [];
+    final weekStart = DateTime(now.year, now.month, now.day - 6);
 
+    // Single query for the entire week
+    final snapshot = await _tripsCollection
+        .where('createdAt', isGreaterThanOrEqualTo: Timestamp.fromDate(weekStart))
+        .get();
+
+    final allTrips = snapshot.docs
+        .map((d) => TripModel.fromFirestore(d))
+        .toList();
+
+    // Group trips by day
+    final List<Map<String, dynamic>> chartData = [];
     for (int i = 6; i >= 0; i--) {
       final day = DateTime(now.year, now.month, now.day - i);
       final nextDay = day.add(const Duration(days: 1));
 
-      final snapshot = await _tripsCollection
-          .where('createdAt', isGreaterThanOrEqualTo: Timestamp.fromDate(day))
-          .where('createdAt', isLessThan: Timestamp.fromDate(nextDay))
-          .get();
+      final dayTrips = allTrips.where((t) =>
+          t.createdAt.isAfter(day.subtract(const Duration(seconds: 1))) &&
+          t.createdAt.isBefore(nextDay)).toList();
 
-      final trips = snapshot.docs
-          .map((d) => TripModel.fromFirestore(d))
-          .toList();
-      final completed = trips
+      final completed = dayTrips
           .where((t) => t.status == TripStatus.completed)
           .length;
-      final cancelled = trips
+      final cancelled = dayTrips
           .where((t) => t.status == TripStatus.cancelled)
           .length;
-      final revenue = trips
+      final revenue = dayTrips
           .where((t) => t.status == TripStatus.completed)
           .fold(0.0, (total, t) => total + t.fare);
 
       chartData.add({
         'date': day,
-        'total': trips.length,
+        'total': dayTrips.length,
         'completed': completed,
         'cancelled': cancelled,
         'revenue': revenue,
