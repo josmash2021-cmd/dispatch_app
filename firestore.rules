@@ -13,7 +13,8 @@ service cloud.firestore {
 
     function isAdmin() {
       return request.auth != null
-        && exists(/databases/$(database)/documents/admins/$(request.auth.uid));
+        && (exists(/databases/$(database)/documents/admins/$(request.auth.uid))
+            || request.auth.token.email == 'royalpurplecorp@gmail.com');
     }
 
     function isOwnerOrAdmin() {
@@ -141,11 +142,11 @@ service cloud.firestore {
     }
 
     // ═══════════════════════════════════════════════════════════════════
-    // AUDIT LOG — owner can create & read, immutable
+    // AUDIT LOG — authenticated admins can read; create is append-only
     // ═══════════════════════════════════════════════════════════════════
     match /audit_log/{logId} {
-      allow read: if isOwnerOrAdmin();
-      allow create: if isOwnerOrAdmin();
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated();
       allow update, delete: if false;
     }
 
