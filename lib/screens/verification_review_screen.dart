@@ -1721,12 +1721,18 @@ class _PendingVerificationDetailPageState
           ],
 
           // Liveness verification video
-          if (request.verificationVideoUrl != null) ...[
+          if (request.verificationVideoUrl != null ||
+              (_backendUser?['video_url'] as String?) != null ||
+              (_backendUser?['verification_video_url'] as String?) != null) ...[
             const SizedBox(height: 10),
             _videoCard(
               context,
               'Video de Verificación',
-              DispatchApiService.fullUrl(request.verificationVideoUrl!),
+              DispatchApiService.fullUrl(
+                request.verificationVideoUrl ??
+                    (_backendUser?['video_url'] as String?) ??
+                    (_backendUser!['verification_video_url'] as String),
+              ),
             ),
           ],
 

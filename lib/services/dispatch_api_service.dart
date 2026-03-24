@@ -510,18 +510,33 @@ class DispatchApiService {
   }
 
   /// Build full URL from a relative path (e.g. /uploads/documents/...).
-  /// If already absolute (starts with http), returns as-is.
+  /// If already absolute (starts with http/https/gs://), returns normalizeUrl.
   static String fullUrl(String path) {
-    if (path.startsWith('http://') || path.startsWith('https://')) {
-      return path;
+    if (path.startsWith('gs://') ||
+        path.startsWith('http://') ||
+        path.startsWith('https://')) {
+      return normalizeUrl(path);
     }
     return '$_activeUrl$path';
   }
 
-  /// Normalize a URL: rewrites local/internal IPs to the active server URL.
+  /// Normalize a URL: rewrites local/internal IPs to the active server URL
+  /// and converts gs:// Firebase Storage paths to https:// download URLs.
   /// Fixes photos stored in Firestore with local dev server addresses.
   static String normalizeUrl(String url) {
     if (url.isEmpty) return url;
+    // Firebase Storage bucket URLs (gs://bucket/path) → HTTPS download URL
+    if (url.startsWith('gs://')) {
+      final withoutScheme = url.substring(5); // strip "gs://"
+      final slashIdx = withoutScheme.indexOf('/');
+      if (slashIdx > 0) {
+        final bucket = withoutScheme.substring(0, slashIdx);
+        final path = Uri.encodeComponent(
+          withoutScheme.substring(slashIdx + 1),
+        );
+        return 'https://firebasestorage.googleapis.com/v0/b/$bucket/o/$path?alt=media';
+      }
+    }
     if (url.startsWith('https://')) return url;
     if (url.startsWith('http://')) {
       final uri = Uri.tryParse(url);

@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../config/app_theme.dart';
 import '../config/page_transitions.dart';
 import '../providers/driver_provider.dart';
+import '../services/dispatch_api_service.dart';
 import '../widgets/shimmer_loading.dart'; // ShimmerPersonCard
 import 'driver_detail_screen.dart';
 
@@ -173,11 +174,17 @@ class _DriverCard extends StatelessWidget {
           children: [
             CircleAvatar(
               backgroundColor: isOnline ? AppColors.success : AppColors.surfaceHigh,
-              child: Icon(
-                Icons.local_taxi,
-                color: isOnline ? Colors.white : AppColors.textHint,
-                size: 20,
-              ),
+              backgroundImage: driver.photoUrl != null && driver.photoUrl!.isNotEmpty
+                  ? NetworkImage(DispatchApiService.fullUrl(driver.photoUrl!))
+                  : null,
+              onBackgroundImageError: driver.photoUrl != null ? (_, __) {} : null,
+              child: driver.photoUrl == null || driver.photoUrl!.isEmpty
+                  ? Icon(
+                      Icons.person_rounded,
+                      color: isOnline ? Colors.white : AppColors.textHint,
+                      size: 20,
+                    )
+                  : null,
             ),
             if (isOnline)
               Positioned(
