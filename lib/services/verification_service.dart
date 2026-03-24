@@ -143,8 +143,11 @@ class VerificationService {
         'isVerified': true,
         'isApproved': true,
         'verificationStatus': 'approved',
+        'driver_status': 'approved',
+        'status': 'approved',
         'verificationReason': null,
         'lastUpdated': FieldValue.serverTimestamp(),
+        'updated_at': FieldValue.serverTimestamp(),
         if (profilePhotoUrl != null && profilePhotoUrl.isNotEmpty)
           'profilePhotoUrl': profilePhotoUrl,
       };
@@ -195,8 +198,11 @@ class VerificationService {
         'isVerified': false,
         'isApproved': false,
         'verificationStatus': 'rejected',
+        'driver_status': 'rejected',
+        'status': 'rejected',
         'verificationReason': reason,
         'lastUpdated': FieldValue.serverTimestamp(),
+        'updated_at': FieldValue.serverTimestamp(),
       };
       await _firestore.collection(col).doc(docId).set(
         rejectUpdate,

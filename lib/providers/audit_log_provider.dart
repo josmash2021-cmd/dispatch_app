@@ -49,7 +49,7 @@ class AuditLogProvider extends ChangeNotifier {
       // Simplified query to avoid composite index requirements
       // We query by timestamp only (which has automatic indexing)
       // and filter by action locally if needed
-      Query query = _db.collection('audit_logs')
+      Query query = _db.collection('audit_log')
           .orderBy('timestamp', descending: true)
           .limit(_limit * 2); // Fetch more to account for local filtering
 
@@ -113,7 +113,7 @@ class AuditLogProvider extends ChangeNotifier {
     _logsSub?.cancel();
     
     // Simplified query - only order by timestamp to avoid composite index
-    Query query = _db.collection('audit_logs')
+    Query query = _db.collection('audit_log')
         .orderBy('timestamp', descending: true)
         .limit(_limit);
 
