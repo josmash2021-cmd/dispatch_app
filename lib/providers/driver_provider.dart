@@ -29,6 +29,8 @@ class DriverProvider extends ChangeNotifier {
   int get onlineDrivers => _drivers.where((d) => d.isOnline).length;
   int get offlineDrivers => _drivers.where((d) => !d.isOnline).length;
   int get verifiedDrivers => _drivers.where((d) => d.isVerified).length;
+  int get rejectedDrivers => _drivers.where((d) => d.isRejected).length;
+  int get pendingDrivers => _drivers.where((d) => d.isPendingVerification).length;
   List<DriverModel> get filteredDrivers => _filteredDrivers;
   List<DriverModel> get allDrivers => _drivers;
 

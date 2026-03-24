@@ -34,6 +34,7 @@ class DriverModel {
   final String? password;
   final String? licenseUrl;
   final String? documentUrl;
+  final String verificationStatus; // 'pending' | 'approved' | 'rejected'
 
   DriverModel({
     required this.driverId,
@@ -67,14 +68,15 @@ class DriverModel {
     this.password,
     this.licenseUrl,
     this.documentUrl,
+    this.verificationStatus = 'pending',
   });
 
   bool get isActive => status == 'active';
   bool get isInactive => status == 'deactivated';
   bool get isBlocked => status == 'blocked';
-  bool get isVerified =>
-      (licenseUrl != null && licenseUrl!.isNotEmpty) &&
-      (documentUrl != null && documentUrl!.isNotEmpty);
+  bool get isVerified => verificationStatus == 'approved';
+  bool get isRejected => verificationStatus == 'rejected';
+  bool get isPendingVerification => verificationStatus == 'pending';
 
   String get fullName => '$firstName $lastName'.trim();
 
@@ -130,7 +132,26 @@ class DriverModel {
           data['licenseUrl'] as String? ?? data['license_url'] as String?,
       documentUrl:
           data['documentUrl'] as String? ?? data['document_url'] as String?,
+      verificationStatus: _resolveVerificationStatus(data),
     );
+  }
+
+  static String _resolveVerificationStatus(Map<String, dynamic> data) {
+    // Check explicit verification fields written by VerificationService
+    final vs = data['verificationStatus'] as String?;
+    if (vs == 'approved' || vs == 'rejected') return vs!;
+    final ds = data['driver_status'] as String?;
+    if (ds == 'approved' || ds == 'rejected') return ds!;
+    final s = data['status'] as String?;
+    if (s == 'approved' || s == 'rejected') return s!;
+    // Check boolean flags
+    if (data['isApproved'] == true || data['isVerified'] == true) {
+      return 'approved';
+    }
+    if (data['isApproved'] == false && data.containsKey('isApproved')) {
+      return 'rejected';
+    }
+    return 'pending';
   }
 
   Map<String, dynamic> toMap() => {

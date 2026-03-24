@@ -77,14 +77,21 @@ class _DriversScreenState extends State<DriversScreen> {
           // Stats chips
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-            child: Row(
-              children: [
-                _countChip('Total', provider.totalDrivers, AppColors.primary),
-                const SizedBox(width: 8),
-                _countChip('Online', provider.onlineDrivers, AppColors.success),
-                const SizedBox(width: 8),
-                _countChip('Verificados', provider.verifiedDrivers, const Color(0xFF1565C0)),
-              ],
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: [
+                  _countChip('Total', provider.totalDrivers, AppColors.primary),
+                  const SizedBox(width: 8),
+                  _countChip('Online', provider.onlineDrivers, AppColors.success),
+                  const SizedBox(width: 8),
+                  _countChip('Verificados', provider.verifiedDrivers, const Color(0xFF1565C0)),
+                  const SizedBox(width: 8),
+                  _countChip('Pendientes', provider.pendingDrivers, AppColors.warning),
+                  const SizedBox(width: 8),
+                  _countChip('Rechazados', provider.rejectedDrivers, AppColors.error),
+                ],
+              ),
             ),
           ),
           // Drivers list
@@ -153,7 +160,6 @@ class _DriverCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isVerified = driver.isVerified;
     final isOnline = driver.isOnline;
     
     return Card(
@@ -204,20 +210,39 @@ class _DriverCard extends StatelessWidget {
               ),
           ],
         ),
-        trailing: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-          decoration: BoxDecoration(
-            color: isVerified ? AppColors.success.withOpacity(0.1) : AppColors.warning.withOpacity(0.1),
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: Text(
-            isVerified ? 'Verificado' : 'Pendiente',
-            style: TextStyle(
-              color: isVerified ? AppColors.success : AppColors.warning,
-              fontSize: 11,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
+        trailing: _buildStatusBadge(driver),
+      ),
+    );
+  }
+
+  Widget _buildStatusBadge(dynamic driver) {
+    final String status = driver.verificationStatus;
+    final Color color;
+    final String label;
+    switch (status) {
+      case 'approved':
+        color = AppColors.success;
+        label = 'Aprobado';
+      case 'rejected':
+        color = AppColors.error;
+        label = 'Rechazado';
+      default:
+        color = AppColors.warning;
+        label = 'Pendiente';
+    }
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: color.withValues(alpha: 0.3)),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          color: color,
+          fontSize: 11,
+          fontWeight: FontWeight.w600,
         ),
       ),
     );
