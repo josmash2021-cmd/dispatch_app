@@ -5,6 +5,7 @@ import 'dart:ui' as ui;
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart' as mapbox;
 
 import '../config/app_theme.dart';
@@ -45,18 +46,50 @@ class _FleetMapScreenState extends State<FleetMapScreen> {
   int _goldDotFrame = 0;
   Timer? _goldDotTimer;
 
-  static const double _defaultLat = 25.7617; // Miami, Florida
-  static const double _defaultLng = -80.1918;
+  // Device location — updated on init, falls back to Birmingham, AL (US center)
+  double _defaultLat = 33.5186;
+  double _defaultLng = -86.8104;
 
   @override
   void initState() {
     super.initState();
     mapbox.MapboxOptions.setAccessToken(MapboxConfig.accessToken);
+    _fetchDeviceLocation();
     _listenDriverLocations();
     _listenActiveTrips();
     _listenTodayTrips();
     _initCarPng();
     _buildGoldDotFrames();
+  }
+
+  Future<void> _fetchDeviceLocation() async {
+    try {
+      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) return;
+      LocationPermission permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+        if (permission == LocationPermission.denied) return;
+      }
+      if (permission == LocationPermission.deniedForever) return;
+      final pos = await Geolocator.getCurrentPosition(
+        locationSettings: const LocationSettings(accuracy: LocationAccuracy.low),
+      );
+      if (!mounted) return;
+      setState(() {
+        _defaultLat = pos.latitude;
+        _defaultLng = pos.longitude;
+      });
+      _mapCtrl?.flyTo(
+        mapbox.CameraOptions(
+          center: mapbox.Point(
+            coordinates: mapbox.Position(pos.longitude, pos.latitude),
+          ),
+          zoom: 12.0,
+        ),
+        mapbox.MapAnimationOptions(duration: 1000),
+      );
+    } catch (_) {}
   }
 
   @override
