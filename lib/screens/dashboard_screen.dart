@@ -816,6 +816,33 @@ class _StatsContent extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    // Unassigned ride alert
+                    if (trips.staleRequestedTrips.isNotEmpty)
+                      Container(
+                        margin: const EdgeInsets.only(bottom: 12),
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                        decoration: BoxDecoration(
+                          color: AppColors.warning.withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: AppColors.warning.withValues(alpha: 0.4)),
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.warning_amber_rounded, color: AppColors.warning, size: 22),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Text(
+                                '${trips.staleRequestedTrips.length} ride${trips.staleRequestedTrips.length > 1 ? "s" : ""} waiting 2+ min without a driver',
+                                style: const TextStyle(
+                                  color: AppColors.warning,
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
                     _buildStatsGrid(context, dash, trips),
                     const SizedBox(height: 24),
                     _sectionTitle('Trips This Week'),

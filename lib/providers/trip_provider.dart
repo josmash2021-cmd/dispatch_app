@@ -45,6 +45,16 @@ class TripProvider extends ChangeNotifier {
           )
           .length;
 
+  /// Trips in 'requested' status for more than 2 minutes (no driver assigned).
+  List<TripModel> get staleRequestedTrips {
+    final cutoff = DateTime.now().subtract(const Duration(minutes: 2));
+    return _trips
+        .where((t) =>
+            t.status == TripStatus.requested &&
+            t.createdAt.isBefore(cutoff))
+        .toList();
+  }
+
   void startListening() {
     _isLoading = true;
     notifyListeners();
