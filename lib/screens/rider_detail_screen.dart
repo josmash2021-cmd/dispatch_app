@@ -360,7 +360,15 @@ class _RiderDetailScreenState extends State<RiderDetailScreen> {
   }
 
   Widget _buildPaymentMethods(Map<String, dynamic> u) {
-    // TODO: Add payment methods from backend when available
+    final paymentMethods = u['payment_methods'] as List? ?? [];
+    final cards = paymentMethods
+        .where((m) => (m as Map)['type'] == 'card')
+        .toList();
+    final banks = paymentMethods
+        .where((m) => (m as Map)['type'] == 'bank')
+        .toList();
+    final defaultMethod = u['default_payment_method'] as String? ?? 'cash';
+
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(16),
@@ -370,9 +378,38 @@ class _RiderDetailScreenState extends State<RiderDetailScreen> {
       ),
       child: Column(
         children: [
-          _buildPaymentRow(Icons.credit_card, 'Tarjetas', '0 agregadas'),
+          _buildPaymentRow(
+            Icons.payments_outlined,
+            'Default',
+            defaultMethod[0].toUpperCase() + defaultMethod.substring(1),
+          ),
           const Divider(color: AppColors.cardBorder),
-          _buildPaymentRow(Icons.account_balance, 'Cuentas Bancarias', '0 agregadas'),
+          _buildPaymentRow(
+            Icons.credit_card,
+            'Tarjetas',
+            cards.isEmpty
+                ? '0 agregadas'
+                : '${cards.length} agregada${cards.length > 1 ? "s" : ""}',
+          ),
+          if (cards.isNotEmpty)
+            ...cards.map((c) {
+              final card = c as Map;
+              return Padding(
+                padding: const EdgeInsets.only(left: 36, top: 4),
+                child: Text(
+                  '•••• ${card['last4'] ?? '****'}  ${card['brand'] ?? ''}',
+                  style: const TextStyle(color: AppColors.textHint, fontSize: 12, fontFamily: 'monospace'),
+                ),
+              );
+            }),
+          const Divider(color: AppColors.cardBorder),
+          _buildPaymentRow(
+            Icons.account_balance,
+            'Cuentas Bancarias',
+            banks.isEmpty
+                ? '0 agregadas'
+                : '${banks.length} agregada${banks.length > 1 ? "s" : ""}',
+          ),
         ],
       ),
     );

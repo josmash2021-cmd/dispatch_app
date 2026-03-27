@@ -1,10 +1,12 @@
-﻿import 'package:flutter/material.dart';
+﻿import 'dart:async';
+import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:uuid/uuid.dart';
 import '../config/app_theme.dart';
 import '../models/trip_model.dart';
 import '../providers/trip_provider.dart';
+import '../services/geocoding_service.dart';
 
 class CreateTripScreen extends StatefulWidget {
   const CreateTripScreen({super.key});
@@ -29,6 +31,11 @@ class _CreateTripScreenState extends State<CreateTripScreen>
   final _durationCtrl = TextEditingController();
   String _paymentMethod = 'cash';
   String _vehicleType = 'Economy';
+
+  // Geocoding
+  Timer? _geocodeTimer;
+  List<GeocodingResult> _pickupSuggestions = [];
+  List<GeocodingResult> _dropoffSuggestions = [];
 
   // Stagger animations
   late AnimationController _staggerCtrl;
@@ -64,6 +71,7 @@ class _CreateTripScreenState extends State<CreateTripScreen>
   @override
   void dispose() {
     _staggerCtrl.dispose();
+    _geocodeTimer?.cancel();
     for (final c in [
       _passengerNameCtrl,
       _passengerPhoneCtrl,
@@ -552,6 +560,57 @@ class _CreateTripScreenState extends State<CreateTripScreen>
     );
   }
 
+  void _onAddressChanged(
+    String value,
+    TextEditingController latCtrl,
+    TextEditingController lngCtrl,
+    bool isPickup,
+  ) {
+    _geocodeTimer?.cancel();
+    if (value.trim().length < 3) {
+      setState(() {
+        if (isPickup) {
+          _pickupSuggestions = [];
+        } else {
+          _dropoffSuggestions = [];
+        }
+      });
+      return;
+    }
+    _geocodeTimer = Timer(const Duration(milliseconds: 500), () async {
+      try {
+        final results = await GeocodingService.search(value);
+        if (!mounted) return;
+        setState(() {
+          if (isPickup) {
+            _pickupSuggestions = results;
+          } else {
+            _dropoffSuggestions = results;
+          }
+        });
+      } catch (_) {}
+    });
+  }
+
+  void _selectSuggestion(
+    GeocodingResult result,
+    TextEditingController addrCtrl,
+    TextEditingController latCtrl,
+    TextEditingController lngCtrl,
+    bool isPickup,
+  ) {
+    addrCtrl.text = result.placeName;
+    latCtrl.text = result.lat.toStringAsFixed(6);
+    lngCtrl.text = result.lng.toStringAsFixed(6);
+    setState(() {
+      if (isPickup) {
+        _pickupSuggestions = [];
+      } else {
+        _dropoffSuggestions = [];
+      }
+    });
+  }
+
   Widget _locationField({
     required TextEditingController ctrl,
     required TextEditingController latCtrl,
@@ -561,6 +620,9 @@ class _CreateTripScreenState extends State<CreateTripScreen>
     required Color dotColor,
     bool required = false,
   }) {
+    final isPickup = ctrl == _pickupAddressCtrl;
+    final suggestions = isPickup ? _pickupSuggestions : _dropoffSuggestions;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -588,10 +650,76 @@ class _CreateTripScreenState extends State<CreateTripScreen>
             ),
             const SizedBox(width: 10),
             Expanded(
-              child: _field(ctrl, label, hint, null, required: required),
+              child: TextFormField(
+                controller: ctrl,
+                style: const TextStyle(color: AppColors.textPrimary, fontSize: 14),
+                onChanged: (v) => _onAddressChanged(v, latCtrl, lngCtrl, isPickup),
+                decoration: InputDecoration(
+                  labelText: label,
+                  hintText: hint,
+                  labelStyle: const TextStyle(color: AppColors.textHint, fontSize: 13),
+                  hintStyle: const TextStyle(color: AppColors.textHint, fontSize: 13),
+                  filled: true,
+                  fillColor: AppColors.surfaceHigh,
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(color: AppColors.cardBorder),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
+                  ),
+                  errorBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(color: AppColors.error),
+                  ),
+                  focusedErrorBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(color: AppColors.error, width: 1.5),
+                  ),
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+                ),
+                validator: required
+                    ? (v) => (v == null || v.isEmpty) ? 'Required' : null
+                    : null,
+              ),
             ),
           ],
         ),
+        // Geocoding suggestions
+        if (suggestions.isNotEmpty)
+          Container(
+            margin: const EdgeInsets.only(left: 18, top: 4),
+            decoration: BoxDecoration(
+              color: AppColors.surface,
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: AppColors.cardBorder),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: suggestions.map((s) => InkWell(
+                onTap: () => _selectSuggestion(s, ctrl, latCtrl, lngCtrl, isPickup),
+                borderRadius: BorderRadius.circular(8),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.location_on_outlined, size: 16, color: AppColors.textSecondary),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          s.placeName,
+                          style: const TextStyle(color: AppColors.textPrimary, fontSize: 13),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              )).toList(),
+            ),
+          ),
         Padding(
           padding: const EdgeInsets.only(left: 18, top: 8),
           child: Row(

@@ -99,25 +99,32 @@ class ClientService {
   }
 
   /// Register a newly-added client in the backend SQLite via /auth/register.
+  /// Retries up to 3 times with exponential backoff.
   void _syncNewClientToBackend(String firestoreId, ClientModel client) async {
-    try {
-      final tempPassword = _generateTempPassword();
-      final user = await DispatchApiService.registerUser(
-        firstName: client.firstName,
-        lastName: client.lastName,
-        phone: client.phone,
-        email: client.email,
-        password: tempPassword,
-        role: 'rider',
-      );
-      final sqliteId = user['id'] as int?;
-      if (sqliteId != null) {
-        await _clientsCollection.doc(firestoreId).update({
-          'sqliteId': sqliteId,
-        });
+    for (int attempt = 0; attempt < 3; attempt++) {
+      try {
+        final tempPassword = _generateTempPassword();
+        final user = await DispatchApiService.registerUser(
+          firstName: client.firstName,
+          lastName: client.lastName,
+          phone: client.phone,
+          email: client.email,
+          password: tempPassword,
+          role: 'rider',
+        );
+        final sqliteId = user['id'] as int?;
+        if (sqliteId != null) {
+          await _clientsCollection.doc(firestoreId).update({
+            'sqliteId': sqliteId,
+          });
+        }
+        return; // success
+      } catch (e) {
+        debugPrint('[ClientService] Backend register sync attempt ${attempt + 1}/3 failed: $e');
+        if (attempt < 2) {
+          await Future.delayed(Duration(seconds: 2 << attempt));
+        }
       }
-    } catch (e) {
-      debugPrint('[ClientService] Backend register sync failed: $e');
     }
   }
 

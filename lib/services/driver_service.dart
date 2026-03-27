@@ -97,24 +97,32 @@ class DriverService {
   }
 
   /// Register a newly-added driver in the backend SQLite via /auth/register.
+  /// Register a newly-added driver in the backend SQLite via /auth/register.
+  /// Retries up to 3 times with exponential backoff.
   void _syncNewDriverToBackend(String firestoreId, DriverModel driver) async {
-    try {
-      final tempPassword = _generateTempPassword();
-      final user = await DispatchApiService.registerUser(
-        firstName: driver.firstName,
-        lastName: driver.lastName,
-        phone: driver.phone,
-        password: tempPassword,
-        role: 'driver',
-      );
-      final sqliteId = user['id'] as int?;
-      if (sqliteId != null) {
-        await _driversCollection.doc(firestoreId).update({
-          'sqliteId': sqliteId,
-        });
+    for (int attempt = 0; attempt < 3; attempt++) {
+      try {
+        final tempPassword = _generateTempPassword();
+        final user = await DispatchApiService.registerUser(
+          firstName: driver.firstName,
+          lastName: driver.lastName,
+          phone: driver.phone,
+          password: tempPassword,
+          role: 'driver',
+        );
+        final sqliteId = user['id'] as int?;
+        if (sqliteId != null) {
+          await _driversCollection.doc(firestoreId).update({
+            'sqliteId': sqliteId,
+          });
+        }
+        return; // success
+      } catch (e) {
+        debugPrint('[DriverService] Backend register sync attempt ${attempt + 1}/3 failed: $e');
+        if (attempt < 2) {
+          await Future.delayed(Duration(seconds: 2 << attempt));
+        }
       }
-    } catch (e) {
-      debugPrint('[DriverService] Backend register sync failed: $e');
     }
   }
 

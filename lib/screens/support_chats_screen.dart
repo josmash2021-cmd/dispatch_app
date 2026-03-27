@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import '../config/app_theme.dart';
 import '../config/page_transitions.dart';
@@ -14,21 +15,22 @@ class SupportChatsScreen extends StatefulWidget {
 class _SupportChatsScreenState extends State<SupportChatsScreen> {
   List<Map<String, dynamic>> _chats = [];
   bool _loading = true;
-  Timer? _pollTimer;
+  StreamSubscription? _firestoreSub;
 
   @override
   void initState() {
     super.initState();
     _loadChats();
-    _pollTimer = Timer.periodic(
-      const Duration(seconds: 5),
-      (_) => _loadChats(),
-    );
+    // Real-time listener: refresh from backend when Firestore changes
+    _firestoreSub = FirebaseFirestore.instance
+        .collection('support_chats')
+        .snapshots()
+        .listen((_) => _loadChats());
   }
 
   @override
   void dispose() {
-    _pollTimer?.cancel();
+    _firestoreSub?.cancel();
     super.dispose();
   }
 

@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import '../config/app_theme.dart';
 import '../services/dispatch_api_service.dart';
@@ -33,22 +34,24 @@ class _SupportChatDetailScreenState extends State<SupportChatDetailScreen> {
   bool _sending = false;
   bool _supervisorConnected = false;
   bool _connecting = false;
-  Timer? _pollTimer;
+  StreamSubscription? _firestoreSub;
 
   @override
   void initState() {
     super.initState();
     _supervisorConnected = widget.supervisorConnected;
     _loadMessages();
-    _pollTimer = Timer.periodic(
-      const Duration(seconds: 3),
-      (_) => _loadMessages(),
-    );
+    // Real-time: listen for changes in this chat doc, then refetch from backend
+    _firestoreSub = FirebaseFirestore.instance
+        .collection('support_chats')
+        .doc(widget.chatId.toString())
+        .snapshots()
+        .listen((_) => _loadMessages());
   }
 
   @override
   void dispose() {
-    _pollTimer?.cancel();
+    _firestoreSub?.cancel();
     _msgCtrl.dispose();
     _scrollCtrl.dispose();
     _focusNode.dispose();
