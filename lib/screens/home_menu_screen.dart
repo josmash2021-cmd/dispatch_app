@@ -616,7 +616,7 @@ class _HomeMenuScreenState extends State<HomeMenuScreen>
       context: context,
       barrierDismissible: true,
       barrierLabel: 'Dismiss',
-      barrierColor: Colors.black.withOpacity(0.5),
+      barrierColor: Colors.black.withValues(alpha: 0.5),
       transitionDuration: const Duration(milliseconds: 200),
       pageBuilder: (context, anim1, anim2) {
         return ScaleTransition(
@@ -636,7 +636,7 @@ class _HomeMenuScreenState extends State<HomeMenuScreen>
                   borderRadius: BorderRadius.circular(16),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.3),
+                      color: Colors.black.withValues(alpha: 0.3),
                       blurRadius: 20,
                       offset: const Offset(0, 10),
                     ),
@@ -648,7 +648,7 @@ class _HomeMenuScreenState extends State<HomeMenuScreen>
                     Container(
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
-                        color: color.withOpacity(0.1),
+                        color: color.withValues(alpha: 0.1),
                         borderRadius: const BorderRadius.vertical(
                           top: Radius.circular(16),
                         ),
@@ -658,7 +658,7 @@ class _HomeMenuScreenState extends State<HomeMenuScreen>
                           Container(
                             padding: const EdgeInsets.all(8),
                             decoration: BoxDecoration(
-                              color: color.withOpacity(0.2),
+                              color: color.withValues(alpha: 0.2),
                               borderRadius: BorderRadius.circular(10),
                             ),
                             child: Icon(icon, color: color, size: 24),
@@ -896,14 +896,14 @@ class _HomeMenuScreenState extends State<HomeMenuScreen>
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [
-            AppColors.primary.withOpacity(0.15),
-            AppColors.primary.withOpacity(0.05),
+            AppColors.primary.withValues(alpha: 0.15),
+            AppColors.primary.withValues(alpha: 0.05),
           ],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.primary.withOpacity(0.2)),
+        border: Border.all(color: AppColors.primary.withValues(alpha: 0.2)),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceAround,
@@ -957,14 +957,14 @@ class _HomeMenuScreenState extends State<HomeMenuScreen>
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [
-            const Color(0xFF1565C0).withOpacity(0.15),
-            const Color(0xFF1565C0).withOpacity(0.05),
+            const Color(0xFF1565C0).withValues(alpha: 0.15),
+            const Color(0xFF1565C0).withValues(alpha: 0.05),
           ],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFF1565C0).withOpacity(0.2)),
+        border: Border.all(color: const Color(0xFF1565C0).withValues(alpha: 0.2)),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceAround,
@@ -1056,25 +1056,25 @@ class _ContextMenuCard extends StatelessWidget {
           ),
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
-            color: color.withOpacity(0.08),
+            color: color.withValues(alpha: 0.08),
             width: 1,
           ),
           boxShadow: [
             // Bottom shadow for 3D depth
             BoxShadow(
-              color: Colors.black.withOpacity(0.5),
+              color: Colors.black.withValues(alpha: 0.5),
               blurRadius: 1,
               offset: const Offset(0, 4),
             ),
             // Soft ambient shadow
             BoxShadow(
-              color: Colors.black.withOpacity(0.3),
+              color: Colors.black.withValues(alpha: 0.3),
               blurRadius: 8,
               offset: const Offset(0, 6),
             ),
             // Top-left highlight for 3D raised effect
             BoxShadow(
-              color: Colors.white.withOpacity(0.03),
+              color: Colors.white.withValues(alpha: 0.03),
               blurRadius: 1,
               offset: const Offset(-1, -1),
             ),
@@ -1092,10 +1092,10 @@ class _ContextMenuCard extends StatelessWidget {
                   Container(
                     padding: const EdgeInsets.all(10),
                     decoration: BoxDecoration(
-                      color: color.withOpacity(0.15),
+                      color: color.withValues(alpha: 0.15),
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(
-                        color: color.withOpacity(0.1),
+                        color: color.withValues(alpha: 0.1),
                         width: 1,
                       ),
                     ),
@@ -1182,7 +1182,7 @@ class _StatItem extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
-                  color: color.withOpacity(0.15),
+                  color: color.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Icon(icon, color: color, size: 20),

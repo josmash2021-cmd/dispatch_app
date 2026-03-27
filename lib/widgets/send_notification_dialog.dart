@@ -47,7 +47,7 @@ class _SendNotificationDialogState extends State<SendNotificationDialog> {
                 Container(
                   padding: const EdgeInsets.all(10),
                   decoration: BoxDecoration(
-                    color: AppColors.primary.withOpacity(0.15),
+                    color: AppColors.primary.withValues(alpha: 0.15),
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: const Icon(
@@ -106,7 +106,7 @@ class _SendNotificationDialogState extends State<SendNotificationDialog> {
                 labelText: 'Notification Title',
                 labelStyle: const TextStyle(color: AppColors.textSecondary),
                 hintText: 'e.g., Trip Update',
-                hintStyle: TextStyle(color: AppColors.textHint.withOpacity(0.5)),
+                hintStyle: TextStyle(color: AppColors.textHint.withValues(alpha: 0.5)),
                 filled: true,
                 fillColor: AppColors.surfaceHigh,
                 border: OutlineInputBorder(
@@ -128,7 +128,7 @@ class _SendNotificationDialogState extends State<SendNotificationDialog> {
                 labelText: 'Message',
                 labelStyle: const TextStyle(color: AppColors.textSecondary),
                 hintText: 'Enter your message here...',
-                hintStyle: TextStyle(color: AppColors.textHint.withOpacity(0.5)),
+                hintStyle: TextStyle(color: AppColors.textHint.withValues(alpha: 0.5)),
                 filled: true,
                 fillColor: AppColors.surfaceHigh,
                 border: OutlineInputBorder(
@@ -204,9 +204,9 @@ class _SendNotificationDialogState extends State<SendNotificationDialog> {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
         decoration: BoxDecoration(
-          color: AppColors.primary.withOpacity(0.1),
+          color: AppColors.primary.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: AppColors.primary.withOpacity(0.3)),
+          border: Border.all(color: AppColors.primary.withValues(alpha: 0.3)),
         ),
         child: Text(
           label,

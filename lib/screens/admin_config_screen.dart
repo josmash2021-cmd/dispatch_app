@@ -698,7 +698,7 @@ class _AdminConfigScreenState extends State<AdminConfigScreen> {
         child: Container(
           padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
           decoration: BoxDecoration(
-            color: isSelected ? color.withOpacity(0.15) : AppColors.surfaceHigh,
+            color: isSelected ? color.withValues(alpha: 0.15) : AppColors.surfaceHigh,
             borderRadius: BorderRadius.circular(10),
             border: Border.all(
               color: isSelected ? color : AppColors.cardBorder,
@@ -758,7 +758,7 @@ class _AdminConfigScreenState extends State<AdminConfigScreen> {
         Switch(
           value: value,
           onChanged: onChanged,
-          activeColor: AppColors.primary,
+          activeThumbColor: AppColors.primary,
           inactiveThumbColor: AppColors.textHint,
           inactiveTrackColor: AppColors.surfaceHigh,
         ),

@@ -301,7 +301,7 @@ class _DashboardScreenState extends State<DashboardScreen>
 
   void _startNotificationService() {
     // Start the notification service to listen for profile changes
-    NotificationService().startListening(context);
+    NotificationService().startListening();
     
     // Listen to the notification stream for showing in-app notifications
     _notificationStreamSub = notificationStream.stream.listen((event) {

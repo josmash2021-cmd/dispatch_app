@@ -15,12 +15,11 @@ class NotificationService {
   final Map<String, DateTime> _lastNotified = {};
 
   /// Start listening for all notification types
-  void startListening(BuildContext context) {
+  void startListening() {
     _stopAll();
     
     // Listen for client profile changes
     _listenToCollection(
-      context, 
       'clients', 
       Icons.person_outline,
       AppColors.warning,
@@ -29,7 +28,6 @@ class NotificationService {
     
     // Listen for driver profile changes  
     _listenToCollection(
-      context,
       'drivers',
       Icons.local_taxi_outlined,
       AppColors.primary,
@@ -37,11 +35,10 @@ class NotificationService {
     );
     
     // Listen for new verifications
-    _listenToVerifications(context);
+    _listenToVerifications();
   }
 
   void _listenToCollection(
-    BuildContext context,
     String collection,
     IconData icon,
     Color color,
@@ -58,7 +55,7 @@ class NotificationService {
           for (final change in snapshot.docChanges) {
             if (change.type == DocumentChangeType.modified) {
               _handleProfileChange(
-                context, change.doc, icon, color, roleLabel, collection);
+                change.doc, icon, color, roleLabel, collection);
             }
           }
         });
@@ -67,7 +64,6 @@ class NotificationService {
   }
 
   Future<void> _handleProfileChange(
-    BuildContext context,
     DocumentSnapshot doc,
     IconData icon,
     Color color,
@@ -139,7 +135,6 @@ class NotificationService {
 
     // Show notification
     _showNotification(
-      context,
       icon: icon,
       color: color,
       title: '📢 $roleLabel actualizó su perfil',
@@ -151,7 +146,7 @@ class NotificationService {
     );
   }
 
-  void _listenToVerifications(BuildContext context) {
+  void _listenToVerifications() {
     final sub = FirebaseFirestore.instance
         .collection('verifications')
         .where('status', isEqualTo: 'pending')
@@ -170,7 +165,6 @@ class NotificationService {
                           'Nuevo usuario';
               
               _showNotification(
-                context,
                 icon: Icons.verified_user_outlined,
                 color: AppColors.success,
                 title: '✅ Nueva verificación pendiente',
@@ -199,8 +193,7 @@ class NotificationService {
     return false;
   }
 
-  void _showNotification(
-    BuildContext context, {
+  void _showNotification({
     required IconData icon,
     required Color color,
     required String title,

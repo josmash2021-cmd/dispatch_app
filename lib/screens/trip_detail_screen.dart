@@ -1073,7 +1073,7 @@ class _TripDetailScreenState extends State<TripDetailScreen>
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: AppColors.primary.withOpacity(0.15),
+                  color: AppColors.primary.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: const Icon(
@@ -1127,7 +1127,7 @@ class _TripDetailScreenState extends State<TripDetailScreen>
                           padding: const EdgeInsets.symmetric(vertical: 10),
                           decoration: BoxDecoration(
                             color: fullRefund
-                                ? AppColors.primary.withOpacity(0.2)
+                                ? AppColors.primary.withValues(alpha: 0.2)
                                 : null,
                             borderRadius: BorderRadius.circular(8),
                           ),
@@ -1153,7 +1153,7 @@ class _TripDetailScreenState extends State<TripDetailScreen>
                           padding: const EdgeInsets.symmetric(vertical: 10),
                           decoration: BoxDecoration(
                             color: !fullRefund
-                                ? AppColors.primary.withOpacity(0.2)
+                                ? AppColors.primary.withValues(alpha: 0.2)
                                 : null,
                             borderRadius: BorderRadius.circular(8),
                           ),

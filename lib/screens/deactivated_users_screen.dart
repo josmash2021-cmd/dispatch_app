@@ -254,7 +254,7 @@ class _DeactivatedUsersScreenState extends State<DeactivatedUsersScreen>
         contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
         leading: CircleAvatar(
           radius: 24,
-          backgroundColor: AppColors.warning.withOpacity(0.15),
+          backgroundColor: AppColors.warning.withValues(alpha: 0.15),
           child: Text(
             driver.fullName.isNotEmpty ? driver.fullName[0].toUpperCase() : '?',
             style: const TextStyle(
@@ -282,7 +282,7 @@ class _DeactivatedUsersScreenState extends State<DeactivatedUsersScreen>
               margin: const EdgeInsets.only(top: 4),
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
               decoration: BoxDecoration(
-                color: AppColors.warning.withOpacity(0.12),
+                color: AppColors.warning.withValues(alpha: 0.12),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: const Text(
@@ -330,7 +330,7 @@ class _DeactivatedUsersScreenState extends State<DeactivatedUsersScreen>
         contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
         leading: CircleAvatar(
           radius: 24,
-          backgroundColor: AppColors.warning.withOpacity(0.15),
+          backgroundColor: AppColors.warning.withValues(alpha: 0.15),
           child: Text(
             rider.fullName.isNotEmpty ? rider.fullName[0].toUpperCase() : '?',
             style: const TextStyle(
@@ -358,7 +358,7 @@ class _DeactivatedUsersScreenState extends State<DeactivatedUsersScreen>
               margin: const EdgeInsets.only(top: 4),
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
               decoration: BoxDecoration(
-                color: AppColors.warning.withOpacity(0.12),
+                color: AppColors.warning.withValues(alpha: 0.12),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: const Text(

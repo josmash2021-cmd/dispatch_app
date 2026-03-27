@@ -15,6 +15,7 @@ migrate_working_dir/
 # Secrets & environment files
 .env
 lib/config/env.dart
+lib/config/mapbox_config.dart
 local.properties
 google-services.json
 GoogleService-Info.plist

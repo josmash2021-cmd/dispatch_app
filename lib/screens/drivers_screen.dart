@@ -125,9 +125,9 @@ class _DriversScreenState extends State<DriversScreen> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
+        color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: color.withOpacity(0.3)),
+        border: Border.all(color: color.withValues(alpha: 0.3)),
       ),
       child: Text(
         '$label: $count',
@@ -141,7 +141,7 @@ class _DriversScreenState extends State<DriversScreen> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.local_taxi_outlined, size: 64, color: AppColors.textHint.withOpacity(0.5)),
+          Icon(Icons.local_taxi_outlined, size: 64, color: AppColors.textHint.withValues(alpha: 0.5)),
           const SizedBox(height: 16),
           const Text(
             'No hay drivers',
@@ -177,7 +177,7 @@ class _DriverCard extends StatelessWidget {
               backgroundImage: driver.photoUrl != null && driver.photoUrl!.isNotEmpty
                   ? NetworkImage(DispatchApiService.fullUrl(driver.photoUrl!))
                   : null,
-              onBackgroundImageError: driver.photoUrl != null ? (_, __) {} : null,
+              onBackgroundImageError: driver.photoUrl != null ? (_, _) {} : null,
               child: driver.photoUrl == null || driver.photoUrl!.isEmpty
                   ? Icon(
                       Icons.person_rounded,
@@ -264,7 +264,7 @@ class _ShimmerList extends StatelessWidget {
     return ListView.builder(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       itemCount: 6,
-      itemBuilder: (_, __) => const ShimmerPersonCard(),
+      itemBuilder: (_, _) => const ShimmerPersonCard(),
     );
   }
 }

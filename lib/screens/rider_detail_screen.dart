@@ -198,7 +198,7 @@ class _RiderDetailScreenState extends State<RiderDetailScreen> {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
             decoration: BoxDecoration(
-              color: isVerified ? AppColors.success.withOpacity(0.1) : AppColors.warning.withOpacity(0.1),
+              color: isVerified ? AppColors.success.withValues(alpha: 0.1) : AppColors.warning.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(20),
             ),
             child: Text(
@@ -286,18 +286,24 @@ class _RiderDetailScreenState extends State<RiderDetailScreen> {
     final profilePhoto = u['photo_url']          as String?;
 
     final photos = <Map<String, String>>[];
-    if (licenseFront != null && licenseFront.isNotEmpty)
+    if (licenseFront != null && licenseFront.isNotEmpty) {
       photos.add({'label': 'Licencia (Frente)', 'url': licenseFront});
-    if (licenseBack != null && licenseBack.isNotEmpty)
+    }
+    if (licenseBack != null && licenseBack.isNotEmpty) {
       photos.add({'label': 'Licencia (Atrás)', 'url': licenseBack});
-    if (insurance != null && insurance.isNotEmpty)
+    }
+    if (insurance != null && insurance.isNotEmpty) {
       photos.add({'label': 'Seguro de Auto', 'url': insurance});
-    if (idPhoto != null && idPhoto.isNotEmpty)
+    }
+    if (idPhoto != null && idPhoto.isNotEmpty) {
       photos.add({'label': 'ID Documento', 'url': idPhoto});
-    if (selfie != null && selfie.isNotEmpty)
+    }
+    if (selfie != null && selfie.isNotEmpty) {
       photos.add({'label': 'Selfie', 'url': selfie});
-    if (profilePhoto != null && profilePhoto.isNotEmpty)
+    }
+    if (profilePhoto != null && profilePhoto.isNotEmpty) {
       photos.add({'label': 'Foto de Perfil', 'url': profilePhoto});
+    }
 
     if (photos.isEmpty) {
       return Container(
@@ -341,7 +347,7 @@ class _RiderDetailScreenState extends State<RiderDetailScreen> {
               height: 180,
               width: double.infinity,
               fit: BoxFit.cover,
-              errorBuilder: (_, __, ___) => Container(
+              errorBuilder: (_, _, _) => Container(
                 height: 100,
                 color: AppColors.surfaceHigh,
                 child: const Center(child: Icon(Icons.broken_image)),

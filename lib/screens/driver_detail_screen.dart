@@ -1,6 +1,8 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import '../config/app_theme.dart';
 import '../config/page_transitions.dart';
+import '../services/audit_service.dart';
 import '../services/dispatch_api_service.dart';
 import 'support_chat_detail_screen.dart';
 
@@ -15,9 +17,16 @@ class DriverDetailScreen extends StatefulWidget {
 class _DriverDetailScreenState extends State<DriverDetailScreen> {
   Map<String, dynamic>? _userData;
   List<Map<String, dynamic>> _documents = [];
-  List<Map<String, dynamic>> _chats = [];
+  final List<Map<String, dynamic>> _chats = [];
   bool _loading = true;
   bool _ssnRevealed = false;
+  Timer? _ssnTimer;
+
+  @override
+  void dispose() {
+    _ssnTimer?.cancel();
+    super.dispose();
+  }
 
   @override
   void initState() {
@@ -173,7 +182,7 @@ class _DriverDetailScreenState extends State<DriverDetailScreen> {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
             decoration: BoxDecoration(
-              color: isVerified ? AppColors.success.withOpacity(0.1) : AppColors.warning.withOpacity(0.1),
+              color: isVerified ? AppColors.success.withValues(alpha: 0.1) : AppColors.warning.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(20),
             ),
             child: Text(
@@ -195,9 +204,9 @@ class _DriverDetailScreenState extends State<DriverDetailScreen> {
       width: double.infinity,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: const Color(0xFFE8C547).withOpacity(0.1),
+        color: const Color(0xFFE8C547).withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFFE8C547).withOpacity(0.3)),
+        border: Border.all(color: const Color(0xFFE8C547).withValues(alpha: 0.3)),
       ),
       child: Row(
         children: [
@@ -283,8 +292,8 @@ class _DriverDetailScreenState extends State<DriverDetailScreen> {
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
                       color: status == 'approved' 
-                          ? AppColors.success.withOpacity(0.1) 
-                          : AppColors.warning.withOpacity(0.1),
+                          ? AppColors.success.withValues(alpha: 0.1) 
+                          : AppColors.warning.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Text(
@@ -307,7 +316,7 @@ class _DriverDetailScreenState extends State<DriverDetailScreen> {
                     height: 140,
                     width: double.infinity,
                     fit: BoxFit.cover,
-                    errorBuilder: (_, __, ___) => Container(
+                    errorBuilder: (_, _, _) => Container(
                       height: 80,
                       color: AppColors.surfaceHigh,
                       child: const Center(child: Icon(Icons.broken_image)),
@@ -383,19 +392,75 @@ class _DriverDetailScreenState extends State<DriverDetailScreen> {
     );
   }
 
+  Future<void> _confirmRevealSSN() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppColors.surface,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Row(
+          children: [
+            Icon(Icons.security, color: AppColors.warning, size: 22),
+            SizedBox(width: 8),
+            Text('Reveal SSN?', style: TextStyle(color: AppColors.textPrimary, fontSize: 18)),
+          ],
+        ),
+        content: const Text(
+          'This action is logged for compliance. '
+          'The SSN will auto-hide after 30 seconds.',
+          style: TextStyle(color: AppColors.textSecondary),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Reveal', style: TextStyle(color: AppColors.warning, fontWeight: FontWeight.w700)),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+
+    // Log to audit trail
+    AuditService().log(
+      action: 'viewed_ssn',
+      targetCollection: 'drivers',
+      targetId: widget.sqliteId.toString(),
+      targetName: _userData?['first_name'] ?? 'unknown',
+    );
+
+    setState(() => _ssnRevealed = true);
+
+    // Auto-hide after 30 seconds
+    _ssnTimer?.cancel();
+    _ssnTimer = Timer(const Duration(seconds: 30), () {
+      if (mounted) setState(() => _ssnRevealed = false);
+    });
+  }
+
   Widget _buildSSNCard(bool ssnProvided, String? ssnFull, String? ssnMasked) {
     return GestureDetector(
       onTap: ssnProvided && ssnFull != null
-          ? () => setState(() => _ssnRevealed = !_ssnRevealed)
+          ? () {
+              if (_ssnRevealed) {
+                _ssnTimer?.cancel();
+                setState(() => _ssnRevealed = false);
+              } else {
+                _confirmRevealSSN();
+              }
+            }
           : null,
       child: Container(
         width: double.infinity,
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: ssnProvided ? AppColors.success.withOpacity(0.05) : AppColors.warning.withOpacity(0.05),
+          color: ssnProvided ? AppColors.success.withValues(alpha: 0.05) : AppColors.warning.withValues(alpha: 0.05),
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
-            color: ssnProvided ? AppColors.success.withOpacity(0.3) : AppColors.warning.withOpacity(0.3),
+            color: ssnProvided ? AppColors.success.withValues(alpha: 0.3) : AppColors.warning.withValues(alpha: 0.3),
           ),
         ),
         child: Row(
@@ -490,7 +555,7 @@ class _DriverDetailScreenState extends State<DriverDetailScreen> {
               height: 180,
               width: double.infinity,
               fit: BoxFit.cover,
-              errorBuilder: (_, __, ___) => Container(
+              errorBuilder: (_, _, _) => Container(
                 height: 100,
                 color: AppColors.surfaceHigh,
                 child: const Center(child: Icon(Icons.broken_image)),

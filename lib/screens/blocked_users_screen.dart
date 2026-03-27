@@ -357,7 +357,7 @@ class _BlockedUserCard extends StatelessWidget {
       color: AppColors.surface,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
-        side: BorderSide(color: AppColors.error.withOpacity(0.3)),
+        side: BorderSide(color: AppColors.error.withValues(alpha: 0.3)),
       ),
       child: InkWell(
         onTap: onTap,
@@ -370,7 +370,7 @@ class _BlockedUserCard extends StatelessWidget {
                 children: [
                   CircleAvatar(
                     radius: 28,
-                    backgroundColor: AppColors.error.withOpacity(0.1),
+                    backgroundColor: AppColors.error.withValues(alpha: 0.1),
                     backgroundImage: photoUrl != null && photoUrl!.isNotEmpty
                         ? NetworkImage(photoUrl!)
                         : null,
@@ -438,7 +438,7 @@ class _BlockedUserCard extends StatelessWidget {
                       Text(
                         'Blocked: ${_formatDate(blockedAt!)}',
                         style: TextStyle(
-                          color: AppColors.error.withOpacity(0.7),
+                          color: AppColors.error.withValues(alpha: 0.7),
                           fontSize: 11,
                         ),
                       ),

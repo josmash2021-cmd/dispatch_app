@@ -119,14 +119,14 @@ class _DriverReportsScreenState extends State<DriverReportsScreen> {
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [
-            AppColors.primary.withOpacity(0.15),
-            AppColors.primary.withOpacity(0.05),
+            AppColors.primary.withValues(alpha: 0.15),
+            AppColors.primary.withValues(alpha: 0.05),
           ],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.primary.withOpacity(0.3)),
+        border: Border.all(color: AppColors.primary.withValues(alpha: 0.3)),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceAround,
@@ -159,7 +159,7 @@ class _DriverReportsScreenState extends State<DriverReportsScreen> {
           Icon(
             Icons.check_circle_outline,
             size: 80,
-            color: AppColors.success.withOpacity(0.5),
+            color: AppColors.success.withValues(alpha: 0.5),
           ),
           const SizedBox(height: 16),
           const Text(
@@ -233,7 +233,7 @@ class _ReportCard extends StatelessWidget {
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
         side: BorderSide(
-          color: isPending ? typeColor.withOpacity(0.3) : AppColors.cardBorder,
+          color: isPending ? typeColor.withValues(alpha: 0.3) : AppColors.cardBorder,
         ),
       ),
       child: Padding(
@@ -247,7 +247,7 @@ class _ReportCard extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: typeColor.withOpacity(0.1),
+                    color: typeColor.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Icon(typeIcon, color: typeColor, size: 20),
@@ -280,8 +280,8 @@ class _ReportCard extends StatelessWidget {
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
                     color: isPending 
-                        ? AppColors.primary.withOpacity(0.1) 
-                        : AppColors.success.withOpacity(0.1),
+                        ? AppColors.primary.withValues(alpha: 0.1) 
+                        : AppColors.success.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Text(

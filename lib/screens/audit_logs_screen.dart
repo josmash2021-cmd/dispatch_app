@@ -149,7 +149,7 @@ class _AuditLogsScreenState extends State<AuditLogsScreen> {
                         Icon(
                           Icons.error_outline,
                           size: 48,
-                          color: AppColors.error.withOpacity(0.5),
+                          color: AppColors.error.withValues(alpha: 0.5),
                         ),
                         const SizedBox(height: 12),
                         Text(
@@ -255,7 +255,7 @@ class _AuditLogsScreenState extends State<AuditLogsScreen> {
                   Icon(
                     Icons.date_range,
                     size: 16,
-                    color: AppColors.primary.withOpacity(0.7),
+                    color: AppColors.primary.withValues(alpha: 0.7),
                   ),
                   const SizedBox(width: 8),
                   Text(
@@ -265,7 +265,7 @@ class _AuditLogsScreenState extends State<AuditLogsScreen> {
                             ? 'From ${DateFormat('MMM d, yyyy').format(_startDate!)}'
                             : 'Until ${DateFormat('MMM d, yyyy').format(_endDate!)}',
                     style: TextStyle(
-                      color: AppColors.primary.withOpacity(0.9),
+                      color: AppColors.primary.withValues(alpha: 0.9),
                       fontSize: 13,
                       fontWeight: FontWeight.w500,
                     ),
@@ -282,7 +282,7 @@ class _AuditLogsScreenState extends State<AuditLogsScreen> {
                     child: Icon(
                       Icons.close,
                       size: 16,
-                      color: AppColors.error.withOpacity(0.7),
+                      color: AppColors.error.withValues(alpha: 0.7),
                     ),
                   ),
                 ],
@@ -390,7 +390,7 @@ class _AuditLogsScreenState extends State<AuditLogsScreen> {
                 Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: actionColor.withOpacity(0.1),
+                    color: actionColor.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Icon(

@@ -172,7 +172,7 @@ class _PricingConfigScreenState extends State<PricingConfigScreen> {
                   Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: AppColors.error.withOpacity(0.1),
+                      color: AppColors.error.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Row(
@@ -194,7 +194,7 @@ class _PricingConfigScreenState extends State<PricingConfigScreen> {
                   Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: AppColors.success.withOpacity(0.1),
+                      color: AppColors.success.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Row(
@@ -225,14 +225,14 @@ class _PricingConfigScreenState extends State<PricingConfigScreen> {
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [
-            AppColors.primary.withOpacity(0.2),
-            AppColors.primary.withOpacity(0.05),
+            AppColors.primary.withValues(alpha: 0.2),
+            AppColors.primary.withValues(alpha: 0.05),
           ],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.primary.withOpacity(0.3)),
+        border: Border.all(color: AppColors.primary.withValues(alpha: 0.3)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -242,7 +242,7 @@ class _PricingConfigScreenState extends State<PricingConfigScreen> {
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: AppColors.primary.withOpacity(0.2),
+                  color: AppColors.primary.withValues(alpha: 0.2),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: const Icon(
@@ -377,7 +377,7 @@ class _PricingConfigScreenState extends State<PricingConfigScreen> {
         child: Container(
           padding: const EdgeInsets.symmetric(vertical: 12),
           decoration: BoxDecoration(
-            color: isSelected ? color.withOpacity(0.2) : AppColors.surface,
+            color: isSelected ? color.withValues(alpha: 0.2) : AppColors.surface,
             borderRadius: BorderRadius.circular(10),
             border: Border.all(
               color: isSelected ? color : AppColors.cardBorder,
@@ -507,7 +507,7 @@ class _PricingConfigScreenState extends State<PricingConfigScreen> {
         labelText: label,
         hintText: hint,
         labelStyle: const TextStyle(color: AppColors.textSecondary),
-        hintStyle: TextStyle(color: AppColors.textHint.withOpacity(0.5)),
+        hintStyle: TextStyle(color: AppColors.textHint.withValues(alpha: 0.5)),
         prefixIcon: Icon(icon, color: AppColors.textHint, size: 20),
         suffixText: suffix,
         suffixStyle: const TextStyle(

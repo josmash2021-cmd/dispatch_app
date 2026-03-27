@@ -348,11 +348,11 @@ class _AccountAppealsScreenState extends State<AccountAppealsScreen>
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
         decoration: BoxDecoration(
           color: selected
-              ? color.withOpacity(0.20)
-              : color.withOpacity(0.08),
+              ? color.withValues(alpha: 0.20)
+              : color.withValues(alpha: 0.08),
           borderRadius: BorderRadius.circular(20),
           border: selected
-              ? Border.all(color: color.withOpacity(0.40))
+              ? Border.all(color: color.withValues(alpha: 0.40))
               : null,
         ),
         child: Text(
@@ -435,7 +435,7 @@ class _AccountAppealsScreenState extends State<AccountAppealsScreen>
         borderRadius: BorderRadius.circular(14),
         border: Border.all(
           color: status == 'pending'
-              ? AppColors.warning.withOpacity(0.3)
+              ? AppColors.warning.withValues(alpha: 0.3)
               : AppColors.cardBorder,
         ),
       ),
@@ -449,7 +449,7 @@ class _AccountAppealsScreenState extends State<AccountAppealsScreen>
               children: [
                 CircleAvatar(
                   radius: 22,
-                  backgroundColor: statusColor.withOpacity(0.15),
+                  backgroundColor: statusColor.withValues(alpha: 0.15),
                   child: Icon(
                     userRole == 'driver' ? Icons.local_taxi : Icons.person,
                     color: statusColor,
@@ -476,7 +476,7 @@ class _AccountAppealsScreenState extends State<AccountAppealsScreen>
                             padding: const EdgeInsets.symmetric(
                                 horizontal: 6, vertical: 2),
                             decoration: BoxDecoration(
-                              color: AppColors.textHint.withOpacity(0.12),
+                              color: AppColors.textHint.withValues(alpha: 0.12),
                               borderRadius: BorderRadius.circular(6),
                             ),
                             child: Text(
@@ -493,7 +493,7 @@ class _AccountAppealsScreenState extends State<AccountAppealsScreen>
                             padding: const EdgeInsets.symmetric(
                                 horizontal: 6, vertical: 2),
                             decoration: BoxDecoration(
-                              color: AppColors.error.withOpacity(0.12),
+                              color: AppColors.error.withValues(alpha: 0.12),
                               borderRadius: BorderRadius.circular(6),
                             ),
                             child: Text(
@@ -515,7 +515,7 @@ class _AccountAppealsScreenState extends State<AccountAppealsScreen>
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
-                    color: statusColor.withOpacity(0.12),
+                    color: statusColor.withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: Row(
@@ -579,9 +579,9 @@ class _AccountAppealsScreenState extends State<AccountAppealsScreen>
                 width: double.infinity,
                 padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
-                  color: statusColor.withOpacity(0.08),
+                  color: statusColor.withValues(alpha: 0.08),
                   borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: statusColor.withOpacity(0.2)),
+                  border: Border.all(color: statusColor.withValues(alpha: 0.2)),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,

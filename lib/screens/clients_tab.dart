@@ -850,6 +850,7 @@ class _ClientCard extends StatelessWidget {
         .doc(client.clientId)
         .get()
         .then((doc) {
+      if (!context.mounted) return;
       final data = doc.data() ?? {};
       final sqliteId = data['sqliteId'] as int?;
       
