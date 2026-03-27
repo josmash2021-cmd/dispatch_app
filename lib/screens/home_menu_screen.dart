@@ -1,8 +1,10 @@
 import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../config/app_theme.dart';
 import '../config/page_transitions.dart';
+import '../providers/auth_provider.dart';
 import 'create_trip_screen.dart';
 import 'fleet_map_screen.dart';
 import 'riders_screen.dart';
@@ -10,6 +12,7 @@ import 'drivers_screen.dart';
 import 'verification_review_screen.dart';
 import 'blocked_users_screen.dart';
 import 'deactivated_users_screen.dart';
+import 'deleted_users_screen.dart';
 import 'account_appeals_screen.dart';
 import 'support_chats_screen.dart';
 import 'scheduled_rides_screen.dart';
@@ -20,6 +23,7 @@ import 'audit_logs_screen.dart';
 import 'pricing_config_screen.dart';
 import 'database_screen.dart';
 import 'driver_reports_screen.dart';
+import 'vehicle_types_screen.dart';
 
 class HomeMenuScreen extends StatefulWidget {
   final Function(int) onNavigate;
@@ -298,11 +302,110 @@ class _HomeMenuScreenState extends State<HomeMenuScreen>
 
   // ─── ADMIN TAB ────────────────────────────────────────────────────────
   Widget _buildAdminTab() {
+    final auth = context.watch<AuthProvider>();
+    final cards = <Widget>[
+      if (auth.canAccess('riders'))
+        _ContextMenuCard(
+          icon: Icons.person,
+          label: 'Riders',
+          sublabel: '$_riderCount usuarios',
+          color: AppColors.primary,
+          badge: _pendingVerifications > 0 ? '$_pendingVerifications' : null,
+          onTap: () => _showRidersMenu(context),
+        ),
+      if (auth.canAccess('drivers'))
+        _ContextMenuCard(
+          icon: Icons.local_taxi,
+          label: 'Drivers',
+          sublabel: '$_driverCount conductores',
+          color: AppColors.primary,
+          onTap: () => _showDriversMenu(context),
+        ),
+      if (auth.canAccess('config'))
+        _ContextMenuCard(
+          icon: Icons.settings,
+          label: 'Configuración',
+          sublabel: 'Ajustes del sistema',
+          color: AppColors.primary,
+          onTap: () => Navigator.push(
+            context,
+            slideFromRightRoute(const AdminConfigScreen()),
+          ),
+        ),
+      if (auth.canAccess('pricing'))
+        _ContextMenuCard(
+          icon: Icons.attach_money,
+          label: 'Precios',
+          sublabel: 'Tarifas y pricing',
+          color: AppColors.primary,
+          onTap: () => Navigator.push(
+            context,
+            slideFromRightRoute(const PricingConfigScreen()),
+          ),
+        ),
+      if (auth.canAccess('reports'))
+        _ContextMenuCard(
+          icon: Icons.analytics,
+          label: 'Reportes',
+          sublabel: 'Reportes financieros',
+          color: AppColors.primary,
+          onTap: () => Navigator.push(
+            context,
+            slideFromRightRoute(const ReportsScreen()),
+          ),
+        ),
+      if (auth.canAccess('audit_logs'))
+        _ContextMenuCard(
+          icon: Icons.security,
+          label: 'Audit Logs',
+          sublabel: 'Registro de actividad',
+          color: AppColors.primary,
+          onTap: () => Navigator.push(
+            context,
+            slideFromRightRoute(const AuditLogsScreen()),
+          ),
+        ),
+      if (auth.canAccess('database'))
+        _ContextMenuCard(
+          icon: Icons.storage,
+          label: 'Base de Datos',
+          sublabel: 'Gestión de datos',
+          color: AppColors.primary,
+          onTap: () => Navigator.push(
+            context,
+            slideFromRightRoute(const DatabaseScreen()),
+          ),
+        ),
+      if (auth.canAccess('driver_reports'))
+        _ContextMenuCard(
+          icon: Icons.report_problem,
+          label: 'Rep. Drivers',
+          sublabel: _driverReports > 0
+              ? '$_driverReports pendientes'
+              : 'Sin reportes',
+          color: AppColors.primary,
+          badge: _driverReports > 0 ? '$_driverReports' : null,
+          onTap: () => Navigator.push(
+            context,
+            slideFromRightRoute(const DriverReportsScreen()),
+          ),
+        ),
+      if (auth.canAccess('vehicle_types'))
+        _ContextMenuCard(
+          icon: Icons.directions_car_filled,
+          label: 'Vehículos',
+          sublabel: 'Tipos de vehículo',
+          color: AppColors.primary,
+          onTap: () => Navigator.push(
+            context,
+            slideFromRightRoute(const VehicleTypesScreen()),
+          ),
+        ),
+    ];
+
     return CustomScrollView(
       slivers: [
-        // Quick Stats - Admin
         SliverToBoxAdapter(child: _buildAdminQuickStats()),
-        // Admin Menu Grid
         SliverPadding(
           padding: const EdgeInsets.all(16),
           sliver: SliverGrid(
@@ -312,86 +415,7 @@ class _HomeMenuScreenState extends State<HomeMenuScreen>
               crossAxisSpacing: 12,
               childAspectRatio: 1.3,
             ),
-            delegate: SliverChildListDelegate([
-              _ContextMenuCard(
-                icon: Icons.person,
-                label: 'Riders',
-                sublabel: '$_riderCount usuarios',
-                color: AppColors.primary,
-                badge: _pendingVerifications > 0 ? '$_pendingVerifications' : null,
-                onTap: () => _showRidersMenu(context),
-              ),
-              _ContextMenuCard(
-                icon: Icons.local_taxi,
-                label: 'Drivers',
-                sublabel: '$_driverCount conductores',
-                color: AppColors.primary,
-                onTap: () => _showDriversMenu(context),
-              ),
-              _ContextMenuCard(
-                icon: Icons.settings,
-                label: 'Configuración',
-                sublabel: 'Ajustes del sistema',
-                color: AppColors.primary,
-                onTap: () => Navigator.push(
-                  context,
-                  slideFromRightRoute(const AdminConfigScreen()),
-                ),
-              ),
-              _ContextMenuCard(
-                icon: Icons.attach_money,
-                label: 'Precios',
-                sublabel: 'Tarifas y pricing',
-                color: AppColors.primary,
-                onTap: () => Navigator.push(
-                  context,
-                  slideFromRightRoute(const PricingConfigScreen()),
-                ),
-              ),
-              _ContextMenuCard(
-                icon: Icons.analytics,
-                label: 'Reportes',
-                sublabel: 'Reportes financieros',
-                color: AppColors.primary,
-                onTap: () => Navigator.push(
-                  context,
-                  slideFromRightRoute(const ReportsScreen()),
-                ),
-              ),
-              _ContextMenuCard(
-                icon: Icons.security,
-                label: 'Audit Logs',
-                sublabel: 'Registro de actividad',
-                color: AppColors.primary,
-                onTap: () => Navigator.push(
-                  context,
-                  slideFromRightRoute(const AuditLogsScreen()),
-                ),
-              ),
-              _ContextMenuCard(
-                icon: Icons.storage,
-                label: 'Base de Datos',
-                sublabel: 'Gestión de datos',
-                color: AppColors.primary,
-                onTap: () => Navigator.push(
-                  context,
-                  slideFromRightRoute(const DatabaseScreen()),
-                ),
-              ),
-              _ContextMenuCard(
-                icon: Icons.report_problem,
-                label: 'Rep. Drivers',
-                sublabel: _driverReports > 0
-                    ? '$_driverReports pendientes'
-                    : 'Sin reportes',
-                color: AppColors.primary,
-                badge: _driverReports > 0 ? '$_driverReports' : null,
-                onTap: () => Navigator.push(
-                  context,
-                  slideFromRightRoute(const DriverReportsScreen()),
-                ),
-              ),
-            ]),
+            delegate: SliverChildListDelegate(cards),
           ),
         ),
         const SliverToBoxAdapter(child: SizedBox(height: 20)),
@@ -445,11 +469,10 @@ class _HomeMenuScreenState extends State<HomeMenuScreen>
         _MenuAction(
           icon: Icons.delete_forever,
           label: 'Eliminados',
-          onTap: () {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Página de eliminados - Próximamente')),
-            );
-          },
+          onTap: () => Navigator.push(
+            context,
+            slideFromRightRoute(const DeletedUsersScreen()),
+          ),
         ),
         _MenuAction(
           icon: Icons.gavel,
@@ -506,11 +529,10 @@ class _HomeMenuScreenState extends State<HomeMenuScreen>
         _MenuAction(
           icon: Icons.delete_forever,
           label: 'Eliminados',
-          onTap: () {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Página de eliminados - Próximamente')),
-            );
-          },
+          onTap: () => Navigator.push(
+            context,
+            slideFromRightRoute(const DeletedUsersScreen()),
+          ),
         ),
         _MenuAction(
           icon: Icons.gavel,

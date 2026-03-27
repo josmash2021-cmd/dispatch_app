@@ -19,7 +19,7 @@ class AuthProvider extends ChangeNotifier {
   AuthStatus _status = AuthStatus.uninitialized;
   User? _user;
   String? _errorMessage;
-  String? _userRole; // 'superadmin' | 'admin' | null
+  String? _userRole; // 'superadmin' | 'admin' | 'dispatcher' | null
   bool _isAdmin = false;
 
   AuthStatus get status => _status;
@@ -166,6 +166,36 @@ class AuthProvider extends ChangeNotifier {
       _errorMessage = e.toString();
       notifyListeners();
       return false;
+    }
+  }
+
+  // ─── RBAC: feature-level access ────────────────────────────────────
+  static const _dispatcherFeatures = {
+    'trips', 'fleet_map', 'support', 'scheduled',
+  };
+  static const _adminFeatures = {
+    ..._dispatcherFeatures,
+    'riders', 'drivers', 'config', 'pricing', 'reports',
+    'audit_logs', 'database', 'driver_reports', 'deleted_users',
+    'vehicle_types',
+  };
+  static const _superadminFeatures = {
+    ..._adminFeatures,
+    'admin_management', 'maintenance_mode',
+  };
+
+  bool get isDispatcher => _userRole == 'dispatcher';
+
+  bool canAccess(String feature) {
+    switch (_userRole) {
+      case 'superadmin':
+        return _superadminFeatures.contains(feature);
+      case 'admin':
+        return _adminFeatures.contains(feature);
+      case 'dispatcher':
+        return _dispatcherFeatures.contains(feature);
+      default:
+        return false;
     }
   }
 

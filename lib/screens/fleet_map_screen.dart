@@ -37,6 +37,8 @@ class _FleetMapScreenState extends State<FleetMapScreen> {
 
   _DriverPin? _selectedDriver;
   bool _showOnlineOnly = true;
+  bool _showHeatmap = false;
+  Timer? _heatmapRefreshTimer;
 
   // Car PNG for map annotations
   Uint8List? _carPng;
@@ -95,6 +97,7 @@ class _FleetMapScreenState extends State<FleetMapScreen> {
   @override
   void dispose() {
     _goldDotTimer?.cancel();
+    _heatmapRefreshTimer?.cancel();
     _driverSub?.cancel();
     _tripSub?.cancel();
     _todayTripSub?.cancel();
@@ -592,9 +595,115 @@ class _FleetMapScreenState extends State<FleetMapScreen> {
       ),
       onMapCreated: _onMapCreated,
       onStyleLoadedListener: (_) async {
-        if (_mapCtrl != null) await MapTheme.applyNavyGold(_mapCtrl!);
+        if (_mapCtrl != null) {
+          await MapTheme.applyNavyGold(_mapCtrl!);
+          if (_showHeatmap) await _addHeatmapLayer();
+        }
       },
     );
+  }
+
+  // ─── HEATMAP ──────────────────────────────────────────────────────────
+  Future<void> _toggleHeatmap() async {
+    setState(() => _showHeatmap = !_showHeatmap);
+    if (_showHeatmap) {
+      await _addHeatmapLayer();
+      _heatmapRefreshTimer?.cancel();
+      _heatmapRefreshTimer = Timer.periodic(
+        const Duration(minutes: 5),
+        (_) => _addHeatmapLayer(),
+      );
+    } else {
+      _heatmapRefreshTimer?.cancel();
+      await _removeHeatmapLayer();
+    }
+  }
+
+  Future<void> _addHeatmapLayer() async {
+    final ctrl = _mapCtrl;
+    if (ctrl == null) return;
+    try {
+      final since = DateTime.now().subtract(const Duration(hours: 24));
+      final snap = await FirebaseFirestore.instance
+          .collection('trips')
+          .where('status', isEqualTo: 'completed')
+          .where('createdAt', isGreaterThanOrEqualTo: Timestamp.fromDate(since))
+          .get();
+
+      final features = <Map<String, dynamic>>[];
+      for (final doc in snap.docs) {
+        final d = doc.data();
+        final lat = (d['pickupLat'] as num?)?.toDouble();
+        final lng = (d['pickupLng'] as num?)?.toDouble();
+        if (lat != null && lng != null && lat != 0 && lng != 0) {
+          features.add({
+            'type': 'Feature',
+            'geometry': {
+              'type': 'Point',
+              'coordinates': [lng, lat],
+            },
+            'properties': {},
+          });
+        }
+      }
+
+      final geojson =
+          '{"type":"FeatureCollection","features":${_encodeFeatures(features)}}';
+
+      // Remove old source/layer if they exist
+      await _removeHeatmapLayer();
+
+      await ctrl.style.addSource(mapbox.GeoJsonSource(
+        id: 'heatmap-source',
+        data: geojson,
+      ));
+
+      await ctrl.style.addLayer(mapbox.HeatmapLayer(
+        id: 'heatmap-layer',
+        sourceId: 'heatmap-source',
+        maxZoom: 15.0,
+        heatmapIntensity: 0.6,
+        heatmapRadius: 25.0,
+        heatmapOpacity: 0.7,
+        heatmapColorExpression: [
+          'interpolate',
+          ['linear'],
+          ['heatmap-density'],
+          0, 'rgba(0,0,0,0)',
+          0.2, 'rgba(184,148,30,0.3)',
+          0.4, 'rgba(232,197,71,0.5)',
+          0.6, 'rgba(245,226,122,0.7)',
+          0.8, 'rgba(255,248,225,0.85)',
+          1.0, 'rgba(255,255,255,1)',
+        ],
+      ));
+    } catch (e) {
+      debugPrint('Heatmap error: $e');
+    }
+  }
+
+  Future<void> _removeHeatmapLayer() async {
+    final ctrl = _mapCtrl;
+    if (ctrl == null) return;
+    try {
+      await ctrl.style.removeStyleLayer('heatmap-layer');
+    } catch (_) {}
+    try {
+      await ctrl.style.removeStyleSource('heatmap-source');
+    } catch (_) {}
+  }
+
+  String _encodeFeatures(List<Map<String, dynamic>> features) {
+    final buf = StringBuffer('[');
+    for (int i = 0; i < features.length; i++) {
+      if (i > 0) buf.write(',');
+      final f = features[i];
+      final coords = f['geometry']['coordinates'] as List;
+      buf.write('{"type":"Feature","geometry":{"type":"Point","coordinates":'
+          '[${coords[0]},${coords[1]}]},"properties":{}}');
+    }
+    buf.write(']');
+    return buf.toString();
   }
 
   @override
@@ -705,6 +814,13 @@ class _FleetMapScreenState extends State<FleetMapScreen> {
                   label: _showOnlineOnly ? 'Online' : 'All',
                   onTap: () =>
                       setState(() => _showOnlineOnly = !_showOnlineOnly),
+                ),
+                const SizedBox(height: 8),
+                _mapButton(
+                  icon: Icons.whatshot,
+                  label: 'Heatmap',
+                  gold: _showHeatmap,
+                  onTap: _toggleHeatmap,
                 ),
                 const SizedBox(height: 8),
                 _mapButton(

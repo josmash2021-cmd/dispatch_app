@@ -1,9 +1,12 @@
 import 'dart:async';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import '../config/app_theme.dart';
 import '../config/page_transitions.dart';
 import '../services/audit_service.dart';
 import '../services/dispatch_api_service.dart';
+import 'dispatch_driver_chat_screen.dart';
 import 'support_chat_detail_screen.dart';
 
 class DriverDetailScreen extends StatefulWidget {
@@ -98,6 +101,8 @@ class _DriverDetailScreenState extends State<DriverDetailScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _buildHeader(photoUrl, u['first_name'], u['last_name'], isVerified),
+          const SizedBox(height: 12),
+          _buildMessageDriverButton(u),
           const SizedBox(height: 20),
           
           _buildSectionTitle('Información de Cuenta'),
@@ -133,6 +138,11 @@ class _DriverDetailScreenState extends State<DriverDetailScreen> {
           
           _buildSectionTitle('Chats con Soporte'),
           _buildSupportChats(),
+          
+          const SizedBox(height: 16),
+          
+          _buildSectionTitle('Ganancias'),
+          _buildEarningsSection(u),
         ],
       ),
     );
@@ -567,6 +577,41 @@ class _DriverDetailScreenState extends State<DriverDetailScreen> {
     );
   }
 
+  Widget _buildMessageDriverButton(Map<String, dynamic> u) {
+    final firebaseUid = u['firebase_uid'] as String?;
+    final name = '${u['first_name'] ?? ''} ${u['last_name'] ?? ''}'.trim();
+    if (firebaseUid == null || firebaseUid.isEmpty) {
+      return const SizedBox.shrink();
+    }
+    return SizedBox(
+      width: double.infinity,
+      height: 44,
+      child: OutlinedButton.icon(
+        onPressed: () => Navigator.push(
+          context,
+          slideFromRightRoute(
+            DispatchDriverChatScreen(
+              driverId: firebaseUid,
+              driverName: name.isNotEmpty ? name : 'Driver',
+            ),
+          ),
+        ),
+        icon: const Icon(Icons.chat_outlined, size: 18),
+        label: const Text(
+          'Message Driver',
+          style: TextStyle(fontWeight: FontWeight.w700),
+        ),
+        style: OutlinedButton.styleFrom(
+          foregroundColor: AppColors.primary,
+          side: BorderSide(color: AppColors.primary.withValues(alpha: 0.4)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildSupportChats() {
     if (_chats.isEmpty) {
       return Container(
@@ -613,4 +658,267 @@ class _DriverDetailScreenState extends State<DriverDetailScreen> {
       }).toList(),
     );
   }
+
+  // ─── EARNINGS SECTION ───────────────────────────────────────────────
+  Widget _buildEarningsSection(Map<String, dynamic> u) {
+    final firebaseUid = u['firebase_uid'] as String? ?? '';
+    if (firebaseUid.isEmpty) {
+      return const Text('No Firebase UID', style: TextStyle(color: AppColors.textHint));
+    }
+    return _DriverEarningsWidget(driverId: firebaseUid);
+  }
+}
+
+class _DriverEarningsWidget extends StatefulWidget {
+  final String driverId;
+  const _DriverEarningsWidget({required this.driverId});
+
+  @override
+  State<_DriverEarningsWidget> createState() => _DriverEarningsWidgetState();
+}
+
+class _DriverEarningsWidgetState extends State<_DriverEarningsWidget> {
+  int _days = 7;
+  List<_DayEarning> _earnings = [];
+  bool _loading = true;
+  double _total = 0;
+  int _tripCount = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    setState(() => _loading = true);
+    try {
+      final since = DateTime.now().subtract(Duration(days: _days));
+      final snap = await FirebaseFirestore.instance
+          .collection('trips')
+          .where('driverId', isEqualTo: widget.driverId)
+          .where('status', isEqualTo: 'completed')
+          .where('completedAt', isGreaterThanOrEqualTo: Timestamp.fromDate(since))
+          .get();
+
+      final Map<String, double> byDay = {};
+      double total = 0;
+      for (final doc in snap.docs) {
+        final d = doc.data();
+        final earn = (d['driverEarnings'] as num?)?.toDouble() ??
+            (d['fare'] as num?)?.toDouble() ?? 0;
+        total += earn;
+        final ts = d['completedAt'] as Timestamp?;
+        if (ts != null) {
+          final dt = ts.toDate();
+          final key = '${dt.month}/${dt.day}';
+          byDay[key] = (byDay[key] ?? 0) + earn;
+        }
+      }
+
+      // Fill missing days
+      final result = <_DayEarning>[];
+      for (int i = _days - 1; i >= 0; i--) {
+        final dt = DateTime.now().subtract(Duration(days: i));
+        final key = '${dt.month}/${dt.day}';
+        result.add(_DayEarning(label: key, amount: byDay[key] ?? 0));
+      }
+
+      if (mounted) {
+        setState(() {
+          _earnings = result;
+          _total = total;
+          _tripCount = snap.docs.length;
+          _loading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.cardBorder),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Period selector
+          Row(
+            children: [
+              _periodChip(7),
+              const SizedBox(width: 8),
+              _periodChip(14),
+              const SizedBox(width: 8),
+              _periodChip(30),
+              const Spacer(),
+              if (!_loading)
+                Text(
+                  '$_tripCount viajes',
+                  style: const TextStyle(color: AppColors.textSecondary, fontSize: 12),
+                ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          // KPI row
+          if (!_loading) ...[
+            Row(
+              children: [
+                _kpi('Total', '\$${_total.toStringAsFixed(2)}'),
+                const SizedBox(width: 16),
+                _kpi('Promedio/día', '\$${(_total / _days).toStringAsFixed(2)}'),
+                const SizedBox(width: 16),
+                _kpi('Promedio/viaje',
+                    _tripCount > 0 ? '\$${(_total / _tripCount).toStringAsFixed(2)}' : '\$0'),
+              ],
+            ),
+            const SizedBox(height: 16),
+            // Bar chart
+            SizedBox(
+              height: 160,
+              child: _buildChart(),
+            ),
+          ],
+          if (_loading)
+            const SizedBox(
+              height: 160,
+              child: Center(child: CircularProgressIndicator(color: AppColors.primary)),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _periodChip(int days) {
+    final selected = _days == days;
+    return GestureDetector(
+      onTap: () {
+        _days = days;
+        _load();
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+          color: selected ? AppColors.primary : AppColors.surfaceHigh,
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Text(
+          '${days}d',
+          style: TextStyle(
+            color: selected ? Colors.black : AppColors.textSecondary,
+            fontSize: 12,
+            fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _kpi(String label, String value) {
+    return Expanded(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(label, style: const TextStyle(color: AppColors.textHint, fontSize: 10)),
+          Text(
+            value,
+            style: const TextStyle(
+              color: AppColors.primary,
+              fontWeight: FontWeight.w800,
+              fontSize: 16,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildChart() {
+    if (_earnings.isEmpty) {
+      return const Center(child: Text('Sin datos', style: TextStyle(color: AppColors.textHint)));
+    }
+    final maxY = _earnings.fold<double>(0, (m, e) => e.amount > m ? e.amount : m);
+    return BarChart(
+      BarChartData(
+        maxY: maxY > 0 ? maxY * 1.2 : 10,
+        barTouchData: BarTouchData(
+          touchTooltipData: BarTouchTooltipData(
+            getTooltipItem: (group, gi, rod, ri) => BarTooltipItem(
+              '\$${rod.toY.toStringAsFixed(2)}',
+              const TextStyle(color: Colors.white, fontSize: 11),
+            ),
+          ),
+        ),
+        titlesData: FlTitlesData(
+          topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+          rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+          leftTitles: AxisTitles(
+            sideTitles: SideTitles(
+              showTitles: true,
+              reservedSize: 40,
+              getTitlesWidget: (v, _) => Text(
+                '\$${v.toInt()}',
+                style: const TextStyle(color: AppColors.textHint, fontSize: 9),
+              ),
+            ),
+          ),
+          bottomTitles: AxisTitles(
+            sideTitles: SideTitles(
+              showTitles: true,
+              reservedSize: 28,
+              getTitlesWidget: (v, _) {
+                final i = v.toInt();
+                if (i < 0 || i >= _earnings.length) return const SizedBox.shrink();
+                // Show every Nth label to avoid overlap
+                final step = _earnings.length > 14 ? 3 : (_earnings.length > 7 ? 2 : 1);
+                if (i % step != 0) return const SizedBox.shrink();
+                return Padding(
+                  padding: const EdgeInsets.only(top: 6),
+                  child: Text(
+                    _earnings[i].label,
+                    style: const TextStyle(color: AppColors.textHint, fontSize: 9),
+                  ),
+                );
+              },
+            ),
+          ),
+        ),
+        gridData: FlGridData(
+          show: true,
+          drawVerticalLine: false,
+          getDrawingHorizontalLine: (_) => FlLine(
+            color: AppColors.cardBorder,
+            strokeWidth: 0.5,
+          ),
+        ),
+        borderData: FlBorderData(show: false),
+        barGroups: _earnings.asMap().entries.map((e) {
+          return BarChartGroupData(
+            x: e.key,
+            barRods: [
+              BarChartRodData(
+                toY: e.value.amount,
+                color: AppColors.primary,
+                width: _earnings.length > 14 ? 6 : 12,
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(4)),
+              ),
+            ],
+          );
+        }).toList(),
+      ),
+    );
+  }
+}
+
+class _DayEarning {
+  final String label;
+  final double amount;
+  const _DayEarning({required this.label, required this.amount});
 }

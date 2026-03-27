@@ -52,6 +52,13 @@ class _AdminConfigScreenState extends State<AdminConfigScreen> {
   bool _driverRegistrationOpen = true;
   bool _riderRegistrationOpen = true;
 
+  // Version forcing
+  String _minVersionIos = '';
+  String _minVersionAndroid = '';
+  String _maintenanceMessage = '';
+  String _announcementText = '';
+  int _announcementDurationHrs = 0;
+
   // Service zones — active US states
   Set<String> _activeStates = {};
   final _stateSearchCtrl = TextEditingController();
@@ -118,6 +125,11 @@ class _AdminConfigScreenState extends State<AdminConfigScreen> {
           _acceptingNewTrips = d['accepting_new_trips'] as bool? ?? _acceptingNewTrips;
           _driverRegistrationOpen = d['driver_registration_open'] as bool? ?? _driverRegistrationOpen;
           _riderRegistrationOpen = d['rider_registration_open'] as bool? ?? _riderRegistrationOpen;
+          _minVersionIos = d['min_version_ios'] as String? ?? '';
+          _minVersionAndroid = d['min_version_android'] as String? ?? '';
+          _maintenanceMessage = d['maintenance_message'] as String? ?? '';
+          _announcementText = d['announcement_text'] as String? ?? '';
+          _announcementDurationHrs = (d['announcement_duration_hrs'] as num?)?.toInt() ?? 0;
         });
       }
 
@@ -169,6 +181,11 @@ class _AdminConfigScreenState extends State<AdminConfigScreen> {
         'accepting_new_trips': _acceptingNewTrips,
         'driver_registration_open': _driverRegistrationOpen,
         'rider_registration_open': _riderRegistrationOpen,
+        'min_version_ios': _minVersionIos,
+        'min_version_android': _minVersionAndroid,
+        'maintenance_message': _maintenanceMessage,
+        'announcement_text': _announcementText,
+        'announcement_duration_hrs': _announcementDurationHrs,
         'updated_at': FieldValue.serverTimestamp(),
       });
 
@@ -418,6 +435,14 @@ class _AdminConfigScreenState extends State<AdminConfigScreen> {
                   const SizedBox(height: 20),
                   _sectionHeader('App Mode & Status', Icons.settings_applications),
                   _buildAppModeSection(),
+
+                  const SizedBox(height: 20),
+                  _sectionHeader('Version Forcing & Maintenance', Icons.system_update),
+                  _buildVersionMaintenanceSection(),
+
+                  const SizedBox(height: 20),
+                  _sectionHeader('Announcements', Icons.campaign),
+                  _buildAnnouncementsSection(),
 
                   const SizedBox(height: 20),
                   _sectionHeader(
@@ -763,6 +788,99 @@ class _AdminConfigScreenState extends State<AdminConfigScreen> {
           inactiveTrackColor: AppColors.surfaceHigh,
         ),
       ],
+    );
+  }
+
+  Widget _buildVersionMaintenanceSection() {
+    return _configCard([
+      _textFieldRow('Min iOS Version', _minVersionIos, (v) => setState(() => _minVersionIos = v),
+          hint: '1.0.0'),
+      const SizedBox(height: 8),
+      _textFieldRow('Min Android Version', _minVersionAndroid,
+          (v) => setState(() => _minVersionAndroid = v),
+          hint: '1.0.0'),
+      const SizedBox(height: 8),
+      _textFieldRow('Maintenance Message', _maintenanceMessage,
+          (v) => setState(() => _maintenanceMessage = v),
+          hint: 'We are upgrading our systems...'),
+    ]);
+  }
+
+  Widget _buildAnnouncementsSection() {
+    return _configCard([
+      _textFieldRow('Banner Text', _announcementText,
+          (v) => setState(() => _announcementText = v),
+          hint: 'New feature available!'),
+      const SizedBox(height: 8),
+      _intSliderRow(
+        'Duration (hours)',
+        _announcementDurationHrs,
+        0,
+        168,
+        (v) => setState(() => _announcementDurationHrs = v),
+        suffix: 'h',
+      ),
+      if (_announcementText.isNotEmpty && _announcementDurationHrs > 0) ...[
+        const SizedBox(height: 8),
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(10),
+          decoration: BoxDecoration(
+            color: AppColors.primary.withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: AppColors.primary.withValues(alpha: 0.3)),
+          ),
+          child: Row(
+            children: [
+              const Icon(Icons.campaign, color: AppColors.primary, size: 16),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  _announcementText,
+                  style: const TextStyle(color: AppColors.primary, fontSize: 12),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    ]);
+  }
+
+  Widget _textFieldRow(String label, String value, ValueChanged<String> onChanged,
+      {String hint = ''}) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 2),
+      child: Row(
+        children: [
+          SizedBox(
+            width: 120,
+            child: Text(
+              label,
+              style: const TextStyle(color: AppColors.textSecondary, fontSize: 13),
+            ),
+          ),
+          Expanded(
+            child: TextField(
+              controller: TextEditingController(text: value),
+              onChanged: onChanged,
+              style: const TextStyle(color: AppColors.textPrimary, fontSize: 13),
+              decoration: InputDecoration(
+                hintText: hint,
+                hintStyle: TextStyle(color: AppColors.textSecondary.withValues(alpha: 0.4), fontSize: 12),
+                filled: true,
+                fillColor: AppColors.surfaceHigh,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  borderSide: BorderSide.none,
+                ),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                isDense: true,
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
