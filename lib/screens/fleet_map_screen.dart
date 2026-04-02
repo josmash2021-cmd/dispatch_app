@@ -17,9 +17,13 @@ import '../models/trip_model.dart';
 // Cruise gold constant
 const _kGold = Color(0xFFE8C547);
 
-/// Live fleet map â€” Mapbox navigation-night-v1 (dark blue + golden freeways).
+/// Live fleet map — Mapbox navigation-night-v1 (dark blue + golden freeways).
 class FleetMapScreen extends StatefulWidget {
-  const FleetMapScreen({super.key});
+  /// Called when the back arrow in the map header is tapped.
+  /// Pass `() => _onTabChanged(0)` from DashboardScreen to return to home.
+  final VoidCallback? onBack;
+
+  const FleetMapScreen({super.key, this.onBack});
 
   @override
   State<FleetMapScreen> createState() => _FleetMapScreenState();
@@ -744,6 +748,25 @@ class _FleetMapScreenState extends State<FleetMapScreen> {
                   ),
                   child: Row(
                     children: [
+                      if (widget.onBack != null) ...[
+                        GestureDetector(
+                          onTap: widget.onBack,
+                          child: Container(
+                            width: 34,
+                            height: 34,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: Colors.white.withValues(alpha: 0.10),
+                            ),
+                            child: const Icon(
+                              Icons.arrow_back_ios_new_rounded,
+                              color: Colors.white,
+                              size: 16,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                      ],
                       Container(
                         width: 34,
                         height: 34,

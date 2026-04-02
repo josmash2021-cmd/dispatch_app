@@ -39,6 +39,7 @@ class _DashboardScreenState extends State<DashboardScreen>
     with TickerProviderStateMixin {
   int _currentIndex = 0;
   int _previousIndex = 0;
+  int _homeTab = 0; // 0 = Dispatch, 1 = Admin (mirrors HomeMenuScreen's internal tab)
   final Set<int> _visitedPages = {0};
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
@@ -71,9 +72,12 @@ class _DashboardScreenState extends State<DashboardScreen>
   ];
 
   List<Widget> get _pages => [
-    HomeMenuScreen(onNavigate: _onTabChanged),
+    HomeMenuScreen(
+      onNavigate: _onTabChanged,
+      onTabChanged: (tab) => setState(() => _homeTab = tab),
+    ),
     const TripListScreen(),
-    const FleetMapScreen(),
+    FleetMapScreen(onBack: () => _onTabChanged(0)),
     const RidersScreen(showAppBar: false),
     const DriversScreen(showAppBar: false),
     const VerificationReviewScreen(),
@@ -415,15 +419,6 @@ class _DashboardScreenState extends State<DashboardScreen>
           ),
         ),
         actions: [
-          if (_currentIndex == 0)
-            IconButton(
-              icon: const Icon(Icons.add_rounded, color: AppColors.primary),
-              tooltip: 'Nuevo Viaje',
-              onPressed: () => Navigator.push(
-                context,
-                scaleExpandRoute(const CreateTripScreen()),
-              ),
-            ),
           if (_currentIndex == 3 && verif.pendingCount > 0)
             Padding(
               padding: const EdgeInsets.only(right: 16),
@@ -434,15 +429,15 @@ class _DashboardScreenState extends State<DashboardScreen>
                     vertical: 3,
                   ),
                   decoration: BoxDecoration(
-                    color: AppColors.error,
+                    color: AppColors.primary,
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Text(
-                    '${verif.pendingCount} pending',
+                    '${verif.pendingCount} pendientes',
                     style: const TextStyle(
-                      color: Colors.white,
+                      color: Color(0xFF08090C),
                       fontSize: 11,
-                      fontWeight: FontWeight.w700,
+                      fontWeight: FontWeight.w800,
                     ),
                   ),
                 ),
@@ -474,7 +469,7 @@ class _DashboardScreenState extends State<DashboardScreen>
           }),
         ),
       ),
-      floatingActionButton: _currentIndex == 0
+      floatingActionButton: (_currentIndex == 0 && _homeTab == 0)
           ? ScaleTransition(
               scale: _fabScale,
               child: FloatingActionButton.extended(
@@ -484,7 +479,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                 ),
                 icon: const Icon(Icons.add_rounded),
                 label: const Text(
-                  'New Trip',
+                  'Nuevo Viaje',
                   style: TextStyle(fontWeight: FontWeight.w700),
                 ),
               ),

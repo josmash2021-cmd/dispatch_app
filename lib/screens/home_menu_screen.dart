@@ -27,7 +27,9 @@ import 'vehicle_types_screen.dart';
 
 class HomeMenuScreen extends StatefulWidget {
   final Function(int) onNavigate;
-  const HomeMenuScreen({super.key, required this.onNavigate});
+  /// Called with 0 (Dispatch) or 1 (Admin) whenever the internal tab changes.
+  final Function(int)? onTabChanged;
+  const HomeMenuScreen({super.key, required this.onNavigate, this.onTabChanged});
 
   @override
   State<HomeMenuScreen> createState() => _HomeMenuScreenState();
@@ -77,6 +79,7 @@ class _HomeMenuScreenState extends State<HomeMenuScreen>
     _tabController.addListener(() {
       if (_tabController.indexIsChanging) return;
       setState(() => _currentTab = _tabController.index);
+      widget.onTabChanged?.call(_tabController.index);
     });
     
     _startRealTimeListeners();
@@ -200,36 +203,6 @@ class _HomeMenuScreenState extends State<HomeMenuScreen>
               ),
             ],
           ),
-        ),
-        floatingActionButton: AnimatedSwitcher(
-          duration: const Duration(milliseconds: 200),
-          transitionBuilder: (child, animation) {
-            return ScaleTransition(
-              scale: animation,
-              child: FadeTransition(
-                opacity: animation,
-                child: child,
-              ),
-            );
-          },
-          child: _currentTab == 0
-              ? SizedBox(
-                  key: const ValueKey('dispatch_fab'),
-                  height: 48,
-                  child: FloatingActionButton.extended(
-                    onPressed: () => Navigator.push(
-                      context,
-                      slideFromRightRoute(const CreateTripScreen()),
-                    ),
-                    backgroundColor: AppColors.primary,
-                    icon: const Icon(Icons.add, size: 20),
-                    label: const Text(
-                      'Nuevo Viaje',
-                      style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
-                    ),
-                  ),
-                )
-              : const SizedBox.shrink(key: ValueKey('admin_fab')),
         ),
       ),
     );
@@ -742,15 +715,15 @@ class _HomeMenuScreenState extends State<HomeMenuScreen>
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                 decoration: BoxDecoration(
-                  color: AppColors.error,
+                  color: AppColors.primary,
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Text(
                   item.badge!,
                   style: const TextStyle(
-                    color: Colors.white,
+                    color: Color(0xFF08090C),
                     fontSize: 11,
-                    fontWeight: FontWeight.w700,
+                    fontWeight: FontWeight.w800,
                   ),
                 ),
               ),
@@ -1130,15 +1103,15 @@ class _ContextMenuCard extends StatelessWidget {
                         vertical: 4,
                       ),
                       decoration: BoxDecoration(
-                        color: AppColors.error,
+                        color: AppColors.primary,
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Text(
                         badge!,
                         style: const TextStyle(
-                          color: Colors.white,
+                          color: Color(0xFF08090C),
                           fontSize: 11,
-                          fontWeight: FontWeight.w700,
+                          fontWeight: FontWeight.w800,
                         ),
                       ),
                     ),
