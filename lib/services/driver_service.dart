@@ -22,8 +22,10 @@ class DriverService {
     List<DriverModel>? lastUserDrivers;
 
     void merge() {
-      final drivers = lastDrivers ?? [];
-      final userDrivers = lastUserDrivers ?? [];
+      // Wait for both streams to have their first data before emitting
+      if (lastDrivers == null || lastUserDrivers == null) return;
+      final drivers = lastDrivers!;
+      final userDrivers = lastUserDrivers!;
       final driverIds = drivers.map((d) => d.driverId).toSet();
       final driverPhones = drivers
           .map((d) => d.phone)
@@ -58,11 +60,11 @@ class DriverService {
         .listen(
           (userDrivers) {
             lastUserDrivers = userDrivers;
-            if (lastDrivers != null) merge();
+            merge();
           },
           onError: (_) {
             lastUserDrivers = [];
-            if (lastDrivers != null) merge();
+            merge();
           },
         );
 

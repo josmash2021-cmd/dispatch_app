@@ -38,8 +38,10 @@ class DashboardProvider extends ChangeNotifier {
         _tripService.getWeeklyChartData(),
       ]);
 
-      _stats = results[0] as Map<String, dynamic>;
-      _weeklyData = results[1] as List<Map<String, dynamic>>;
+      if (results[0] is! Map) throw Exception('Invalid stats format from getDashboardStats');
+      if (results[1] is! List) throw Exception('Invalid weekly data format from getWeeklyChartData');
+      _stats = (results[0] as Map).cast<String, dynamic>();
+      _weeklyData = (results[1] as List).cast<Map<String, dynamic>>();
     } catch (e) {
       _errorMessage = 'Error al cargar estadísticas: $e';
     }

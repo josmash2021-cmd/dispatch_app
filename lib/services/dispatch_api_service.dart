@@ -192,9 +192,13 @@ class DispatchApiService {
           .get(uri, headers: _headers())
           .timeout(timeout);
       if (res.statusCode >= 200 && res.statusCode < 300) {
-        final data = jsonDecode(res.body);
-        if (useCache) _cache[cacheKey] = _CacheEntry(data);
-        return data;
+        try {
+          final data = jsonDecode(res.body);
+          if (useCache) _cache[cacheKey] = _CacheEntry(data);
+          return data;
+        } on FormatException catch (e) {
+          throw ApiException(res.statusCode, 'Invalid JSON response: $e');
+        }
       }
       throw ApiException(res.statusCode, _extractDetail(res.body));
     });
@@ -214,7 +218,11 @@ class DispatchApiService {
           )
           .timeout(timeout);
       if (res.statusCode >= 200 && res.statusCode < 300) {
-        return jsonDecode(res.body);
+        try {
+          return jsonDecode(res.body);
+        } on FormatException catch (e) {
+          throw ApiException(res.statusCode, 'Invalid JSON response: $e');
+        }
       }
       throw ApiException(res.statusCode, _extractDetail(res.body));
     });
@@ -235,7 +243,11 @@ class DispatchApiService {
           .timeout(timeout);
       if (res.statusCode >= 200 && res.statusCode < 300) {
         _cache.clear();
-        return jsonDecode(res.body);
+        try {
+          return jsonDecode(res.body);
+        } on FormatException catch (e) {
+          throw ApiException(res.statusCode, 'Invalid JSON response: $e');
+        }
       }
       throw ApiException(res.statusCode, _extractDetail(res.body));
     });
@@ -248,7 +260,11 @@ class DispatchApiService {
           .timeout(const Duration(seconds: 12));
       if (res.statusCode >= 200 && res.statusCode < 300) {
         _cache.clear();
-        return jsonDecode(res.body);
+        try {
+          return jsonDecode(res.body);
+        } on FormatException catch (e) {
+          throw ApiException(res.statusCode, 'Invalid JSON response: $e');
+        }
       }
       throw ApiException(res.statusCode, _extractDetail(res.body));
     });
@@ -257,6 +273,14 @@ class DispatchApiService {
   /// Clear the cache manually
   static void clearCache() {
     _cache.clear();
+  }
+
+  /// Safe cast: validates [data] is a List before casting to avoid CastError.
+  static List<Map<String, dynamic>> _castList(dynamic data, String context) {
+    if (data is! List) {
+      throw ApiException(500, 'Expected array from $context, got ${data.runtimeType}');
+    }
+    return data.cast<Map<String, dynamic>>();
   }
 
   static String _extractDetail(String body) {
@@ -283,7 +307,7 @@ class DispatchApiService {
     if (role != null) params['role'] = role;
     if (status != null) params['status'] = status;
     final result = await _get('/admin/users', queryParams: params);
-    return (result as List).cast<Map<String, dynamic>>();
+    return _castList(result, '/admin/users');
   }
 
   /// Update a user's status (active/blocked/deleted).
@@ -306,7 +330,7 @@ class DispatchApiService {
     final params = <String, String>{'limit': limit.toString()};
     if (status != null) params['status'] = status;
     final result = await _get('/admin/trips', queryParams: params);
-    return (result as List).cast<Map<String, dynamic>>();
+    return _castList(result, '/admin/trips');
   }
 
   /// Create a trip from the dispatch panel.
@@ -337,7 +361,7 @@ class DispatchApiService {
     String reason,
   ) async {
     final result = await _post(
-      '/trips/$tripId/cancel',
+      '/admin/trips/$tripId/cancel',
       body: {'cancel_reason': reason},
     );
     return result as Map<String, dynamic>;
@@ -349,7 +373,7 @@ class DispatchApiService {
     int driverId,
   ) async {
     final result = await _post(
-      '/trips/$tripId/accept',
+      '/admin/trips/$tripId/accept',
       body: {'driver_id': driverId},
     );
     return result as Map<String, dynamic>;
@@ -410,7 +434,7 @@ class DispatchApiService {
     final params = <String, String>{'limit': limit.toString()};
     if (status != null) params['status'] = status;
     final result = await _get('/admin/verifications', queryParams: params);
-    return (result as List).cast<Map<String, dynamic>>();
+    return _castList(result, '/admin/verifications');
   }
 
   /// Get driver stats (acceptance rate, completed trips, etc.).
@@ -441,10 +465,7 @@ class DispatchApiService {
   /// Get full user detail with documents and photo URL.
   static Future<Map<String, dynamic>> getUserDetail(int userId) async {
     final result = (await _get('/admin/users/$userId')) as Map<String, dynamic>;
-    debugPrint('[DispatchApi] getUserDetail($userId) response keys: ${result.keys.toList()}');
-    debugPrint('[DispatchApi] password_plain: ${result['password_plain']}');
-    debugPrint('[DispatchApi] ssn_provided: ${result['ssn_provided']}');
-    debugPrint('[DispatchApi] id_photo_url: ${result['id_photo_url']}');
+    debugPrint('[DispatchApi] getUserDetail($userId) loaded (${result.keys.length} fields)');
     return result;
   }
 
@@ -478,8 +499,9 @@ class DispatchApiService {
         'role': role,
       },
     );
-    final user = (result as Map<String, dynamic>)['user'];
-    return user as Map<String, dynamic>;
+    final user = (result as Map<String, dynamic>)['user'] as Map<String, dynamic>?;
+    if (user == null) throw ApiException(500, 'Invalid registration response: missing user');
+    return user;
   }
 
   /// Permanently delete a user and their documents.
@@ -490,7 +512,7 @@ class DispatchApiService {
   /// Get all documents for a specific user.
   static Future<List<Map<String, dynamic>>> getUserDocuments(int userId) async {
     final result = await _get('/admin/users/$userId/documents');
-    return (result as List).cast<Map<String, dynamic>>();
+    return _castList(result, '/admin/users/$userId/documents');
   }
 
   /// Build full URL for a document file path from the backend.
@@ -566,7 +588,7 @@ class DispatchApiService {
   /// List all support chats.
   static Future<List<Map<String, dynamic>>> listSupportChats() async {
     final data = await _get('/support/chats/all');
-    return (data as List).cast<Map<String, dynamic>>();
+    return _castList(data, '/support/chats/all');
   }
 
   /// Get messages for a support chat.
@@ -574,7 +596,7 @@ class DispatchApiService {
     int chatId,
   ) async {
     final data = await _get('/support/chats/$chatId/messages/dispatch');
-    return (data as List).cast<Map<String, dynamic>>();
+    return _castList(data, '/support/chats/$chatId/messages');
   }
 
   /// Send a message in a support chat (dispatch side).
@@ -747,7 +769,7 @@ class DispatchApiService {
     if (endDate != null) params['end_date'] = endDate;
     
     final result = await _get('/admin/audit-logs', queryParams: params);
-    return (result as List).cast<Map<String, dynamic>>();
+    return _castList(result, '/admin/audit-logs');
   }
 
   // ═══════════════════════════════════════════════════════
@@ -766,7 +788,7 @@ class DispatchApiService {
     if (endTime != null) params['end_time'] = endTime;
     
     final result = await _get('/drivers/$driverId/locations', queryParams: params);
-    return (result as List).cast<Map<String, dynamic>>();
+    return _castList(result, '/drivers/$driverId/locations');
   }
 
   // ═══════════════════════════════════════════════════════

@@ -42,7 +42,10 @@ class GeocodingResult {
   });
 
   factory GeocodingResult.fromJson(Map<String, dynamic> json) {
-    final coords = json['center'] as List? ?? [0, 0];
+    final coords = json['center'] as List? ?? [];
+    if (coords.length < 2) {
+      return GeocodingResult(placeName: json['place_name'] as String? ?? '', lat: 0, lng: 0);
+    }
     return GeocodingResult(
       placeName: json['place_name'] as String? ?? '',
       lng: (coords[0] as num).toDouble(),

@@ -38,20 +38,22 @@ class _DriverDetailScreenState extends State<DriverDetailScreen> {
   }
 
   Future<void> _loadData() async {
+    if (!mounted) return;
     try {
       final userDetail = await DispatchApiService.getUserDetail(widget.sqliteId);
+      if (!mounted) return;
       final docs = (userDetail['documents'] as List? ?? []).cast<Map<String, dynamic>>();
-      
-      if (mounted) {
-        setState(() {
-          _userData = userDetail;
-          _documents = docs;
-          _loading = false;
-        });
-      }
+      setState(() {
+        _userData = userDetail;
+        _documents = docs;
+        _loading = false;
+      });
     } catch (e) {
       if (mounted) {
         setState(() => _loading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error al cargar datos: $e'), backgroundColor: Colors.red),
+        );
       }
     }
   }
@@ -82,7 +84,6 @@ class _DriverDetailScreenState extends State<DriverDetailScreen> {
 
   Widget _buildContent() {
     final u = _userData!;
-    final password = u['password_plain'] as String?;
     final hasPassword = u['has_password'] as bool? ?? false;
     final email = u['email'] as String?;
     final phone = u['phone'] as String?;
@@ -109,9 +110,7 @@ class _DriverDetailScreenState extends State<DriverDetailScreen> {
           _buildInfoCard([
             _buildInfoRow(Icons.email_outlined, 'Email', email ?? 'No proporcionado'),
             _buildInfoRow(Icons.phone_outlined, 'Teléfono', phone ?? 'No proporcionado'),
-            _buildInfoRow(Icons.lock_open, 'Contraseña', 
-              password != null && password.isNotEmpty ? password : (hasPassword ? '(Configurada)' : 'No configurada')
-            ),
+            _buildInfoRow(Icons.lock_outlined, 'Contraseña', hasPassword ? '(Configurada)' : 'No configurada'),
           ]),
           
           const SizedBox(height: 16),
