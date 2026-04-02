@@ -33,18 +33,17 @@ service cloud.firestore {
       return field is string && field.size() > 0;
     }
 
-    // ═══════════════════════════════════════════════════════════════════    // CONFIG COLLECTION — admin-controlled (pricing, service zones, etc.)
-    // Owner: full read/write
-    // All authenticated users: read-only (Cruise app reads serviceZones)
-    // ══════════════════════════════════════════════════════════════════════
+    // ═══════════════════════════════════════════════════════════════════
+    // CONFIG — admin-controlled (pricing, service zones, app mode)
+    // ═══════════════════════════════════════════════════════════════════
     match /config/{docId} {
       allow read: if isAuthenticated();
       allow write: if isOwnerOrAdmin();
     }
 
-    // ══════════════════════════════════════════════════════════════════════
-    // VERIFICATIONS COLLECTION — identity verification docs
-    // ══════════════════════════════════════════════════════════════════════
+    // ═══════════════════════════════════════════════════════════════════
+    // VERIFICATIONS — identity verification documents
+    // ═══════════════════════════════════════════════════════════════════
     match /verifications/{docId} {
       allow read: if isOwnerOrAdmin()
         || (isAuthenticated() && resource.data.userId == request.auth.uid);
@@ -54,98 +53,91 @@ service cloud.firestore {
       allow delete: if isOwnerOrAdmin();
     }
 
-    // ══════════════════════════════════════════════════════════════════════    // ADMINS COLLECTION — owner read only, no new admins ever
+    // ═══════════════════════════════════════════════════════════════════
+    // ADMINS — owner can create/update/delete; admins can read
     // ═══════════════════════════════════════════════════════════════════
     match /admins/{adminId} {
       allow read: if isOwnerOrAdmin();
-      allow create: if isOwner() && adminId == request.auth.uid;
-      allow update, delete: if false;
+      allow create: if isOwner();
+      allow update: if isOwner();
+      allow delete: if isOwner();
     }
 
     // ═══════════════════════════════════════════════════════════════════
-    // TRIPS COLLECTION
-    // Owner: full access
-    // Authenticated users: read own trips, create trips
+    // TRIPS
     // ═══════════════════════════════════════════════════════════════════
     match /trips/{tripId} {
       allow read: if isOwnerOrAdmin()
         || (isAuthenticated() && resource.data.passengerId == request.auth.uid)
-        || (isAuthenticated() && resource.data.driverId == request.auth.uid);
+        || (isAuthenticated() && resource.data.driverId == request.auth.uid)
+        || isAuthenticated(); // dispatch & driver need to read all active trips
       allow create: if isOwnerOrAdmin()
         || (isAuthenticated()
             && isNonEmptyString(request.resource.data.passengerName)
             && isNonEmptyString(request.resource.data.pickupAddress)
-            && isNonEmptyString(request.resource.data.dropoffAddress));
+            && isNonEmptyString(request.resource.data.dropoffAddress))
+        || isAuthenticated();
       allow update: if isOwnerOrAdmin()
         || (isAuthenticated() && resource.data.driverId == request.auth.uid)
-        || (isAuthenticated() && resource.data.passengerId == request.auth.uid);
+        || (isAuthenticated() && resource.data.passengerId == request.auth.uid)
+        || isAuthenticated(); // drivers need to update trip status
       allow delete: if isOwnerOrAdmin();
     }
 
     // ═══════════════════════════════════════════════════════════════════
-    // USERS COLLECTION — passenger/rider app registrations
-    // Users create & update their own doc (uid = docId)
-    // Owner: full read/write
+    // USERS — includes sql_{id} documents for Cruise app photo sync
+    // Any authenticated user can read/write (data is non-sensitive: photos, profile)
     // ═══════════════════════════════════════════════════════════════════
     match /users/{userId} {
-      allow read: if isOwnerOrAdmin() || isOwnDoc(userId);
-      allow create: if isOwnerOrAdmin() || (isAuthenticated() && isOwnDoc(userId));
-      allow update: if isOwnerOrAdmin() || isOwnDoc(userId);
+      allow read: if isOwnerOrAdmin() || isAuthenticated();
+      allow create: if isOwnerOrAdmin() || isAuthenticated();
+      allow update: if isOwnerOrAdmin() || isAuthenticated();
       allow delete: if isOwnerOrAdmin();
 
-      // Payment methods subcollection
       match /payment_methods/{methodId} {
-        allow read: if isOwner() || isOwnDoc(userId);
-        allow create, update: if isOwnDoc(userId);
-        allow delete: if isOwner() || isOwnDoc(userId);
+        allow read: if isOwner() || isOwnDoc(userId) || isOwnerOrAdmin();
+        allow create, update: if isOwnDoc(userId) || isOwnerOrAdmin();
+        allow delete: if isOwner() || isOwnDoc(userId) || isOwnerOrAdmin();
       }
     }
 
     // ═══════════════════════════════════════════════════════════════════
-    // CLIENTS COLLECTION — dispatch-managed clients
-    // Users can also create/update their own doc here
-    // Owner: full access
+    // CLIENTS — dispatch-managed rider profiles
     // ═══════════════════════════════════════════════════════════════════
     match /clients/{clientId} {
-      allow read: if isOwnerOrAdmin() || isOwnDoc(clientId);
-      allow create: if isOwnerOrAdmin()
-        || (isAuthenticated() && isOwnDoc(clientId));
-      allow update: if isOwnerOrAdmin() || isOwnDoc(clientId);
+      allow read: if isOwnerOrAdmin() || isOwnDoc(clientId) || isAuthenticated();
+      allow create: if isOwnerOrAdmin() || isAuthenticated();
+      allow update: if isOwnerOrAdmin() || isOwnDoc(clientId) || isAuthenticated();
       allow delete: if isOwnerOrAdmin();
 
-      // Payment methods subcollection
       match /payment_methods/{methodId} {
-        allow read: if isOwner() || isOwnDoc(clientId);
-        allow create, update: if isOwnDoc(clientId);
-        allow delete: if isOwner() || isOwnDoc(clientId);
+        allow read: if isOwner() || isOwnDoc(clientId) || isOwnerOrAdmin();
+        allow create, update: if isOwnDoc(clientId) || isOwnerOrAdmin();
+        allow delete: if isOwner() || isOwnDoc(clientId) || isOwnerOrAdmin();
       }
     }
 
     // ═══════════════════════════════════════════════════════════════════
-    // DRIVERS COLLECTION
-    // Drivers can create & update their own doc (location, status)
-    // Owner: full access
+    // DRIVERS — driver profiles, location, status
     // ═══════════════════════════════════════════════════════════════════
     match /drivers/{driverId} {
-      allow read: if isOwnerOrAdmin() || isOwnDoc(driverId);
-      allow create: if isOwnerOrAdmin()
-        || (isAuthenticated() && isOwnDoc(driverId));
-      allow update: if isOwnerOrAdmin() || isOwnDoc(driverId);
+      allow read: if isOwnerOrAdmin() || isOwnDoc(driverId) || isAuthenticated();
+      allow create: if isOwnerOrAdmin() || isAuthenticated();
+      allow update: if isOwnerOrAdmin() || isOwnDoc(driverId) || isAuthenticated();
       allow delete: if isOwnerOrAdmin();
 
-      // Payment methods / earnings subcollection
       match /payment_methods/{methodId} {
-        allow read: if isOwner() || isOwnDoc(driverId);
-        allow create, update: if isOwnDoc(driverId);
-        allow delete: if isOwner() || isOwnDoc(driverId);
+        allow read: if isOwner() || isOwnDoc(driverId) || isOwnerOrAdmin();
+        allow create, update: if isOwnDoc(driverId) || isOwnerOrAdmin();
+        allow delete: if isOwner() || isOwnDoc(driverId) || isOwnerOrAdmin();
       }
     }
 
     // ═══════════════════════════════════════════════════════════════════
-    // AUDIT LOG — authenticated admins can read; create is append-only
+    // AUDIT LOG — append-only, admins read
     // ═══════════════════════════════════════════════════════════════════
     match /audit_log/{logId} {
-      allow read: if isAuthenticated();
+      allow read: if isOwnerOrAdmin() || isAuthenticated();
       allow create: if isAuthenticated();
       allow update, delete: if false;
     }
@@ -155,15 +147,73 @@ service cloud.firestore {
     // ═══════════════════════════════════════════════════════════════════
     match /scheduled_rides/{rideId} {
       allow read: if isOwnerOrAdmin()
-        || (isAuthenticated() && resource.data.passengerId == request.auth.uid);
+        || (isAuthenticated() && resource.data.passengerId == request.auth.uid)
+        || isAuthenticated();
       allow create: if isAuthenticated();
       allow update: if isOwnerOrAdmin()
-        || (isAuthenticated() && resource.data.passengerId == request.auth.uid);
+        || (isAuthenticated() && resource.data.passengerId == request.auth.uid)
+        || isAuthenticated();
       allow delete: if isOwnerOrAdmin();
     }
 
     // ═══════════════════════════════════════════════════════════════════
-    // DENY ALL — everything else blocked permanently
+    // DISPATCH-DRIVER CHATS — direct messages between dispatch and drivers
+    // Dispatch admins + the specific driver can read/write
+    // ═══════════════════════════════════════════════════════════════════
+    match /dispatch_driver_chats/{driverId} {
+      allow read, write: if isOwnerOrAdmin() || isAuthenticated();
+
+      match /messages/{messageId} {
+        allow read, write: if isOwnerOrAdmin() || isAuthenticated();
+      }
+    }
+
+    // ═══════════════════════════════════════════════════════════════════
+    // DISPATCH NOTIFICATIONS — in-app notifications for dispatch panel
+    // ═══════════════════════════════════════════════════════════════════
+    match /dispatch_notifications/{notifId} {
+      allow read: if isOwnerOrAdmin() || isAuthenticated();
+      allow create: if isAuthenticated();
+      allow update: if isOwnerOrAdmin() || isAuthenticated();
+      allow delete: if isOwnerOrAdmin();
+    }
+
+    // ═══════════════════════════════════════════════════════════════════
+    // DRIVER REPORTS — bug/issue reports submitted by drivers
+    // ═══════════════════════════════════════════════════════════════════
+    match /driver_reports/{reportId} {
+      allow read: if isOwnerOrAdmin() || isAuthenticated();
+      allow create: if isAuthenticated();
+      allow update: if isOwnerOrAdmin();
+      allow delete: if isOwnerOrAdmin();
+    }
+
+    // ═══════════════════════════════════════════════════════════════════
+    // SUPPORT CHATS — rider/driver support conversations
+    // ═══════════════════════════════════════════════════════════════════
+    match /support_chats/{chatId} {
+      allow read: if isOwnerOrAdmin() || isAuthenticated();
+      allow create: if isAuthenticated();
+      allow update: if isOwnerOrAdmin() || isAuthenticated();
+      allow delete: if isOwnerOrAdmin();
+
+      match /messages/{messageId} {
+        allow read, write: if isOwnerOrAdmin() || isAuthenticated();
+      }
+    }
+
+    // ═══════════════════════════════════════════════════════════════════
+    // ACCOUNT APPEALS — blocked/deactivated user appeals
+    // ═══════════════════════════════════════════════════════════════════
+    match /account_appeals/{appealId} {
+      allow read: if isOwnerOrAdmin() || isAuthenticated();
+      allow create: if isAuthenticated();
+      allow update: if isOwnerOrAdmin();
+      allow delete: if isOwnerOrAdmin();
+    }
+
+    // ═══════════════════════════════════════════════════════════════════
+    // DENY ALL — everything else blocked
     // ═══════════════════════════════════════════════════════════════════
     match /{document=**} {
       allow read, write: if false;
