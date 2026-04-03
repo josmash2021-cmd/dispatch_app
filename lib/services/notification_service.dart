@@ -17,25 +17,94 @@ class NotificationService {
   /// Start listening for all notification types
   void startListening() {
     _stopAll();
-    
+
     // Listen for client profile changes
     _listenToCollection(
-      'clients', 
+      'clients',
       Icons.person_outline,
       AppColors.warning,
       'Cliente'
     );
-    
-    // Listen for driver profile changes  
+
+    // Listen for driver profile changes
     _listenToCollection(
       'drivers',
       Icons.local_taxi_outlined,
       AppColors.primary,
       'Conductor'
     );
-    
+
     // Listen for new verifications
     _listenToVerifications();
+
+    // Listen for admin alerts (payment failures, server errors, security threats)
+    _listenToAdminAlerts();
+  }
+
+  /// Listen for real-time admin alerts from the backend
+  void _listenToAdminAlerts() {
+    final sub = FirebaseFirestore.instance
+        .collection('admin_alerts')
+        .where('read', isEqualTo: false)
+        .orderBy('createdAt', descending: true)
+        .limit(10)
+        .snapshots()
+        .listen((snapshot) {
+          for (final change in snapshot.docChanges) {
+            if (change.type == DocumentChangeType.added) {
+              final data = change.doc.data();
+              if (data == null) continue;
+
+              final severity = data['severity'] ?? 'high';
+              final alertType = data['type'] ?? '';
+              final title = data['title'] ?? 'Alert';
+              final message = data['message'] ?? '';
+
+              // Pick icon + color based on alert type
+              IconData icon;
+              Color color;
+              switch (alertType) {
+                case 'payment_failed':
+                case 'stripe_charge_failed':
+                  icon = Icons.payment_outlined;
+                  color = const Color(0xFFEF4444); // red
+                  break;
+                case 'server_errors':
+                  icon = Icons.dns_outlined;
+                  color = const Color(0xFFEF4444);
+                  break;
+                case 'security_ip_blocked':
+                  icon = Icons.shield_outlined;
+                  color = const Color(0xFFF59E0B); // amber
+                  break;
+                default:
+                  icon = Icons.warning_amber_rounded;
+                  color = severity == 'critical'
+                      ? const Color(0xFFEF4444)
+                      : const Color(0xFFF59E0B);
+              }
+
+              _showNotification(
+                icon: icon,
+                color: color,
+                title: title,
+                message: message,
+                actionLabel: 'Marcar leido',
+                onAction: () {
+                  // Mark as read in Firestore
+                  change.doc.reference.update({'read': true});
+                },
+                duration: severity == 'critical'
+                    ? const Duration(seconds: 15)
+                    : const Duration(seconds: 8),
+              );
+            }
+          }
+        }, onError: (e) {
+          debugPrint('[AdminAlerts] Listener error: $e');
+        });
+
+    _subscriptions.add(sub);
   }
 
   void _listenToCollection(

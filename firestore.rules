@@ -213,6 +213,16 @@ service cloud.firestore {
     }
 
     // ═══════════════════════════════════════════════════════════════════
+    // ADMIN ALERTS — server/payment/security alerts from backend
+    // ═══════════════════════════════════════════════════════════════════
+    match /admin_alerts/{alertId} {
+      allow read: if isOwnerOrAdmin();
+      allow update: if isOwnerOrAdmin(); // mark as read
+      allow create: if isAuthenticated(); // backend writes via service account
+      allow delete: if isOwnerOrAdmin();
+    }
+
+    // ═══════════════════════════════════════════════════════════════════
     // DENY ALL — everything else blocked
     // ═══════════════════════════════════════════════════════════════════
     match /{document=**} {
