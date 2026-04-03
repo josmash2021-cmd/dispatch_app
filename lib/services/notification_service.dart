@@ -13,9 +13,13 @@ class NotificationService {
 
   final List<StreamSubscription> _subscriptions = [];
   final Map<String, DateTime> _lastNotified = {};
+  bool _isListening = false;
 
   /// Start listening for all notification types
   void startListening() {
+    // Guard against duplicate subscriptions from multiple calls
+    if (_isListening) return;
+    _isListening = true;
     _stopAll();
 
     // Listen for client profile changes
@@ -151,6 +155,16 @@ class NotificationService {
       return;
     }
     _lastNotified[docId] = now;
+
+    // Prevent unbounded memory growth — purge oldest entries when map is too large
+    if (_lastNotified.length > 1000) {
+      final entries = _lastNotified.entries.toList()
+        ..sort((a, b) => a.value.compareTo(b.value));
+      final removeCount = _lastNotified.length - 500;
+      for (final entry in entries.take(removeCount)) {
+        _lastNotified.remove(entry.key);
+      }
+    }
 
     final firstName = data['firstName'] ?? data['first_name'] ?? 'Usuario';
     final lastName = data['lastName'] ?? data['last_name'] ?? '';
@@ -293,6 +307,7 @@ class NotificationService {
       sub.cancel();
     }
     _subscriptions.clear();
+    _isListening = false;
   }
 
   void stop() {

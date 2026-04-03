@@ -2,14 +2,13 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
 import 'dispatch_api_service.dart';
 
-/// Thrown when Firestore update succeeds but SQLite backend sync fails.
-/// Non-critical — the verification status IS saved in Firestore/Firebase.
-class VerificationSyncWarning implements Exception {
-  final String operation;
-  final Object cause;
-  const VerificationSyncWarning(this.operation, this.cause);
-  @override
-  String toString() => 'Sync al servidor falló ($operation): $cause';
+/// Result of an approve/reject operation.
+/// [syncedToBackend] is false when Firestore succeeded but the backend
+/// SQLite sync failed.  The caller can decide whether to show a warning.
+class VerificationResult {
+  final bool syncedToBackend;
+  final String? syncError;
+  const VerificationResult({this.syncedToBackend = true, this.syncError});
 }
 
 class VerificationRequest {
@@ -122,8 +121,11 @@ class VerificationService {
         });
   }
 
-  /// Approve a verification request
-  Future<void> approve(String docId) async {
+  /// Approve a verification request.
+  ///
+  /// Returns a [VerificationResult] — check [syncedToBackend] to decide
+  /// whether to show a non-critical warning to the dispatcher.
+  Future<VerificationResult> approve(String docId) async {
     await _collection.doc(docId).update({
       'status': 'approved',
       'reason': null,
@@ -131,57 +133,58 @@ class VerificationService {
     });
     // Also update the user's verification status in clients/drivers collection
     final doc = await _collection.doc(docId).get();
-    if (doc.exists) {
-      final data = doc.data() as Map<String, dynamic>? ?? {};
-      final role = data['role'] as String? ?? 'rider';
-      final userId = (data['userId'] as num?)?.toInt() ?? 0;
-      final col = role == 'driver' ? 'drivers' : 'clients';
-      // For riders: propagate selfie as profile photo
-      final selfieUrl = data['selfieUrl'] as String?;
-      final profilePhotoUrl = data['profilePhotoUrl'] as String? ?? selfieUrl;
-      final update = <String, dynamic>{
-        'isVerified': true,
-        'isApproved': true,
-        'verificationStatus': 'approved',
-        'driver_status': 'approved',
-        'status': 'approved',
-        'verificationReason': null,
-        'lastUpdated': FieldValue.serverTimestamp(),
-        'updated_at': FieldValue.serverTimestamp(),
-        if (profilePhotoUrl != null && profilePhotoUrl.isNotEmpty)
-          'profilePhotoUrl': profilePhotoUrl,
-      };
-      await _firestore.collection(col).doc(docId).set(
-        update,
-        SetOptions(merge: true),
-      );
-      // Also update in users collection
-      await _firestore.collection('users').doc(docId).set(
-        update,
-        SetOptions(merge: true),
-      );
-      // Sync to backend SQLite
-      if (userId > 0) {
-        try {
-          if (role == 'driver') {
-            await DispatchApiService.approveVerification(userId);
-          } else {
-            await DispatchApiService.reviewVerification(
-              userId,
-              action: 'approve',
-            );
-          }
-        } catch (e) {
-          debugPrint('[Verification] Backend approve sync failed: $e');
-          // Non-critical — Firestore is already updated, polling will pick it up
-          throw VerificationSyncWarning('approve', e);
+    if (!doc.exists) return const VerificationResult();
+
+    final data = doc.data() as Map<String, dynamic>? ?? {};
+    final role = data['role'] as String? ?? 'rider';
+    final userId = (data['userId'] as num?)?.toInt() ?? 0;
+    final col = role == 'driver' ? 'drivers' : 'clients';
+    // For riders: propagate selfie as profile photo
+    final selfieUrl = data['selfieUrl'] as String?;
+    final profilePhotoUrl = data['profilePhotoUrl'] as String? ?? selfieUrl;
+    final update = <String, dynamic>{
+      'verificationStatus': 'approved',
+      'verificationReason': null,
+      'lastUpdated': FieldValue.serverTimestamp(),
+      if (profilePhotoUrl != null && profilePhotoUrl.isNotEmpty)
+        'profilePhotoUrl': profilePhotoUrl,
+    };
+    await _firestore.collection(col).doc(docId).set(
+      update,
+      SetOptions(merge: true),
+    );
+    // Also update in users collection
+    await _firestore.collection('users').doc(docId).set(
+      update,
+      SetOptions(merge: true),
+    );
+    // Sync to backend SQLite — non-critical
+    if (userId > 0) {
+      try {
+        if (role == 'driver') {
+          await DispatchApiService.approveVerification(userId);
+        } else {
+          await DispatchApiService.reviewVerification(
+            userId,
+            action: 'approve',
+          );
         }
+      } catch (e) {
+        debugPrint('[Verification] Backend approve sync failed: $e');
+        return VerificationResult(
+          syncedToBackend: false,
+          syncError: e.toString(),
+        );
       }
     }
+    return const VerificationResult();
   }
 
-  /// Reject a verification request with a reason
-  Future<void> reject(String docId, String reason) async {
+  /// Reject a verification request with a reason.
+  ///
+  /// Returns a [VerificationResult] — check [syncedToBackend] to decide
+  /// whether to show a non-critical warning to the dispatcher.
+  Future<VerificationResult> reject(String docId, String reason) async {
     await _collection.doc(docId).update({
       'status': 'rejected',
       'reason': reason,
@@ -189,48 +192,46 @@ class VerificationService {
     });
     // Also update the user's verification status
     final doc = await _collection.doc(docId).get();
-    if (doc.exists) {
-      final data = doc.data() as Map<String, dynamic>? ?? {};
-      final role = data['role'] as String? ?? 'rider';
-      final userId = (data['userId'] as num?)?.toInt() ?? 0;
-      final col = role == 'driver' ? 'drivers' : 'clients';
-      final rejectUpdate = <String, dynamic>{
-        'isVerified': false,
-        'isApproved': false,
-        'verificationStatus': 'rejected',
-        'driver_status': 'rejected',
-        'status': 'rejected',
-        'verificationReason': reason,
-        'lastUpdated': FieldValue.serverTimestamp(),
-        'updated_at': FieldValue.serverTimestamp(),
-      };
-      await _firestore.collection(col).doc(docId).set(
-        rejectUpdate,
-        SetOptions(merge: true),
-      );
-      await _firestore.collection('users').doc(docId).set(
-        rejectUpdate,
-        SetOptions(merge: true),
-      );
-      // Sync to backend SQLite
-      if (userId > 0) {
-        try {
-          if (role == 'driver') {
-            await DispatchApiService.rejectVerification(userId, reason);
-          } else {
-            await DispatchApiService.reviewVerification(
-              userId,
-              action: 'reject',
-              reason: reason,
-            );
-          }
-        } catch (e) {
-          debugPrint('[Verification] Backend reject sync failed: $e');
-          // Fix H8: re-throw as non-critical warning so UI can surface it
-          throw VerificationSyncWarning('reject', e);
+    if (!doc.exists) return const VerificationResult();
+
+    final data = doc.data() as Map<String, dynamic>? ?? {};
+    final role = data['role'] as String? ?? 'rider';
+    final userId = (data['userId'] as num?)?.toInt() ?? 0;
+    final col = role == 'driver' ? 'drivers' : 'clients';
+    final rejectUpdate = <String, dynamic>{
+      'verificationStatus': 'rejected',
+      'verificationReason': reason,
+      'lastUpdated': FieldValue.serverTimestamp(),
+    };
+    await _firestore.collection(col).doc(docId).set(
+      rejectUpdate,
+      SetOptions(merge: true),
+    );
+    await _firestore.collection('users').doc(docId).set(
+      rejectUpdate,
+      SetOptions(merge: true),
+    );
+    // Sync to backend SQLite — non-critical
+    if (userId > 0) {
+      try {
+        if (role == 'driver') {
+          await DispatchApiService.rejectVerification(userId, reason);
+        } else {
+          await DispatchApiService.reviewVerification(
+            userId,
+            action: 'reject',
+            reason: reason,
+          );
         }
+      } catch (e) {
+        debugPrint('[Verification] Backend reject sync failed: $e');
+        return VerificationResult(
+          syncedToBackend: false,
+          syncError: e.toString(),
+        );
       }
     }
+    return const VerificationResult();
   }
 
   /// Get count of pending verifications

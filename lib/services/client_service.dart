@@ -61,9 +61,11 @@ class ClientService {
             lastUsers = users;
             if (lastClients != null) merge();
           },
-          onError: (_) {
-            lastUsers = [];
-            if (lastClients != null) merge();
+          onError: (e) {
+            debugPrint('[ClientService] users-collection stream error: $e');
+            // Propagate the error so the UI can react, rather than
+            // silently replacing real data with an empty list.
+            controller.addError(e);
           },
         );
 
@@ -100,7 +102,7 @@ class ClientService {
 
   /// Register a newly-added client in the backend SQLite via /auth/register.
   /// Retries up to 3 times with exponential backoff.
-  void _syncNewClientToBackend(String firestoreId, ClientModel client) async {
+  Future<void> _syncNewClientToBackend(String firestoreId, ClientModel client) async {
     for (int attempt = 0; attempt < 3; attempt++) {
       try {
         final tempPassword = _generateTempPassword();
@@ -126,6 +128,7 @@ class ClientService {
         }
       }
     }
+    debugPrint('[ClientService] Backend register sync FAILED after 3 attempts for client ${client.phone} (firestoreId: $firestoreId)');
   }
 
   static String _generateTempPassword() {
@@ -211,8 +214,17 @@ class ClientService {
       final userDoc = await _usersCollection.doc(clientId).get();
       if (userDoc.exists) {
         await _usersCollection.doc(clientId).delete();
+      } else if (sqliteId != null) {
+        // Prefer sqliteId match — phone alone could collide with another user
+        final snap = await _usersCollection
+            .where('sqliteId', isEqualTo: sqliteId)
+            .limit(1)
+            .get();
+        for (final doc in snap.docs) {
+          await _usersCollection.doc(doc.id).delete();
+        }
       } else if (phone.isNotEmpty) {
-        // Find by phone
+        // Last resort: phone-based lookup (sqliteId not yet synced)
         final snap = await _usersCollection
             .where('phone', isEqualTo: phone)
             .limit(1)
@@ -244,11 +256,28 @@ class ClientService {
       });
       return;
     }
-    // Find by phone
+    // Fallback: find by sqliteId first, then phone
     final clientDoc = await _clientsCollection.doc(clientId).get();
     if (!clientDoc.exists) return;
     final data = clientDoc.data() as Map<String, dynamic>? ?? {};
+    final sqliteId = data['sqliteId'] as int?;
     final phone = data['phone'] as String? ?? '';
+
+    // Prefer sqliteId match — phone alone could collide with another user
+    if (sqliteId != null) {
+      final snap = await _usersCollection
+          .where('sqliteId', isEqualTo: sqliteId)
+          .limit(1)
+          .get();
+      for (final doc in snap.docs) {
+        await _usersCollection.doc(doc.id).update({
+          'status': status,
+          'lastUpdated': FieldValue.serverTimestamp(),
+        });
+      }
+      return;
+    }
+    // Last resort: phone-based lookup (sqliteId not yet synced)
     if (phone.isEmpty) return;
     final snap = await _usersCollection
         .where('phone', isEqualTo: phone)

@@ -86,9 +86,21 @@ class VerificationProvider extends ChangeNotifier {
     );
   }
 
+  /// Non-critical warning shown when Firestore succeeded but backend sync
+  /// failed.  Cleared on next successful operation.
+  String? _syncWarning;
+  String? get syncWarning => _syncWarning;
+
   Future<void> approve(String docId) async {
+    _syncWarning = null;
     try {
-      await _service.approve(docId);
+      final result = await _service.approve(docId);
+      if (!result.syncedToBackend) {
+        _syncWarning =
+            'Aprobado en Firestore, pero la sincronización al servidor falló: '
+            '${result.syncError}';
+        notifyListeners();
+      }
     } catch (e) {
       _errorMessage = 'Failed to approve: $e';
       notifyListeners();
@@ -96,8 +108,15 @@ class VerificationProvider extends ChangeNotifier {
   }
 
   Future<void> reject(String docId, String reason) async {
+    _syncWarning = null;
     try {
-      await _service.reject(docId, reason);
+      final result = await _service.reject(docId, reason);
+      if (!result.syncedToBackend) {
+        _syncWarning =
+            'Rechazado en Firestore, pero la sincronización al servidor falló: '
+            '${result.syncError}';
+        notifyListeners();
+      }
     } catch (e) {
       _errorMessage = 'Failed to reject: $e';
       notifyListeners();

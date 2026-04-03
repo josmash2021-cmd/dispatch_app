@@ -62,9 +62,11 @@ class DriverService {
             lastUserDrivers = userDrivers;
             merge();
           },
-          onError: (_) {
-            lastUserDrivers = [];
-            merge();
+          onError: (e) {
+            debugPrint('[DriverService] users-collection stream error: $e');
+            // Propagate the error so the UI can react, rather than
+            // silently replacing real data with an empty list.
+            controller.addError(e);
           },
         );
 
@@ -99,9 +101,8 @@ class DriverService {
   }
 
   /// Register a newly-added driver in the backend SQLite via /auth/register.
-  /// Register a newly-added driver in the backend SQLite via /auth/register.
   /// Retries up to 3 times with exponential backoff.
-  void _syncNewDriverToBackend(String firestoreId, DriverModel driver) async {
+  Future<void> _syncNewDriverToBackend(String firestoreId, DriverModel driver) async {
     for (int attempt = 0; attempt < 3; attempt++) {
       try {
         final tempPassword = _generateTempPassword();
@@ -126,8 +127,13 @@ class DriverService {
         }
       }
     }
+    debugPrint('[DriverService] Backend register sync FAILED after 3 attempts for driver ${driver.phone} (firestoreId: $firestoreId)');
   }
 
+  /// Generates a random temporary password for the backend registration call.
+  /// This password is NOT shown to the driver — the admin sets/resets the
+  /// driver's real password separately. It exists only to satisfy the
+  /// /auth/register endpoint's required `password` field.
   static String _generateTempPassword() {
     const chars =
         'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
@@ -216,7 +222,17 @@ class DriverService {
       final userDoc = await _usersCollection.doc(driverId).get();
       if (userDoc.exists) {
         await _usersCollection.doc(driverId).delete();
+      } else if (sqliteId != null) {
+        // Prefer sqliteId match — phone alone could collide with another user
+        final snap = await _usersCollection
+            .where('sqliteId', isEqualTo: sqliteId)
+            .limit(1)
+            .get();
+        for (final doc in snap.docs) {
+          await _usersCollection.doc(doc.id).delete();
+        }
       } else if (phone.isNotEmpty) {
+        // Last resort: phone-based lookup (sqliteId not yet synced)
         final snap = await _usersCollection
             .where('phone', isEqualTo: phone)
             .limit(1)
@@ -250,7 +266,24 @@ class DriverService {
     final driverDoc = await _driversCollection.doc(driverId).get();
     if (!driverDoc.exists) return;
     final data = driverDoc.data() as Map<String, dynamic>? ?? {};
+    final sqliteId = data['sqliteId'] as int?;
     final phone = data['phone'] as String? ?? '';
+
+    // Prefer sqliteId match — phone alone could collide with another user
+    if (sqliteId != null) {
+      final snap = await _usersCollection
+          .where('sqliteId', isEqualTo: sqliteId)
+          .limit(1)
+          .get();
+      for (final doc in snap.docs) {
+        await _usersCollection.doc(doc.id).update({
+          'status': status,
+          'lastUpdated': FieldValue.serverTimestamp(),
+        });
+      }
+      return;
+    }
+    // Last resort: phone-based lookup (sqliteId not yet synced)
     if (phone.isEmpty) return;
     final snap = await _usersCollection
         .where('phone', isEqualTo: phone)

@@ -6,6 +6,20 @@ import 'dispatch_api_service.dart';
 class TripService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
+  /// Status values that represent an active (non-terminal) trip.
+  static const List<String> activeStatusValues = [
+    'requested',
+    'accepted',
+    'driver_arrived',
+    'in_progress',
+  ];
+
+  /// Status values that represent a terminal (finished) trip.
+  static const List<String> terminalStatusValues = [
+    'completed',
+    'cancelled',
+  ];
+
   CollectionReference get _tripsCollection => _firestore.collection('trips');
 
   /// Stream de todos los viajes en tiempo real, ordenados por fecha de creación.
@@ -102,21 +116,28 @@ class TripService {
 
     await _tripsCollection.doc(tripId).update(updateData);
     // Sync status to backend if we have a sqliteId
-    _syncStatusToBackend(tripId, newStatus.value);
+    await _syncStatusToBackend(tripId, newStatus.value);
   }
 
-  /// Best-effort sync: find the backend trip by notes field containing Firestore docId
-  void _syncStatusToBackend(String firestoreId, String status) async {
+  /// Sync trip status to the backend via sqliteId.
+  Future<void> _syncStatusToBackend(String firestoreId, String status) async {
     try {
       final doc = await _tripsCollection.doc(firestoreId).get();
-      if (!doc.exists) return;
+      if (!doc.exists) {
+        debugPrint('[TripService] _syncStatusToBackend: doc $firestoreId not found');
+        return;
+      }
       final data = doc.data() as Map<String, dynamic>? ?? {};
       final sqliteId = data['sqliteId'] as int?;
-      if (sqliteId != null) {
-        await DispatchApiService.updateTrip(sqliteId, {'status': status});
+      if (sqliteId == null) {
+        debugPrint('[TripService] _syncStatusToBackend: no sqliteId on $firestoreId');
+        return;
       }
-    } catch (e) {
-      debugPrint('[TripService] Backend status sync failed: $e');
+      await DispatchApiService.updateTrip(sqliteId, {'status': status});
+      debugPrint('[TripService] Backend status synced: trip $sqliteId → $status');
+    } catch (e, st) {
+      debugPrint('[TripService] Backend status sync failed for $firestoreId: $e');
+      debugPrint('[TripService] $st');
     }
   }
 
@@ -135,11 +156,11 @@ class TripService {
       'acceptedAt': FieldValue.serverTimestamp(),
     });
     // Sync assignment to backend
-    _syncAssignToBackend(tripId, driverId, driverName, driverPhone);
+    await _syncAssignToBackend(tripId, driverId, driverName, driverPhone);
   }
 
-  /// Sync driver assignment to backend via sqliteId
-  void _syncAssignToBackend(
+  /// Sync driver assignment to backend via POST /admin/trips/{id}/accept.
+  Future<void> _syncAssignToBackend(
     String firestoreId,
     String driverId,
     String driverName,
@@ -147,16 +168,27 @@ class TripService {
   ) async {
     try {
       final doc = await _tripsCollection.doc(firestoreId).get();
-      if (!doc.exists) return;
+      if (!doc.exists) {
+        debugPrint('[TripService] _syncAssignToBackend: doc $firestoreId not found');
+        return;
+      }
       final data = doc.data() as Map<String, dynamic>? ?? {};
       final sqliteId = data['sqliteId'] as int?;
       // Parse driver SQLite ID from Firestore format "sql_123"
       final driverSqlId = int.tryParse(driverId.replaceFirst('sql_', ''));
-      if (sqliteId != null && driverSqlId != null) {
-        await DispatchApiService.acceptTripBackend(sqliteId, driverSqlId);
+      if (sqliteId == null) {
+        debugPrint('[TripService] _syncAssignToBackend: no sqliteId on $firestoreId');
+        return;
       }
-    } catch (e) {
-      debugPrint('[TripService] Backend assign sync failed: $e');
+      if (driverSqlId == null) {
+        debugPrint('[TripService] _syncAssignToBackend: cannot parse driver id "$driverId"');
+        return;
+      }
+      await DispatchApiService.acceptTripBackend(sqliteId, driverSqlId);
+      debugPrint('[TripService] Backend accept synced: trip $sqliteId → driver $driverSqlId');
+    } catch (e, st) {
+      debugPrint('[TripService] Backend assign sync failed for $firestoreId: $e');
+      debugPrint('[TripService] $st');
     }
   }
 
@@ -167,21 +199,28 @@ class TripService {
       'cancelReason': reason,
       'cancelledAt': FieldValue.serverTimestamp(),
     });
-    _syncCancelToBackend(tripId, reason);
+    await _syncCancelToBackend(tripId, reason);
   }
 
-  /// Sync cancel + reason to backend via sqliteId
-  void _syncCancelToBackend(String firestoreId, String reason) async {
+  /// Sync cancel + reason to backend via POST /admin/trips/{id}/cancel.
+  Future<void> _syncCancelToBackend(String firestoreId, String reason) async {
     try {
       final doc = await _tripsCollection.doc(firestoreId).get();
-      if (!doc.exists) return;
+      if (!doc.exists) {
+        debugPrint('[TripService] _syncCancelToBackend: doc $firestoreId not found');
+        return;
+      }
       final data = doc.data() as Map<String, dynamic>? ?? {};
       final sqliteId = data['sqliteId'] as int?;
-      if (sqliteId != null) {
-        await DispatchApiService.cancelTripBackend(sqliteId, reason);
+      if (sqliteId == null) {
+        debugPrint('[TripService] _syncCancelToBackend: no sqliteId on $firestoreId');
+        return;
       }
-    } catch (e) {
-      debugPrint('[TripService] Backend cancel sync failed: $e');
+      await DispatchApiService.cancelTripBackend(sqliteId, reason);
+      debugPrint('[TripService] Backend cancel synced: trip $sqliteId');
+    } catch (e, st) {
+      debugPrint('[TripService] Backend cancel sync failed for $firestoreId: $e');
+      debugPrint('[TripService] $st');
     }
   }
 
@@ -255,7 +294,7 @@ class TripService {
     final activeSnapshot = await _tripsCollection
         .where(
           'status',
-          whereIn: ['requested', 'accepted', 'driver_arrived', 'in_progress'],
+          whereIn: activeStatusValues,
         )
         .get();
 
