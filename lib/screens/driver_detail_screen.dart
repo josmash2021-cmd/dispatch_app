@@ -115,6 +115,11 @@ class _DriverDetailScreenState extends State<DriverDetailScreen> {
           
           const SizedBox(height: 16),
           
+          _buildSectionTitle('Rendimiento'),
+          _DriverPerformanceWidget(driverId: u['firebase_uid'] as String? ?? ''),
+
+          const SizedBox(height: 16),
+
           _buildSectionTitle('Vehículo'),
           _buildVehicleCard(vehicleType, vehiclePlate, vehicleColor),
           
@@ -920,4 +925,327 @@ class _DayEarning {
   final String label;
   final double amount;
   const _DayEarning({required this.label, required this.amount});
+}
+
+// ─── DRIVER PERFORMANCE METRICS ────────────────────────────────────────
+class _DriverPerformanceWidget extends StatefulWidget {
+  final String driverId;
+  const _DriverPerformanceWidget({required this.driverId});
+
+  @override
+  State<_DriverPerformanceWidget> createState() => _DriverPerformanceWidgetState();
+}
+
+class _DriverPerformanceWidgetState extends State<_DriverPerformanceWidget> {
+  bool _loading = true;
+  int _totalTrips = 0;
+  int _completedTrips = 0;
+  int _cancelledTrips = 0;
+  int _totalOffers = 0;
+  double _avgRating = 0;
+  int _ratingCount = 0;
+  double _totalOnlineHours = 0;
+  double _avgResponseMin = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    if (widget.driverId.isEmpty) {
+      if (mounted) setState(() => _loading = false);
+      return;
+    }
+    try {
+      final db = FirebaseFirestore.instance;
+
+      // Get all trips for this driver
+      final tripsSnap = await db
+          .collection('trips')
+          .where('driverId', isEqualTo: widget.driverId)
+          .get();
+
+      int completed = 0;
+      int cancelled = 0;
+      double ratingSum = 0;
+      int ratingCount = 0;
+      double totalResponseSec = 0;
+      int responseCount = 0;
+
+      for (final doc in tripsSnap.docs) {
+        final d = doc.data();
+        final status = d['status'] as String? ?? '';
+        if (status == 'completed') {
+          completed++;
+          final r = d['rating'];
+          if (r != null) {
+            ratingSum += (r as num).toDouble();
+            ratingCount++;
+          }
+        } else if (status == 'cancelled' || status == 'canceled') {
+          cancelled++;
+        }
+
+        // Calculate response time (createdAt → acceptedAt)
+        final created = d['createdAt'] as Timestamp?;
+        final accepted = d['acceptedAt'] as Timestamp?;
+        if (created != null && accepted != null) {
+          final diff = accepted.toDate().difference(created.toDate()).inSeconds;
+          if (diff > 0 && diff < 600) {
+            totalResponseSec += diff;
+            responseCount++;
+          }
+        }
+      }
+
+      // Get offers count (trips where driver was offered but may have declined)
+      final offersSnap = await db
+          .collection('trip_offers')
+          .where('driverId', isEqualTo: widget.driverId)
+          .get()
+          .catchError((_) => null);
+
+      final totalOffers = offersSnap?.docs.length ?? tripsSnap.docs.length;
+
+      // Estimate online hours from driver_sessions or calculate from trip spans
+      double onlineHours = 0;
+      final sessionsSnap = await db
+          .collection('driver_sessions')
+          .where('driverId', isEqualTo: widget.driverId)
+          .orderBy('startedAt', descending: true)
+          .limit(100)
+          .get()
+          .catchError((_) => null);
+
+      if (sessionsSnap != null) {
+        for (final doc in sessionsSnap.docs) {
+          final d = doc.data();
+          final start = d['startedAt'] as Timestamp?;
+          final end = d['endedAt'] as Timestamp?;
+          if (start != null && end != null) {
+            onlineHours += end.toDate().difference(start.toDate()).inMinutes / 60.0;
+          }
+        }
+      }
+
+      if (mounted) {
+        setState(() {
+          _totalTrips = tripsSnap.docs.length;
+          _completedTrips = completed;
+          _cancelledTrips = cancelled;
+          _totalOffers = totalOffers > 0 ? totalOffers : tripsSnap.docs.length;
+          _avgRating = ratingCount > 0 ? ratingSum / ratingCount : 0;
+          _ratingCount = ratingCount;
+          _totalOnlineHours = onlineHours;
+          _avgResponseMin = responseCount > 0 ? (totalResponseSec / responseCount) / 60 : 0;
+          _loading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (widget.driverId.isEmpty) {
+      return Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: const Text('No Firebase UID', style: TextStyle(color: AppColors.textHint)),
+      );
+    }
+
+    if (_loading) {
+      return Container(
+        height: 200,
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: AppColors.cardBorder),
+        ),
+        child: const Center(child: CircularProgressIndicator(color: AppColors.primary)),
+      );
+    }
+
+    final completionRate = _totalTrips > 0 ? (_completedTrips / _totalTrips * 100) : 0.0;
+    final cancellationRate = _totalTrips > 0 ? (_cancelledTrips / _totalTrips * 100) : 0.0;
+    final acceptanceRate = _totalOffers > 0 ? (_totalTrips / _totalOffers * 100) : 0.0;
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.cardBorder),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Rating row
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.star_rounded, color: AppColors.primary, size: 22),
+                    const SizedBox(width: 4),
+                    Text(
+                      _avgRating > 0 ? _avgRating.toStringAsFixed(2) : 'N/A',
+                      style: const TextStyle(
+                        color: AppColors.primary,
+                        fontSize: 20,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 12),
+              Text(
+                '$_ratingCount reviews',
+                style: const TextStyle(color: AppColors.textSecondary, fontSize: 13),
+              ),
+              const Spacer(),
+              if (_totalOnlineHours > 0)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: AppColors.surfaceHigh,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.schedule, color: AppColors.textSecondary, size: 14),
+                      const SizedBox(width: 4),
+                      Text(
+                        '${_totalOnlineHours.toStringAsFixed(0)}h online',
+                        style: const TextStyle(color: AppColors.textSecondary, fontSize: 12),
+                      ),
+                    ],
+                  ),
+                ),
+            ],
+          ),
+
+          const SizedBox(height: 16),
+
+          // Metrics grid
+          Row(
+            children: [
+              Expanded(child: _metricCard(
+                'Completion',
+                '${completionRate.toStringAsFixed(0)}%',
+                completionRate / 100,
+                completionRate >= 90 ? const Color(0xFF22C55E) : completionRate >= 70 ? AppColors.primary : const Color(0xFFEF4444),
+              )),
+              const SizedBox(width: 8),
+              Expanded(child: _metricCard(
+                'Acceptance',
+                '${acceptanceRate.toStringAsFixed(0)}%',
+                acceptanceRate / 100,
+                acceptanceRate >= 85 ? const Color(0xFF22C55E) : acceptanceRate >= 60 ? AppColors.primary : const Color(0xFFEF4444),
+              )),
+              const SizedBox(width: 8),
+              Expanded(child: _metricCard(
+                'Cancellation',
+                '${cancellationRate.toStringAsFixed(0)}%',
+                cancellationRate / 100,
+                cancellationRate <= 5 ? const Color(0xFF22C55E) : cancellationRate <= 15 ? AppColors.primary : const Color(0xFFEF4444),
+              )),
+            ],
+          ),
+
+          const SizedBox(height: 12),
+
+          // Stats row
+          Row(
+            children: [
+              _statChip(Icons.route, '$_completedTrips completed'),
+              const SizedBox(width: 8),
+              _statChip(Icons.cancel_outlined, '$_cancelledTrips cancelled'),
+              if (_avgResponseMin > 0) ...[
+                const SizedBox(width: 8),
+                _statChip(Icons.speed, '${_avgResponseMin.toStringAsFixed(1)}m avg response'),
+              ],
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _metricCard(String label, String value, double progress, Color color) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: AppColors.surfaceHigh,
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Column(
+        children: [
+          SizedBox(
+            width: 48,
+            height: 48,
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                CircularProgressIndicator(
+                  value: progress.clamp(0, 1),
+                  strokeWidth: 4,
+                  backgroundColor: AppColors.cardBorder,
+                  valueColor: AlwaysStoppedAnimation(color),
+                ),
+                Text(
+                  value,
+                  style: TextStyle(
+                    color: color,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            label,
+            style: const TextStyle(color: AppColors.textSecondary, fontSize: 10),
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _statChip(IconData icon, String text) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: AppColors.background,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 12, color: AppColors.textHint),
+          const SizedBox(width: 4),
+          Text(text, style: const TextStyle(color: AppColors.textSecondary, fontSize: 10)),
+        ],
+      ),
+    );
+  }
 }

@@ -863,6 +863,43 @@ class DispatchApiService {
     );
     return result as Map<String, dynamic>;
   }
+
+  // ═══════════════════════════════════════════════════════
+  //  SYSTEM HEALTH
+  // ═══════════════════════════════════════════════════════
+
+  /// Get detailed system health metrics
+  static Future<Map<String, dynamic>> getSystemHealth() async {
+    final result = await _get('/admin/health', timeout: const Duration(seconds: 8));
+    return result as Map<String, dynamic>;
+  }
+
+  // ═══════════════════════════════════════════════════════
+  //  PROMO CODES
+  // ═══════════════════════════════════════════════════════
+
+  /// List all promo codes
+  static Future<List<Map<String, dynamic>>> listPromos() async {
+    final result = await _get('/admin/promos');
+    return _castList(result, '/admin/promos');
+  }
+
+  /// Create a promo code
+  static Future<Map<String, dynamic>> createPromo(Map<String, dynamic> data) async {
+    final result = await _post('/admin/promos', body: data);
+    return result as Map<String, dynamic>;
+  }
+
+  /// Update a promo code
+  static Future<Map<String, dynamic>> updatePromo(String promoId, Map<String, dynamic> data) async {
+    final result = await _patch('/admin/promos/$promoId', body: data);
+    return result as Map<String, dynamic>;
+  }
+
+  /// Delete a promo code
+  static Future<void> deletePromo(String promoId) async {
+    await _delete('/admin/promos/$promoId');
+  }
 }
 
 class ApiException implements Exception {

@@ -24,6 +24,11 @@ import 'pricing_config_screen.dart';
 import 'database_screen.dart';
 import 'driver_reports_screen.dart';
 import 'vehicle_types_screen.dart';
+import 'alerts_screen.dart';
+import 'payouts_screen.dart';
+import 'promos_screen.dart';
+import 'system_health_screen.dart';
+import 'notification_history_screen.dart';
 
 class HomeMenuScreen extends StatefulWidget {
   final Function(int) onNavigate;
@@ -52,7 +57,8 @@ class _HomeMenuScreenState extends State<HomeMenuScreen>
   int _supportChats = 0;
   int _blockedUsers = 0;
   int _onlineDrivers = 0;
-  
+  int _unreadAlerts = 0;
+
   StreamSubscription? _ridersSub;
   StreamSubscription? _driversSub;
   StreamSubscription? _verifSub;
@@ -62,6 +68,7 @@ class _HomeMenuScreenState extends State<HomeMenuScreen>
   StreamSubscription? _driverReportsSub;
   StreamSubscription? _blockedSub;
   StreamSubscription? _onlineDriversSub;
+  StreamSubscription? _alertsSub;
 
   @override
   void initState() {
@@ -160,6 +167,13 @@ class _HomeMenuScreenState extends State<HomeMenuScreen>
         .where('isOnline', isEqualTo: true)
         .snapshots()
         .listen((snap) => setState(() => _onlineDrivers = snap.docs.length));
+
+    // Unread admin alerts
+    _alertsSub = FirebaseFirestore.instance
+        .collection('admin_alerts')
+        .where('read', isEqualTo: false)
+        .snapshots()
+        .listen((snap) => setState(() => _unreadAlerts = snap.docs.length));
   }
 
   @override
@@ -175,6 +189,7 @@ class _HomeMenuScreenState extends State<HomeMenuScreen>
     _driverReportsSub?.cancel();
     _blockedSub?.cancel();
     _onlineDriversSub?.cancel();
+    _alertsSub?.cancel();
     super.dispose();
   }
 
@@ -263,6 +278,29 @@ class _HomeMenuScreenState extends State<HomeMenuScreen>
                 onTap: () => Navigator.push(
                   context,
                   slideFromRightRoute(const ScheduledRidesScreen()),
+                ),
+              ),
+              _ContextMenuCard(
+                icon: Icons.notifications_active,
+                label: 'Alertas',
+                sublabel: _unreadAlerts > 0
+                    ? '$_unreadAlerts sin leer'
+                    : 'Sin alertas nuevas',
+                color: _unreadAlerts > 0 ? const Color(0xFFEF4444) : AppColors.primary,
+                badge: _unreadAlerts > 0 ? '$_unreadAlerts' : null,
+                onTap: () => Navigator.push(
+                  context,
+                  slideFromRightRoute(const AlertsScreen()),
+                ),
+              ),
+              _ContextMenuCard(
+                icon: Icons.monitor_heart,
+                label: 'Sistema',
+                sublabel: 'Salud del servidor',
+                color: AppColors.primary,
+                onTap: () => Navigator.push(
+                  context,
+                  slideFromRightRoute(const SystemHealthScreen()),
                 ),
               ),
             ]),
@@ -374,6 +412,36 @@ class _HomeMenuScreenState extends State<HomeMenuScreen>
             slideFromRightRoute(const VehicleTypesScreen()),
           ),
         ),
+      _ContextMenuCard(
+        icon: Icons.account_balance_wallet,
+        label: 'Pagos Drivers',
+        sublabel: 'Payouts y balances',
+        color: AppColors.primary,
+        onTap: () => Navigator.push(
+          context,
+          slideFromRightRoute(const PayoutsScreen()),
+        ),
+      ),
+      _ContextMenuCard(
+        icon: Icons.local_offer,
+        label: 'Promos',
+        sublabel: 'Códigos de descuento',
+        color: AppColors.primary,
+        onTap: () => Navigator.push(
+          context,
+          slideFromRightRoute(const PromosScreen()),
+        ),
+      ),
+      _ContextMenuCard(
+        icon: Icons.notifications,
+        label: 'Notificaciones',
+        sublabel: 'Historial de envíos',
+        color: AppColors.primary,
+        onTap: () => Navigator.push(
+          context,
+          slideFromRightRoute(const NotificationHistoryScreen()),
+        ),
+      ),
     ];
 
     return CustomScrollView(
@@ -952,14 +1020,14 @@ class _HomeMenuScreenState extends State<HomeMenuScreen>
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [
-            const Color(0xFF1565C0).withValues(alpha: 0.15),
-            const Color(0xFF1565C0).withValues(alpha: 0.05),
+            AppColors.primary.withValues(alpha: 0.12),
+            AppColors.primary.withValues(alpha: 0.04),
           ],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFF1565C0).withValues(alpha: 0.2)),
+        border: Border.all(color: AppColors.primary.withValues(alpha: 0.15)),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceAround,
@@ -968,34 +1036,34 @@ class _HomeMenuScreenState extends State<HomeMenuScreen>
             icon: Icons.person,
             value: '$_riderCount',
             label: 'Riders',
-            color: const Color(0xFF1565C0),
+            color: AppColors.primary,
             onTap: () => _showRidersMenu(context),
           ),
           _StatItem(
             icon: Icons.local_taxi,
             value: '$_driverCount',
             label: 'Drivers',
-            color: const Color(0xFF1565C0),
+            color: AppColors.primary,
             onTap: () => _showDriversMenu(context),
           ),
           _StatItem(
             icon: Icons.verified_user,
             value: '$_pendingVerifications',
             label: 'Verificaciones',
-            color: AppColors.warning,
+            color: AppColors.primary,
             onTap: () => Navigator.push(
               context,
               slideFromRightRoute(const VerificationReviewScreen()),
             ),
           ),
           _StatItem(
-            icon: Icons.block,
-            value: '$_blockedUsers',
-            label: 'Bloqueados',
-            color: AppColors.error,
+            icon: _unreadAlerts > 0 ? Icons.notifications_active : Icons.notifications_none,
+            value: '$_unreadAlerts',
+            label: 'Alertas',
+            color: _unreadAlerts > 0 ? const Color(0xFFEF4444) : AppColors.primary,
             onTap: () => Navigator.push(
               context,
-              slideFromRightRoute(const BlockedUsersScreen()),
+              slideFromRightRoute(const AlertsScreen()),
             ),
           ),
         ],
