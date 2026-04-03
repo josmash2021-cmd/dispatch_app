@@ -10,7 +10,8 @@ import 'user_detail_page.dart';
 /// Screen for managing blocked/deleted drivers and riders.
 /// Provides a centralized place to view and restore banned users.
 class BlockedUsersScreen extends StatefulWidget {
-  const BlockedUsersScreen({super.key});
+  final String roleFilter; // 'rider', 'driver', or '' for all
+  const BlockedUsersScreen({super.key, this.roleFilter = ''});
 
   @override
   State<BlockedUsersScreen> createState() => _BlockedUsersScreenState();
@@ -26,10 +27,14 @@ class _BlockedUsersScreenState extends State<BlockedUsersScreen>
   List<ClientModel> _blockedRiders = [];
   bool _loading = true;
 
+  bool get _showRiders => widget.roleFilter.isEmpty || widget.roleFilter == 'rider';
+  bool get _showDrivers => widget.roleFilter.isEmpty || widget.roleFilter == 'driver';
+  int get _tabCount => (_showRiders && _showDrivers) ? 2 : 1;
+
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this);
+    _tabController = TabController(length: _tabCount, vsync: this);
     _loadBlockedUsers();
   }
 
@@ -176,9 +181,13 @@ class _BlockedUsersScreenState extends State<BlockedUsersScreen>
           onPressed: () => Navigator.pop(context),
         ),
         elevation: 0,
-        title: const Text(
-          'Blocked Users',
-          style: TextStyle(
+        title: Text(
+          widget.roleFilter == 'rider'
+              ? 'Riders Bloqueados'
+              : widget.roleFilter == 'driver'
+                  ? 'Drivers Bloqueados'
+                  : 'Blocked Users',
+          style: const TextStyle(
             color: AppColors.textPrimary,
             fontWeight: FontWeight.w700,
           ),
@@ -189,46 +198,54 @@ class _BlockedUsersScreenState extends State<BlockedUsersScreen>
             onPressed: _loadBlockedUsers,
           ),
         ],
-        bottom: TabBar(
-          controller: _tabController,
-          labelColor: AppColors.primary,
-          unselectedLabelColor: AppColors.textSecondary,
-          indicatorColor: AppColors.primary,
-          tabs: [
-            Tab(
-              icon: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Icon(Icons.local_taxi, size: 18),
-                  const SizedBox(width: 8),
-                  Text('Drivers (${_blockedDrivers.length})'),
+        bottom: _tabCount > 1
+            ? TabBar(
+                controller: _tabController,
+                labelColor: AppColors.primary,
+                unselectedLabelColor: AppColors.textSecondary,
+                indicatorColor: AppColors.primary,
+                tabs: [
+                  if (_showDrivers)
+                    Tab(
+                      icon: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Icon(Icons.local_taxi, size: 18),
+                          const SizedBox(width: 8),
+                          Text('Drivers (${_blockedDrivers.length})'),
+                        ],
+                      ),
+                    ),
+                  if (_showRiders)
+                    Tab(
+                      icon: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Icon(Icons.person, size: 18),
+                          const SizedBox(width: 8),
+                          Text('Riders (${_blockedRiders.length})'),
+                        ],
+                      ),
+                    ),
                 ],
-              ),
-            ),
-            Tab(
-              icon: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Icon(Icons.person, size: 18),
-                  const SizedBox(width: 8),
-                  Text('Riders (${_blockedRiders.length})'),
-                ],
-              ),
-            ),
-          ],
-        ),
+              )
+            : null,
       ),
       body: _loading
           ? const Center(
               child: CircularProgressIndicator(color: AppColors.primary),
             )
-          : TabBarView(
-              controller: _tabController,
-              children: [
-                _buildDriversList(),
-                _buildRidersList(),
-              ],
-            ),
+          : _tabCount > 1
+              ? TabBarView(
+                  controller: _tabController,
+                  children: [
+                    if (_showDrivers) _buildDriversList(),
+                    if (_showRiders) _buildRidersList(),
+                  ],
+                )
+              : _showDrivers
+                  ? _buildDriversList()
+                  : _buildRidersList(),
     );
   }
 

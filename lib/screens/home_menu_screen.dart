@@ -419,7 +419,7 @@ class _HomeMenuScreenState extends State<HomeMenuScreen>
           badge: _pendingVerifications > 0 ? '$_pendingVerifications' : null,
           onTap: () => Navigator.push(
             context,
-            slideFromRightRoute(const VerificationReviewScreen()),
+            slideFromRightRoute(const VerificationReviewScreen(roleFilter: 'rider')),
           ),
         ),
         _MenuAction(
@@ -428,7 +428,7 @@ class _HomeMenuScreenState extends State<HomeMenuScreen>
           badge: _blockedUsers > 0 ? '$_blockedUsers' : null,
           onTap: () => Navigator.push(
             context,
-            slideFromRightRoute(const BlockedUsersScreen()),
+            slideFromRightRoute(const BlockedUsersScreen(roleFilter: 'rider')),
           ),
         ),
         _MenuAction(
@@ -436,7 +436,7 @@ class _HomeMenuScreenState extends State<HomeMenuScreen>
           label: 'Desactivados',
           onTap: () => Navigator.push(
             context,
-            slideFromRightRoute(const DeactivatedUsersScreen()),
+            slideFromRightRoute(const DeactivatedUsersScreen(roleFilter: 'rider')),
           ),
         ),
         _MenuAction(
@@ -444,7 +444,7 @@ class _HomeMenuScreenState extends State<HomeMenuScreen>
           label: 'Eliminados',
           onTap: () => Navigator.push(
             context,
-            slideFromRightRoute(const DeletedUsersScreen()),
+            slideFromRightRoute(const DeletedUsersScreen(roleFilter: 'rider')),
           ),
         ),
         _MenuAction(
@@ -452,7 +452,7 @@ class _HomeMenuScreenState extends State<HomeMenuScreen>
           label: 'Apelaciones',
           onTap: () => Navigator.push(
             context,
-            slideFromRightRoute(const AccountAppealsScreen()),
+            slideFromRightRoute(const AccountAppealsScreen(roleFilter: 'rider')),
           ),
         ),
       ],
@@ -480,7 +480,7 @@ class _HomeMenuScreenState extends State<HomeMenuScreen>
           label: 'Verificación',
           onTap: () => Navigator.push(
             context,
-            slideFromRightRoute(const VerificationReviewScreen()),
+            slideFromRightRoute(const VerificationReviewScreen(roleFilter: 'driver')),
           ),
         ),
         _MenuAction(
@@ -488,7 +488,7 @@ class _HomeMenuScreenState extends State<HomeMenuScreen>
           label: 'Bloqueados',
           onTap: () => Navigator.push(
             context,
-            slideFromRightRoute(const BlockedUsersScreen()),
+            slideFromRightRoute(const BlockedUsersScreen(roleFilter: 'driver')),
           ),
         ),
         _MenuAction(
@@ -496,7 +496,7 @@ class _HomeMenuScreenState extends State<HomeMenuScreen>
           label: 'Desactivados',
           onTap: () => Navigator.push(
             context,
-            slideFromRightRoute(const DeactivatedUsersScreen()),
+            slideFromRightRoute(const DeactivatedUsersScreen(roleFilter: 'driver')),
           ),
         ),
         _MenuAction(
@@ -504,7 +504,7 @@ class _HomeMenuScreenState extends State<HomeMenuScreen>
           label: 'Eliminados',
           onTap: () => Navigator.push(
             context,
-            slideFromRightRoute(const DeletedUsersScreen()),
+            slideFromRightRoute(const DeletedUsersScreen(roleFilter: 'driver')),
           ),
         ),
         _MenuAction(
@@ -512,7 +512,7 @@ class _HomeMenuScreenState extends State<HomeMenuScreen>
           label: 'Apelaciones',
           onTap: () => Navigator.push(
             context,
-            slideFromRightRoute(const AccountAppealsScreen()),
+            slideFromRightRoute(const AccountAppealsScreen(roleFilter: 'driver')),
           ),
         ),
       ],

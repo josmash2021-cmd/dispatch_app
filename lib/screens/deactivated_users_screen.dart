@@ -9,7 +9,8 @@ import 'user_detail_page.dart';
 
 /// Screen for managing deactivated drivers and riders.
 class DeactivatedUsersScreen extends StatefulWidget {
-  const DeactivatedUsersScreen({super.key});
+  final String roleFilter; // 'rider', 'driver', or '' for all
+  const DeactivatedUsersScreen({super.key, this.roleFilter = ''});
 
   @override
   State<DeactivatedUsersScreen> createState() => _DeactivatedUsersScreenState();
@@ -25,10 +26,14 @@ class _DeactivatedUsersScreenState extends State<DeactivatedUsersScreen>
   List<ClientModel> _deactivatedRiders = [];
   bool _loading = true;
 
+  bool get _showRiders => widget.roleFilter.isEmpty || widget.roleFilter == 'rider';
+  bool get _showDrivers => widget.roleFilter.isEmpty || widget.roleFilter == 'driver';
+  int get _tabCount => (_showRiders && _showDrivers) ? 2 : 1;
+
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this);
+    _tabController = TabController(length: _tabCount, vsync: this);
     _loadDeactivatedUsers();
   }
 
@@ -149,9 +154,13 @@ class _DeactivatedUsersScreenState extends State<DeactivatedUsersScreen>
           onPressed: () => Navigator.pop(context),
         ),
         elevation: 0,
-        title: const Text(
-          'Usuarios Desactivados',
-          style: TextStyle(
+        title: Text(
+          widget.roleFilter == 'rider'
+              ? 'Riders Desactivados'
+              : widget.roleFilter == 'driver'
+                  ? 'Drivers Desactivados'
+                  : 'Usuarios Desactivados',
+          style: const TextStyle(
             color: AppColors.textPrimary,
             fontWeight: FontWeight.w700,
           ),
@@ -162,34 +171,42 @@ class _DeactivatedUsersScreenState extends State<DeactivatedUsersScreen>
             onPressed: _loadDeactivatedUsers,
           ),
         ],
-        bottom: TabBar(
-          controller: _tabController,
-          indicatorColor: AppColors.primary,
-          labelColor: AppColors.primary,
-          unselectedLabelColor: AppColors.textSecondary,
-          tabs: [
-            Tab(
-              text: 'Drivers (${_deactivatedDrivers.length})',
-              icon: const Icon(Icons.local_taxi, size: 20),
-            ),
-            Tab(
-              text: 'Riders (${_deactivatedRiders.length})',
-              icon: const Icon(Icons.person, size: 20),
-            ),
-          ],
-        ),
+        bottom: _tabCount > 1
+            ? TabBar(
+                controller: _tabController,
+                indicatorColor: AppColors.primary,
+                labelColor: AppColors.primary,
+                unselectedLabelColor: AppColors.textSecondary,
+                tabs: [
+                  if (_showDrivers)
+                    Tab(
+                      text: 'Drivers (${_deactivatedDrivers.length})',
+                      icon: const Icon(Icons.local_taxi, size: 20),
+                    ),
+                  if (_showRiders)
+                    Tab(
+                      text: 'Riders (${_deactivatedRiders.length})',
+                      icon: const Icon(Icons.person, size: 20),
+                    ),
+                ],
+              )
+            : null,
       ),
       body: _loading
           ? const Center(
               child: CircularProgressIndicator(color: AppColors.primary),
             )
-          : TabBarView(
-              controller: _tabController,
-              children: [
-                _buildDriversList(),
-                _buildRidersList(),
-              ],
-            ),
+          : _tabCount > 1
+              ? TabBarView(
+                  controller: _tabController,
+                  children: [
+                    if (_showDrivers) _buildDriversList(),
+                    if (_showRiders) _buildRidersList(),
+                  ],
+                )
+              : _showDrivers
+                  ? _buildDriversList()
+                  : _buildRidersList(),
     );
   }
 

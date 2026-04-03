@@ -12,7 +12,8 @@ import 'user_detail_page.dart';
 
 /// Screen for managing account appeals from blocked/deactivated riders and drivers.
 class AccountAppealsScreen extends StatefulWidget {
-  const AccountAppealsScreen({super.key});
+  final String roleFilter; // 'rider', 'driver', or '' for all
+  const AccountAppealsScreen({super.key, this.roleFilter = ''});
 
   @override
   State<AccountAppealsScreen> createState() => _AccountAppealsScreenState();
@@ -49,6 +50,14 @@ class _AccountAppealsScreenState extends State<AccountAppealsScreen>
     setState(() => _loading = true);
 
     Query query = FirebaseFirestore.instance.collection('account_appeals');
+    if (widget.roleFilter.isNotEmpty) {
+      // Filter by role: 'rider' matches 'rider' and 'client', 'driver' matches 'driver'
+      if (widget.roleFilter == 'rider') {
+        query = query.where('userRole', whereIn: ['rider', 'client']);
+      } else {
+        query = query.where('userRole', isEqualTo: widget.roleFilter);
+      }
+    }
     if (_filter != 'all') {
       query = query.where('status', isEqualTo: _filter);
     }
@@ -288,9 +297,13 @@ class _AccountAppealsScreenState extends State<AccountAppealsScreen>
           onPressed: () => Navigator.pop(context),
         ),
         elevation: 0,
-        title: const Text(
-          'Apelaciones de Cuentas',
-          style: TextStyle(
+        title: Text(
+          widget.roleFilter == 'rider'
+              ? 'Apelaciones Riders'
+              : widget.roleFilter == 'driver'
+                  ? 'Apelaciones Drivers'
+                  : 'Apelaciones de Cuentas',
+          style: const TextStyle(
             color: AppColors.textPrimary,
             fontWeight: FontWeight.w700,
           ),

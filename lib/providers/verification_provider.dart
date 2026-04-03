@@ -17,6 +17,9 @@ class VerificationProvider extends ChangeNotifier {
   String _filter = 'all'; // all, pending, approved, rejected
   String get filter => _filter;
 
+  String _roleFilter = ''; // '', 'rider', 'driver'
+  String get roleFilter => _roleFilter;
+
   String _searchQuery = '';
 
   int _pendingCount = 0;
@@ -25,13 +28,19 @@ class VerificationProvider extends ChangeNotifier {
   StreamSubscription? _subscription;
   StreamSubscription? _countSub;
 
-  int get totalCount => _all.length;
-  int get pendingTotal => _all.where((v) => v.isPending).length;
-  int get approvedTotal => _all.where((v) => v.isApproved).length;
-  int get rejectedTotal => _all.where((v) => v.isRejected).length;
+  List<VerificationRequest> get _roleFiltered =>
+      _roleFilter.isEmpty ? _all : _all.where((v) => v.role == _roleFilter).toList();
+
+  int get totalCount => _roleFiltered.length;
+  int get pendingTotal => _roleFiltered.where((v) => v.isPending).length;
+  int get approvedTotal => _roleFiltered.where((v) => v.isApproved).length;
+  int get rejectedTotal => _roleFiltered.where((v) => v.isRejected).length;
 
   List<VerificationRequest> get _filtered {
     var list = _all;
+    if (_roleFilter.isNotEmpty) {
+      list = list.where((v) => v.role == _roleFilter).toList();
+    }
     if (_filter != 'all') {
       list = list.where((v) => v.status == _filter).toList();
     }
@@ -49,6 +58,11 @@ class VerificationProvider extends ChangeNotifier {
 
   void setFilter(String f) {
     _filter = f;
+    notifyListeners();
+  }
+
+  void setRoleFilter(String role) {
+    _roleFilter = role;
     notifyListeners();
   }
 

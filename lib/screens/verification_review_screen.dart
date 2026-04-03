@@ -18,7 +18,8 @@ import '../services/dispatch_api_service.dart';
 import '../services/verification_service.dart';
 
 class VerificationReviewScreen extends StatefulWidget {
-  const VerificationReviewScreen({super.key});
+  final String roleFilter; // 'rider', 'driver', or '' for all
+  const VerificationReviewScreen({super.key, this.roleFilter = ''});
   @override
   State<VerificationReviewScreen> createState() =>
       _VerificationReviewScreenState();
@@ -31,7 +32,9 @@ class _VerificationReviewScreenState extends State<VerificationReviewScreen> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<VerificationProvider>().startListening();
+      final prov = context.read<VerificationProvider>();
+      prov.setRoleFilter(widget.roleFilter);
+      prov.startListening();
     });
   }
 
@@ -54,7 +57,11 @@ class _VerificationReviewScreenState extends State<VerificationReviewScreen> {
         ),
         title: Row(
           children: [
-            const Text('Verification Review'),
+            Text(widget.roleFilter == 'driver'
+                ? 'Verificación Drivers'
+                : widget.roleFilter == 'rider'
+                    ? 'Verificación Riders'
+                    : 'Verification Review'),
             if (prov.pendingCount > 0) ...[
               const SizedBox(width: 8),
               Container(
@@ -664,88 +671,90 @@ class _VerificationCard extends StatelessWidget {
                 ),
               ],
 
-              // ── SSN ──
-              const SizedBox(height: 20),
-              _sectionHeader('Social Security Number'),
-              const SizedBox(height: 8),
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 14,
-                  vertical: 12,
-                ),
-                decoration: BoxDecoration(
-                  color: AppColors.surfaceHigh,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                    color: request.ssnProvided
-                        ? AppColors.success.withValues(alpha: 0.35)
-                        : AppColors.warning.withValues(alpha: 0.35),
+              // ── SSN (drivers only) ──
+              if (request.role == 'driver') ...[
+                const SizedBox(height: 20),
+                _sectionHeader('Número de Seguro Social'),
+                const SizedBox(height: 8),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 12,
                   ),
-                ),
-                child: Row(
-                  children: [
-                    Icon(
-                      Icons.security_rounded,
-                      size: 20,
+                  decoration: BoxDecoration(
+                    color: AppColors.surfaceHigh,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
                       color: request.ssnProvided
-                          ? AppColors.success
-                          : AppColors.warning,
+                          ? AppColors.success.withValues(alpha: 0.35)
+                          : AppColors.warning.withValues(alpha: 0.35),
                     ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            request.ssnProvided
-                                ? 'SSN Provided'
-                                : 'SSN Not Provided',
-                            style: TextStyle(
-                              color: request.ssnProvided
-                                  ? AppColors.success
-                                  : AppColors.warning,
-                              fontSize: 12,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                          if (request.ssnProvided) ...[
-                            const SizedBox(height: 2),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.security_rounded,
+                        size: 20,
+                        color: request.ssnProvided
+                            ? AppColors.success
+                            : AppColors.warning,
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
                             Text(
-                              request.ssnMasked ??
-                                  '***-**-${request.ssnLast4 ?? "????"}',
-                              style: const TextStyle(
-                                color: AppColors.textPrimary,
-                                fontSize: 16,
+                              request.ssnProvided
+                                  ? 'SSN Proporcionado'
+                                  : 'SSN No Proporcionado',
+                              style: TextStyle(
+                                color: request.ssnProvided
+                                    ? AppColors.success
+                                    : AppColors.warning,
+                                fontSize: 12,
                                 fontWeight: FontWeight.w700,
-                                fontFamily: 'monospace',
-                                letterSpacing: 1.2,
                               ),
                             ),
-                            if (request.ssnLast4 != null)
+                            if (request.ssnProvided) ...[
+                              const SizedBox(height: 2),
                               Text(
-                                'Last 4: ${request.ssnLast4}',
+                                request.ssnMasked ??
+                                    '***-**-${request.ssnLast4 ?? "????"}',
                                 style: const TextStyle(
-                                  color: AppColors.textSecondary,
-                                  fontSize: 12,
+                                  color: AppColors.textPrimary,
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w700,
+                                  fontFamily: 'monospace',
+                                  letterSpacing: 1.2,
                                 ),
                               ),
+                              if (request.ssnLast4 != null)
+                                Text(
+                                  'Últimos 4: ${request.ssnLast4}',
+                                  style: const TextStyle(
+                                    color: AppColors.textSecondary,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                            ],
                           ],
-                        ],
+                        ),
                       ),
-                    ),
-                    Icon(
-                      request.ssnProvided
-                          ? Icons.verified_rounded
-                          : Icons.warning_amber_rounded,
-                      color: request.ssnProvided
-                          ? AppColors.success
-                          : AppColors.warning,
-                      size: 22,
-                    ),
-                  ],
+                      Icon(
+                        request.ssnProvided
+                            ? Icons.verified_rounded
+                            : Icons.warning_amber_rounded,
+                        color: request.ssnProvided
+                            ? AppColors.success
+                            : AppColors.warning,
+                        size: 22,
+                      ),
+                    ],
+                  ),
                 ),
-              ),
+              ],
 
               // ── Verification Photos ──
               if (request.idPhotoUrl != null ||
@@ -1572,82 +1581,84 @@ class _PendingVerificationDetailPageState
               dateFmt.format(request.submittedAt!),
             ),
 
-          // ── SSN ──
-          const SizedBox(height: 20),
-          _sectionHeader('Número de Seguro Social'),
-          const SizedBox(height: 8),
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-            decoration: BoxDecoration(
-              color: AppColors.surfaceHigh,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(
-                color: ssnProvided
-                    ? AppColors.success.withValues(alpha: 0.35)
-                    : AppColors.warning.withValues(alpha: 0.35),
-              ),
-            ),
-            child: Row(
-              children: [
-                Icon(
-                  Icons.security_rounded,
-                  size: 20,
-                  color: ssnProvided ? AppColors.success : AppColors.warning,
+          // ── SSN (drivers only) ──
+          if (request.role == 'driver') ...[
+            const SizedBox(height: 20),
+            _sectionHeader('Número de Seguro Social'),
+            const SizedBox(height: 8),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+              decoration: BoxDecoration(
+                color: AppColors.surfaceHigh,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: ssnProvided
+                      ? AppColors.success.withValues(alpha: 0.35)
+                      : AppColors.warning.withValues(alpha: 0.35),
                 ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        ssnProvided
-                            ? 'SSN Proporcionado'
-                            : 'SSN No Proporcionado',
-                        style: TextStyle(
-                          color: ssnProvided
-                              ? AppColors.success
-                              : AppColors.warning,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                      if (ssnProvided) ...[
-                        const SizedBox(height: 2),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.security_rounded,
+                    size: 20,
+                    color: ssnProvided ? AppColors.success : AppColors.warning,
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
                         Text(
-                          ssnFull ??
-                              ssnMasked ??
-                              '***-**-${ssnLast4 ?? "????"}',
-                          style: const TextStyle(
-                            color: AppColors.textPrimary,
-                            fontSize: 16,
+                          ssnProvided
+                              ? 'SSN Proporcionado'
+                              : 'SSN No Proporcionado',
+                          style: TextStyle(
+                            color: ssnProvided
+                                ? AppColors.success
+                                : AppColors.warning,
+                            fontSize: 12,
                             fontWeight: FontWeight.w700,
-                            fontFamily: 'monospace',
-                            letterSpacing: 1.2,
                           ),
                         ),
-                        if (ssnLast4 != null)
+                        if (ssnProvided) ...[
+                          const SizedBox(height: 2),
                           Text(
-                            'Últimos 4: $ssnLast4',
+                            ssnFull ??
+                                ssnMasked ??
+                                '***-**-${ssnLast4 ?? "????"}',
                             style: const TextStyle(
-                              color: AppColors.textSecondary,
-                              fontSize: 12,
+                              color: AppColors.textPrimary,
+                              fontSize: 16,
+                              fontWeight: FontWeight.w700,
+                              fontFamily: 'monospace',
+                              letterSpacing: 1.2,
                             ),
                           ),
+                          if (ssnLast4 != null)
+                            Text(
+                              'Últimos 4: $ssnLast4',
+                              style: const TextStyle(
+                                color: AppColors.textSecondary,
+                                fontSize: 12,
+                              ),
+                            ),
+                        ],
                       ],
-                    ],
+                    ),
                   ),
-                ),
-                Icon(
-                  ssnProvided
-                      ? Icons.verified_rounded
-                      : Icons.warning_amber_rounded,
-                  color: ssnProvided ? AppColors.success : AppColors.warning,
-                  size: 22,
-                ),
-              ],
+                  Icon(
+                    ssnProvided
+                        ? Icons.verified_rounded
+                        : Icons.warning_amber_rounded,
+                    color: ssnProvided ? AppColors.success : AppColors.warning,
+                    size: 22,
+                  ),
+                ],
+              ),
             ),
-          ),
+          ],
 
           // ── Verification Photos ──
           const SizedBox(height: 28),
@@ -2365,91 +2376,93 @@ class _UserDetailWidgetState extends State<_UserDetailWidget> {
             _formatDate(createdAt),
           ),
 
-        // ── SSN from backend ──
-        const SizedBox(height: 10),
-        GestureDetector(
-          onTap: ssnProvided && ssnFull != null
-              ? () => setState(() => _ssnRevealed = !_ssnRevealed)
-              : null,
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-            decoration: BoxDecoration(
-              color: ssnProvided
-                  ? AppColors.success.withValues(alpha: 0.07)
-                  : AppColors.warning.withValues(alpha: 0.07),
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(
+        // ── SSN from backend (drivers only) ──
+        if (isDriver) ...[
+          const SizedBox(height: 10),
+          GestureDetector(
+            onTap: ssnProvided && ssnFull != null
+                ? () => setState(() => _ssnRevealed = !_ssnRevealed)
+                : null,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              decoration: BoxDecoration(
                 color: ssnProvided
-                    ? AppColors.success.withValues(alpha: 0.3)
-                    : AppColors.warning.withValues(alpha: 0.3),
-              ),
-            ),
-            child: Row(
-              children: [
-                Icon(
-                  Icons.security_rounded,
-                  size: 17,
-                  color: ssnProvided ? AppColors.success : AppColors.warning,
+                    ? AppColors.success.withValues(alpha: 0.07)
+                    : AppColors.warning.withValues(alpha: 0.07),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(
+                  color: ssnProvided
+                      ? AppColors.success.withValues(alpha: 0.3)
+                      : AppColors.warning.withValues(alpha: 0.3),
                 ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          const Text(
-                            'SSN',
-                            style: TextStyle(
-                              color: AppColors.textSecondary,
-                              fontSize: 11,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                          if (ssnProvided && ssnFull != null) ...[
-                            const SizedBox(width: 6),
-                            Text(
-                              _ssnRevealed ? 'Tap to hide' : 'Tap to reveal',
-                              style: const TextStyle(
-                                color: AppColors.primary,
-                                fontSize: 10,
-                                fontWeight: FontWeight.w500,
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.security_rounded,
+                    size: 17,
+                    color: ssnProvided ? AppColors.success : AppColors.warning,
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            const Text(
+                              'SSN',
+                              style: TextStyle(
+                                color: AppColors.textSecondary,
+                                fontSize: 11,
+                                fontWeight: FontWeight.w600,
                               ),
                             ),
+                            if (ssnProvided && ssnFull != null) ...[
+                              const SizedBox(width: 6),
+                              Text(
+                                _ssnRevealed ? 'Tap to hide' : 'Tap to reveal',
+                                style: const TextStyle(
+                                  color: AppColors.primary,
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ],
                           ],
-                        ],
-                      ),
-                      Text(
-                        ssnProvided
-                            ? (_ssnRevealed && ssnFull != null
-                                  ? ssnFull
-                                  : (ssnMasked ??
-                                        '***-**-${ssnLast4 ?? "????"}'))
-                            : 'No proporcionado',
-                        style: TextStyle(
-                          color: ssnProvided
-                              ? AppColors.textPrimary
-                              : AppColors.textHint,
-                          fontSize: 14,
-                          fontWeight: FontWeight.w700,
-                          fontFamily: 'monospace',
                         ),
-                      ),
-                    ],
+                        Text(
+                          ssnProvided
+                              ? (_ssnRevealed && ssnFull != null
+                                    ? ssnFull
+                                    : (ssnMasked ??
+                                          '***-**-${ssnLast4 ?? "????"}'))
+                              : 'No proporcionado',
+                          style: TextStyle(
+                            color: ssnProvided
+                                ? AppColors.textPrimary
+                                : AppColors.textHint,
+                            fontSize: 14,
+                            fontWeight: FontWeight.w700,
+                            fontFamily: 'monospace',
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-                Text(
-                  ssnProvided ? 'Verified' : 'Missing',
-                  style: TextStyle(
-                    color: ssnProvided ? AppColors.success : AppColors.warning,
-                    fontSize: 11,
-                    fontWeight: FontWeight.w700,
+                  Text(
+                    ssnProvided ? 'Verified' : 'Missing',
+                    style: TextStyle(
+                      color: ssnProvided ? AppColors.success : AppColors.warning,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
-        ),
+        ],
 
         // ── Backend verification photos (fallback if Firestore photos missing) ──
         if (backendIdPhoto != null || backendSelfie != null) ...[

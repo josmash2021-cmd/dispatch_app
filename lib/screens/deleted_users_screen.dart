@@ -5,7 +5,8 @@ import '../services/audit_service.dart';
 
 /// Screen showing soft-deleted users (riders + drivers) with restore / permanent delete.
 class DeletedUsersScreen extends StatefulWidget {
-  const DeletedUsersScreen({super.key});
+  final String roleFilter; // 'rider', 'driver', or '' for all
+  const DeletedUsersScreen({super.key, this.roleFilter = ''});
 
   @override
   State<DeletedUsersScreen> createState() => _DeletedUsersScreenState();
@@ -16,10 +17,14 @@ class _DeletedUsersScreenState extends State<DeletedUsersScreen>
   late final TabController _tabCtrl;
   final _audit = AuditService();
 
+  bool get _showRiders => widget.roleFilter.isEmpty || widget.roleFilter == 'rider';
+  bool get _showDrivers => widget.roleFilter.isEmpty || widget.roleFilter == 'driver';
+  int get _tabCount => (_showRiders && _showDrivers) ? 2 : 1;
+
   @override
   void initState() {
     super.initState();
-    _tabCtrl = TabController(length: 2, vsync: this);
+    _tabCtrl = TabController(length: _tabCount, vsync: this);
   }
 
   @override
@@ -39,28 +44,38 @@ class _DeletedUsersScreenState extends State<DeletedUsersScreen>
           icon: const Icon(Icons.arrow_back, color: AppColors.primary),
           onPressed: () => Navigator.pop(context),
         ),
-        title: const Text(
-          'Usuarios Eliminados',
-          style: TextStyle(color: AppColors.textPrimary),
+        title: Text(
+          widget.roleFilter == 'rider'
+              ? 'Riders Eliminados'
+              : widget.roleFilter == 'driver'
+                  ? 'Drivers Eliminados'
+                  : 'Usuarios Eliminados',
+          style: const TextStyle(color: AppColors.textPrimary),
         ),
-        bottom: TabBar(
-          controller: _tabCtrl,
-          indicatorColor: AppColors.primary,
-          labelColor: AppColors.primary,
-          unselectedLabelColor: AppColors.textSecondary,
-          tabs: const [
-            Tab(text: 'Riders'),
-            Tab(text: 'Drivers'),
-          ],
-        ),
+        bottom: _tabCount > 1
+            ? TabBar(
+                controller: _tabCtrl,
+                indicatorColor: AppColors.primary,
+                labelColor: AppColors.primary,
+                unselectedLabelColor: AppColors.textSecondary,
+                tabs: [
+                  if (_showRiders) const Tab(text: 'Riders'),
+                  if (_showDrivers) const Tab(text: 'Drivers'),
+                ],
+              )
+            : null,
       ),
-      body: TabBarView(
-        controller: _tabCtrl,
-        children: [
-          _buildList('clients'),
-          _buildList('drivers'),
-        ],
-      ),
+      body: _tabCount > 1
+          ? TabBarView(
+              controller: _tabCtrl,
+              children: [
+                if (_showRiders) _buildList('clients'),
+                if (_showDrivers) _buildList('drivers'),
+              ],
+            )
+          : _showRiders
+              ? _buildList('clients')
+              : _buildList('drivers'),
     );
   }
 
