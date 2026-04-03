@@ -126,12 +126,7 @@ class VerificationService {
   /// Returns a [VerificationResult] — check [syncedToBackend] to decide
   /// whether to show a non-critical warning to the dispatcher.
   Future<VerificationResult> approve(String docId) async {
-    await _collection.doc(docId).update({
-      'status': 'approved',
-      'reason': null,
-      'reviewedAt': FieldValue.serverTimestamp(),
-    });
-    // Also update the user's verification status in clients/drivers collection
+    // Read doc data BEFORE batch write (need role, userId, photo)
     final doc = await _collection.doc(docId).get();
     if (!doc.exists) return const VerificationResult();
 
@@ -139,25 +134,31 @@ class VerificationService {
     final role = data['role'] as String? ?? 'rider';
     final userId = (data['userId'] as num?)?.toInt() ?? 0;
     final col = role == 'driver' ? 'drivers' : 'clients';
-    // For riders: propagate selfie as profile photo
     final selfieUrl = data['selfieUrl'] as String?;
     final profilePhotoUrl = data['profilePhotoUrl'] as String? ?? selfieUrl;
-    final update = <String, dynamic>{
+
+    // Atomic batch write to ALL 3 collections — Cruise app detects any of them
+    final approvalPayload = <String, dynamic>{
+      'status': 'approved',
+      'driver_status': 'approved',
+      'approvalStatus': 'approved',
       'verificationStatus': 'approved',
+      'isVerified': true,
+      'isApproved': true,
+      'reason': null,
       'verificationReason': null,
+      'reviewedAt': FieldValue.serverTimestamp(),
+      'updated_at': FieldValue.serverTimestamp(),
       'lastUpdated': FieldValue.serverTimestamp(),
       if (profilePhotoUrl != null && profilePhotoUrl.isNotEmpty)
         'profilePhotoUrl': profilePhotoUrl,
     };
-    await _firestore.collection(col).doc(docId).set(
-      update,
-      SetOptions(merge: true),
-    );
-    // Also update in users collection
-    await _firestore.collection('users').doc(docId).set(
-      update,
-      SetOptions(merge: true),
-    );
+
+    final batch = _firestore.batch();
+    batch.set(_collection.doc(docId), approvalPayload, SetOptions(merge: true));
+    batch.set(_firestore.collection(col).doc(docId), approvalPayload, SetOptions(merge: true));
+    batch.set(_firestore.collection('users').doc(docId), approvalPayload, SetOptions(merge: true));
+    await batch.commit();
     // Sync to backend SQLite — non-critical
     if (userId > 0) {
       try {
@@ -185,12 +186,7 @@ class VerificationService {
   /// Returns a [VerificationResult] — check [syncedToBackend] to decide
   /// whether to show a non-critical warning to the dispatcher.
   Future<VerificationResult> reject(String docId, String reason) async {
-    await _collection.doc(docId).update({
-      'status': 'rejected',
-      'reason': reason,
-      'reviewedAt': FieldValue.serverTimestamp(),
-    });
-    // Also update the user's verification status
+    // Read doc data BEFORE batch write (need role, userId)
     final doc = await _collection.doc(docId).get();
     if (!doc.exists) return const VerificationResult();
 
@@ -198,19 +194,27 @@ class VerificationService {
     final role = data['role'] as String? ?? 'rider';
     final userId = (data['userId'] as num?)?.toInt() ?? 0;
     final col = role == 'driver' ? 'drivers' : 'clients';
-    final rejectUpdate = <String, dynamic>{
+
+    // Atomic batch write to ALL 3 collections — Cruise app detects any of them
+    final rejectPayload = <String, dynamic>{
+      'status': 'rejected',
+      'driver_status': 'rejected',
+      'approvalStatus': 'rejected',
       'verificationStatus': 'rejected',
+      'isVerified': false,
+      'isApproved': false,
+      'reason': reason,
       'verificationReason': reason,
+      'reviewedAt': FieldValue.serverTimestamp(),
+      'updated_at': FieldValue.serverTimestamp(),
       'lastUpdated': FieldValue.serverTimestamp(),
     };
-    await _firestore.collection(col).doc(docId).set(
-      rejectUpdate,
-      SetOptions(merge: true),
-    );
-    await _firestore.collection('users').doc(docId).set(
-      rejectUpdate,
-      SetOptions(merge: true),
-    );
+
+    final batch = _firestore.batch();
+    batch.set(_collection.doc(docId), rejectPayload, SetOptions(merge: true));
+    batch.set(_firestore.collection(col).doc(docId), rejectPayload, SetOptions(merge: true));
+    batch.set(_firestore.collection('users').doc(docId), rejectPayload, SetOptions(merge: true));
+    await batch.commit();
     // Sync to backend SQLite — non-critical
     if (userId > 0) {
       try {
