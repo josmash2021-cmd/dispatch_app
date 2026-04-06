@@ -67,6 +67,7 @@ class _HomeMenuScreenState extends State<HomeMenuScreen>
   StreamSubscription? _chatsSub;
   StreamSubscription? _driverReportsSub;
   StreamSubscription? _blockedSub;
+  StreamSubscription? _blockedDriversSub;
   StreamSubscription? _onlineDriversSub;
   StreamSubscription? _alertsSub;
 
@@ -142,15 +143,14 @@ class _HomeMenuScreenState extends State<HomeMenuScreen>
         .listen((snap) => setState(() => _driverReports = snap.docs.length));
 
     // Blocked users count — listen to blocked drivers separately
-    StreamSubscription? blockedDriversSub;
     _blockedSub = FirebaseFirestore.instance
         .collection('clients')
         .where('status', isEqualTo: 'blocked')
         .snapshots()
         .listen((snap) {
           final blockedClients = snap.docs.length;
-          blockedDriversSub?.cancel();
-          blockedDriversSub = FirebaseFirestore.instance
+          _blockedDriversSub?.cancel();
+          _blockedDriversSub = FirebaseFirestore.instance
               .collection('drivers')
               .where('status', isEqualTo: 'blocked')
               .snapshots()
@@ -188,6 +188,7 @@ class _HomeMenuScreenState extends State<HomeMenuScreen>
     _chatsSub?.cancel();
     _driverReportsSub?.cancel();
     _blockedSub?.cancel();
+    _blockedDriversSub?.cancel();
     _onlineDriversSub?.cancel();
     _alertsSub?.cancel();
     super.dispose();
@@ -244,7 +245,7 @@ class _HomeMenuScreenState extends State<HomeMenuScreen>
                 icon: Icons.directions_car,
                 label: 'Viajes',
                 sublabel: '$_activeTrips activos',
-                color: AppColors.primary,
+                color: AppColors.primary, // Operations — gold
                 badge: _activeTrips > 0 ? '$_activeTrips' : null,
                 onTap: () => _showTripsMenu(context),
               ),
@@ -252,7 +253,7 @@ class _HomeMenuScreenState extends State<HomeMenuScreen>
                 icon: Icons.map,
                 label: 'Mapa Fleet',
                 sublabel: '$_onlineDrivers en línea',
-                color: AppColors.primary,
+                color: AppColors.primary, // Operations — gold
                 badge: _onlineDrivers > 0 ? '$_onlineDrivers' : null,
                 onTap: () => _showFleetMenu(context),
               ),
@@ -262,7 +263,7 @@ class _HomeMenuScreenState extends State<HomeMenuScreen>
                 sublabel: _supportChats > 0
                     ? '$_supportChats mensajes nuevos'
                     : 'Chat con usuarios',
-                color: AppColors.primary,
+                color: const Color(0xFFF59E0B), // Support — amber
                 badge: _supportChats > 0 ? '$_supportChats' : null,
                 onTap: () => Navigator.push(
                   context,
@@ -273,7 +274,7 @@ class _HomeMenuScreenState extends State<HomeMenuScreen>
                 icon: Icons.calendar_today,
                 label: 'Reservas',
                 sublabel: '$_scheduledTrips programados',
-                color: AppColors.primary,
+                color: AppColors.primary, // Operations — gold
                 badge: _scheduledTrips > 0 ? '$_scheduledTrips' : null,
                 onTap: () => Navigator.push(
                   context,
@@ -286,7 +287,7 @@ class _HomeMenuScreenState extends State<HomeMenuScreen>
                 sublabel: _unreadAlerts > 0
                     ? '$_unreadAlerts sin leer'
                     : 'Sin alertas nuevas',
-                color: _unreadAlerts > 0 ? const Color(0xFFEF4444) : AppColors.primary,
+                color: _unreadAlerts > 0 ? const Color(0xFFEF4444) : const Color(0xFFF59E0B), // Support — amber
                 badge: _unreadAlerts > 0 ? '$_unreadAlerts' : null,
                 onTap: () => Navigator.push(
                   context,
@@ -297,7 +298,7 @@ class _HomeMenuScreenState extends State<HomeMenuScreen>
                 icon: Icons.monitor_heart,
                 label: 'Sistema',
                 sublabel: 'Salud del servidor',
-                color: AppColors.primary,
+                color: const Color(0xFF6B7280), // System — gray
                 onTap: () => Navigator.push(
                   context,
                   slideFromRightRoute(const SystemHealthScreen()),
@@ -320,7 +321,7 @@ class _HomeMenuScreenState extends State<HomeMenuScreen>
           icon: Icons.person,
           label: 'Riders',
           sublabel: '$_riderCount usuarios',
-          color: AppColors.primary,
+          color: const Color(0xFF3B82F6), // People — blue
           badge: _pendingVerifications > 0 ? '$_pendingVerifications' : null,
           onTap: () => _showRidersMenu(context),
         ),
@@ -329,7 +330,7 @@ class _HomeMenuScreenState extends State<HomeMenuScreen>
           icon: Icons.local_taxi,
           label: 'Drivers',
           sublabel: '$_driverCount conductores',
-          color: AppColors.primary,
+          color: const Color(0xFF3B82F6), // People — blue
           onTap: () => _showDriversMenu(context),
         ),
       if (auth.canAccess('config'))
@@ -337,7 +338,7 @@ class _HomeMenuScreenState extends State<HomeMenuScreen>
           icon: Icons.settings,
           label: 'Configuración',
           sublabel: 'Ajustes del sistema',
-          color: AppColors.primary,
+          color: const Color(0xFF6B7280), // System — gray
           onTap: () => Navigator.push(
             context,
             slideFromRightRoute(const AdminConfigScreen()),
@@ -348,7 +349,7 @@ class _HomeMenuScreenState extends State<HomeMenuScreen>
           icon: Icons.attach_money,
           label: 'Precios',
           sublabel: 'Tarifas y pricing',
-          color: AppColors.primary,
+          color: const Color(0xFF22C55E), // Money — green
           onTap: () => Navigator.push(
             context,
             slideFromRightRoute(const PricingConfigScreen()),
@@ -359,7 +360,7 @@ class _HomeMenuScreenState extends State<HomeMenuScreen>
           icon: Icons.analytics,
           label: 'Reportes',
           sublabel: 'Reportes financieros',
-          color: AppColors.primary,
+          color: const Color(0xFFF59E0B), // Support/Reports — amber
           onTap: () => Navigator.push(
             context,
             slideFromRightRoute(const ReportsScreen()),
@@ -370,7 +371,7 @@ class _HomeMenuScreenState extends State<HomeMenuScreen>
           icon: Icons.security,
           label: 'Audit Logs',
           sublabel: 'Registro de actividad',
-          color: AppColors.primary,
+          color: const Color(0xFF6B7280), // System — gray
           onTap: () => Navigator.push(
             context,
             slideFromRightRoute(const AuditLogsScreen()),
@@ -381,7 +382,7 @@ class _HomeMenuScreenState extends State<HomeMenuScreen>
           icon: Icons.storage,
           label: 'Base de Datos',
           sublabel: 'Gestión de datos',
-          color: AppColors.primary,
+          color: const Color(0xFF6B7280), // System — gray
           onTap: () => Navigator.push(
             context,
             slideFromRightRoute(const DatabaseScreen()),
@@ -394,7 +395,7 @@ class _HomeMenuScreenState extends State<HomeMenuScreen>
           sublabel: _driverReports > 0
               ? '$_driverReports pendientes'
               : 'Sin reportes',
-          color: AppColors.primary,
+          color: const Color(0xFFF59E0B), // Support/Reports — amber
           badge: _driverReports > 0 ? '$_driverReports' : null,
           onTap: () => Navigator.push(
             context,
@@ -406,7 +407,7 @@ class _HomeMenuScreenState extends State<HomeMenuScreen>
           icon: Icons.directions_car_filled,
           label: 'Vehículos',
           sublabel: 'Tipos de vehículo',
-          color: AppColors.primary,
+          color: AppColors.primary, // Operations — gold
           onTap: () => Navigator.push(
             context,
             slideFromRightRoute(const VehicleTypesScreen()),
@@ -416,7 +417,7 @@ class _HomeMenuScreenState extends State<HomeMenuScreen>
         icon: Icons.account_balance_wallet,
         label: 'Pagos Drivers',
         sublabel: 'Payouts y balances',
-        color: AppColors.primary,
+        color: const Color(0xFF22C55E), // Money — green
         onTap: () => Navigator.push(
           context,
           slideFromRightRoute(const PayoutsScreen()),
@@ -426,7 +427,7 @@ class _HomeMenuScreenState extends State<HomeMenuScreen>
         icon: Icons.local_offer,
         label: 'Promos',
         sublabel: 'Códigos de descuento',
-        color: AppColors.primary,
+        color: const Color(0xFF22C55E), // Money — green
         onTap: () => Navigator.push(
           context,
           slideFromRightRoute(const PromosScreen()),
@@ -436,7 +437,7 @@ class _HomeMenuScreenState extends State<HomeMenuScreen>
         icon: Icons.notifications,
         label: 'Notificaciones',
         sublabel: 'Historial de envíos',
-        color: AppColors.primary,
+        color: const Color(0xFF6B7280), // System — gray
         onTap: () => Navigator.push(
           context,
           slideFromRightRoute(const NotificationHistoryScreen()),

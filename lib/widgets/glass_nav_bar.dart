@@ -22,7 +22,7 @@ class GlassNavBar extends StatelessWidget {
       child: BackdropFilter(
         filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
         child: Container(
-          height: 58 + bottom,
+          height: 65 + bottom,
           padding: EdgeInsets.only(bottom: bottom),
           decoration: BoxDecoration(
             color: const Color(0xFF0C0D0F).withValues(alpha: 0.94),
@@ -107,7 +107,7 @@ class _GlassNavButton extends StatelessWidget {
                     color: isSelected
                         ? AppColors.primary
                         : AppColors.textSecondary,
-                    size: 20,
+                    size: 24,
                   ),
                 ),
               ),
@@ -142,7 +142,7 @@ class _GlassNavButton extends StatelessWidget {
           AnimatedDefaultTextStyle(
             duration: const Duration(milliseconds: 180),
             style: TextStyle(
-              fontSize: 9,
+              fontSize: 11,
               fontWeight: isSelected ? FontWeight.w700 : FontWeight.w400,
               color: isSelected ? AppColors.primary : AppColors.textSecondary,
               letterSpacing: 0.2,

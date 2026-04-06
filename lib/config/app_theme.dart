@@ -9,7 +9,7 @@ class AppColors {
   static const Color background = Color(0xFF08090C);
   static const Color surface = Color(0xFF101114);
   static const Color surfaceHigh = Color(0xFF161719);
-  static const Color cardBorder = Color(0xFF08090C); // black
+  static const Color cardBorder = Color(0xFF1E1F24); // visible border
 
   // Primary accent — Cruise Gold
   static const Color primary = Color(0xFFE8C547);
@@ -24,20 +24,20 @@ class AppColors {
   static const Color textSecondary = Color(0x80FFFFFF); // white 50%
   static const Color textHint = Color(0x40FFFFFF); // white 25%
 
-  // Status colors - MINIMALIST: only black, white, gold
-  static const Color requested = Color(0xFFE8C547); // gold
-  static const Color accepted = Color(0xFFE8C547); // gold
-  static const Color driverArrived = Color(0xFFF5D990); // gold-light
-  static const Color inProgress = Color(0xFFE8C547); // gold
-  static const Color completed = Color(0xFFFFFFFF); // white
-  static const Color cancelled = Color(0xFF000000); // pure black
+  // Status colors — semantic, distinguishable
+  static const Color requested = Color(0xFFE8C547);   // gold (brand)
+  static const Color accepted = Color(0xFF3B82F6);     // blue
+  static const Color driverArrived = Color(0xFF8B5CF6); // purple
+  static const Color inProgress = Color(0xFF22C55E);   // green
+  static const Color completed = Color(0xFF22C55E);    // green
+  static const Color cancelled = Color(0xFF6B7280);    // gray
 
-  // Semantic - MINIMALIST: only black, white, gold
-  static const Color success = Color(0xFFE8C547); // gold (was green)
-  static const Color warning = Color(0xFFE8C547); // gold
-  static const Color error = Color(0xFFFFFFFF); // white for contrast
-  static const Color info = Color(0xFFE8C547); // gold
-  static const Color divider = Color(0xFF08090C); // black
+  // Semantic colors
+  static const Color success = Color(0xFF22C55E);      // green
+  static const Color warning = Color(0xFFF59E0B);      // amber
+  static const Color error = Color(0xFFEF4444);        // red
+  static const Color info = Color(0xFF3B82F6);         // blue
+  static const Color divider = Color(0xFF08090C);      // black
 }
 
 // Cruise-identical Cupertino transitions for all platforms

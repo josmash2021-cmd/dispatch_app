@@ -579,7 +579,7 @@ class _FleetMapScreenState extends State<FleetMapScreen> {
     }
     if (!mounted || frames.length != frameCount) return;
     setState(() => _goldDotFrames = frames);
-    _goldDotTimer = Timer.periodic(const Duration(milliseconds: 130), (_) {
+    _goldDotTimer = Timer.periodic(const Duration(milliseconds: 500), (_) {
       if (!mounted || _goldDotFrames.isEmpty) return;
       _goldDotFrame = (_goldDotFrame + 1) % _goldDotFrames.length;
       _refreshAnnotations();
@@ -801,23 +801,32 @@ class _FleetMapScreenState extends State<FleetMapScreen> {
                           letterSpacing: -0.2,
                         ),
                       ),
-                      const Spacer(),
-                      _statChip(
-                        Icons.circle,
-                        AppColors.success,
-                        '$onlineCount online',
-                      ),
-                      const SizedBox(width: 6),
-                      _statChip(
-                        Icons.circle,
-                        AppColors.error,
-                        '$offlineCount offline',
-                      ),
-                      const SizedBox(width: 6),
-                      _statChip(
-                        Icons.local_taxi,
-                        _kGold,
-                        '$todayTripCount trips',
+                      const SizedBox(width: 8),
+                      Flexible(
+                        child: SingleChildScrollView(
+                          scrollDirection: Axis.horizontal,
+                          child: Row(
+                            children: [
+                              _statChip(
+                                Icons.circle,
+                                AppColors.success,
+                                '$onlineCount online',
+                              ),
+                              const SizedBox(width: 6),
+                              _statChip(
+                                Icons.circle,
+                                AppColors.error,
+                                '$offlineCount offline',
+                              ),
+                              const SizedBox(width: 6),
+                              _statChip(
+                                Icons.local_taxi,
+                                _kGold,
+                                '$todayTripCount trips',
+                              ),
+                            ],
+                          ),
+                        ),
                       ),
                     ],
                   ),
@@ -1018,7 +1027,7 @@ class _FleetMapScreenState extends State<FleetMapScreen> {
                         ),
                         const SizedBox(height: 3),
                         Text(
-                          '${d.vehicleType ?? "Vehicle"} Â· ${d.vehiclePlate ?? "N/A"}',
+                          '${d.vehicleType ?? "Vehicle"} \u00B7 ${d.vehiclePlate ?? "N/A"}',
                           style: TextStyle(
                             color: _kGold,
                             fontSize: 12,
