@@ -820,6 +820,14 @@ class _VerificationCard extends StatelessWidget {
                     DispatchApiService.fullUrl(request.insuranceUrl!),
                   ),
                 ],
+                if (request.registrationUrl != null) ...[
+                  const SizedBox(height: 8),
+                  _photoCard(
+                    context,
+                    'Car Registration',
+                    DispatchApiService.fullUrl(request.registrationUrl!),
+                  ),
+                ],
                 if (request.verificationVideoUrl != null) ...[
                   const SizedBox(height: 8),
                   _videoCard(
@@ -1388,6 +1396,7 @@ class _PendingVerificationDetailPageState
     );
     final licenseBackUrl = _pickUrl(request.licenseBackUrl, 'license_back_url');
     final insuranceUrl = _pickUrl(request.insuranceUrl, 'insurance_url');
+    final registrationUrl = _pickUrl(request.registrationUrl, 'vehicle_registration_url');
     final idPhotoUrl = _pickUrl(request.idPhotoUrl, 'id_photo_url');
     final selfieUrl = _pickUrl(request.selfieUrl, 'selfie_url');
 
@@ -1708,6 +1717,16 @@ class _PendingVerificationDetailPageState
               context,
               'Seguro del Vehículo',
               DispatchApiService.fullUrl(insuranceUrl),
+            ),
+          ],
+
+          // Car Registration
+          if (registrationUrl != null) ...[
+            const SizedBox(height: 10),
+            _photoCard(
+              context,
+              'Tarjeta de Circulación',
+              DispatchApiService.fullUrl(registrationUrl),
             ),
           ],
 

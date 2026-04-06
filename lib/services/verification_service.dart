@@ -30,6 +30,7 @@ class VerificationRequest {
   final String? licenseFrontUrl;
   final String? licenseBackUrl;
   final String? insuranceUrl;
+  final String? registrationUrl;
   final String? verificationVideoUrl;
   final Map<String, dynamic>? vehicle;
   // SSN (masked — only last 4 visible)
@@ -56,6 +57,7 @@ class VerificationRequest {
     this.licenseFrontUrl,
     this.licenseBackUrl,
     this.insuranceUrl,
+    this.registrationUrl,
     this.verificationVideoUrl,
     this.vehicle,
     this.ssnProvided = false,
@@ -90,6 +92,7 @@ class VerificationRequest {
       licenseFrontUrl: data['licenseFrontUrl'] as String?,
       licenseBackUrl: data['licenseBackUrl'] as String?,
       insuranceUrl: data['insuranceUrl'] as String?,
+      registrationUrl: data['registrationPhotoUrl'] as String? ?? data['vehicleRegistrationUrl'] as String? ?? data['registrationUrl'] as String?,
       verificationVideoUrl: data['verificationVideoUrl'] as String?,
       vehicle: data['vehicle'] as Map<String, dynamic>?,
       ssnProvided: data['ssnProvided'] as bool? ?? false,
