@@ -320,11 +320,14 @@ class _LoginScreenState extends State<LoginScreen>
                         const SizedBox(height: 28),
 
                         // ── Sign In button — gradient pill ────────────────
-                        GestureDetector(
-                          onTap: (auth.isLoading || !_canSignIn)
-                              ? null
-                              : _handleLogin,
-                          child: AnimatedContainer(
+                        Material(
+                          color: Colors.transparent,
+                          child: InkWell(
+                            onTap: (auth.isLoading || !_canSignIn)
+                                ? null
+                                : _handleLogin,
+                            borderRadius: BorderRadius.circular(28),
+                            child: AnimatedContainer(
                             duration: const Duration(milliseconds: 300),
                             curve: Curves.easeOutCubic,
                             height: 56,
@@ -381,6 +384,7 @@ class _LoginScreenState extends State<LoginScreen>
                                       ),
                                     ),
                             ),
+                          ),
                           ),
                         ),
 
