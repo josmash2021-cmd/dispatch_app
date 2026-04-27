@@ -677,7 +677,7 @@ class DispatchApiService {
     if (data != null) {
       requestBody['data'] = data;
     }
-    final result = await _post('/notifications/send', body: requestBody);
+    final result = await _post('/admin/notifications/send', body: requestBody);
     return result as Map<String, dynamic>;
   }
 
@@ -694,7 +694,7 @@ class DispatchApiService {
     if (data != null) {
       requestBody['data'] = data;
     }
-    final result = await _post('/notifications/broadcast/drivers', body: requestBody);
+    final result = await _post('/admin/notifications/broadcast/drivers', body: requestBody);
     return result as Map<String, dynamic>;
   }
 
@@ -711,7 +711,7 @@ class DispatchApiService {
     if (data != null) {
       requestBody['data'] = data;
     }
-    final result = await _post('/notifications/broadcast/riders', body: requestBody);
+    final result = await _post('/admin/notifications/broadcast/riders', body: requestBody);
     return result as Map<String, dynamic>;
   }
 
